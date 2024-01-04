@@ -1,0 +1,33 @@
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using MockEsu.Application.Services.Kontragents;
+
+namespace MockEsu.Web.Controllers.V1
+{
+    [Route("api/v{version:ApiVersion}/[controller]")]
+    [ApiController]
+    [ApiVersion("1")]
+    public class KontragentsController : ControllerBase
+    {
+        private readonly IMediator _mediator;
+
+        public KontragentsController(IMediator mediator)
+        {
+            _mediator = mediator;
+        }
+
+        [HttpGet]
+        [Route("Hello")]
+        public async Task<InitSqlResponse> GetList([FromQuery] InitSqlQuery query)
+        {
+            return await _mediator.Send(query);
+        }
+
+        [HttpGet]
+        [Route("Get")]
+        public async Task<GetKontragentsResponse> GetList([FromQuery] GetKontragentsQuery query)
+        {
+            return await _mediator.Send(query);
+        }
+    }
+}
