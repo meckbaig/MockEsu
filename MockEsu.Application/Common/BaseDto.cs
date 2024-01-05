@@ -33,10 +33,10 @@ namespace MockEsu.Application.Common
         //    return propertyMap.DestinationMember.Name;
         //}
 
-        public static string GetSource<TSrc, TDst>(IConfigurationProvider provider, string sourceProperty)
+        public static string GetSource<TSource, TDestintaion>(IConfigurationProvider provider, string sourceProperty)
         {
             var internalAPI = InternalApi.Internal(provider);
-            var map = internalAPI.FindTypeMapFor<TSrc, TDst>();
+            var map = internalAPI.FindTypeMapFor<TSource, TDestintaion>();
             var propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.DestinationMember.Name == sourceProperty);
 
             if (propertyMap.CustomMapExpression == null)

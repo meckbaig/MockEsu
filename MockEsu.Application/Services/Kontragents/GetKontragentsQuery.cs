@@ -14,8 +14,8 @@ public record GetKontragentsQuery : BaseRequest<GetKontragentsResponse>//, IJour
 {
     public int skip { get; set; }
     public int take { get; set; }
-
-    public string[] filters {  get; set; }
+    
+    public string[] filters { get; set; }
 }
 
 public class GetKontragentsResponse : BaseResponse
@@ -42,7 +42,7 @@ public class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery, G
                 .Include(k => k.Address).ThenInclude(a => a.Street)
                 .Include(k => k.Address).ThenInclude(a => a.Region)
                 .Skip(request.skip).Take(request.take).OrderBy(k => k.Id)
-                .AddFilters<Kontragent, KonragentPreviewDto>(_mapper, request.filters.AsSpan())
+                .AddFilters<Kontragent, KonragentPreviewDto>(_mapper, request.filters)
                 .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider)
                 .ToListAsync();
         //qwerty = qwerty.ПрименитьФильтрыКлиента(фильтры);

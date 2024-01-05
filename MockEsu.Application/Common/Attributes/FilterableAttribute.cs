@@ -20,5 +20,8 @@ internal enum CompareMethod
     Equals,
     Between,
     CellContainsValue,
-    ValueContainsCell
+    ValueContainsCell,
+    Date,
+    DateTime,
+    ById
 }

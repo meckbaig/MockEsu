@@ -32,5 +32,20 @@ namespace MockEsu.Domain.Common
         {
             _domainEvents.Clear();
         }
+        public object this[string propertyName]
+        {
+            get
+            {
+                Type myType = GetType();
+                PropertyInfo myPropInfo = myType.GetProperty(propertyName);
+                return myPropInfo.GetValue(this, null);
+            }
+            set
+            {
+                Type myType = GetType();
+                PropertyInfo myPropInfo = myType.GetProperty(propertyName);
+                myPropInfo.SetValue(this, value, null);
+            }
+        }
     }
 }

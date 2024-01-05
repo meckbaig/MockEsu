@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common;
 using MockEsu.Application.Common.Attributes;
 using MockEsu.Domain.Entities;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MockEsu.Application.DTOs.Kontragents;
 
@@ -22,7 +24,7 @@ public record KonragentPreviewDto : BaseDto
     [Filterable(CompareMethod.CellContainsValue)]
     public string PersonalAccount { get; set; }
 
-    [Filterable(CompareMethod.Between)]
+    [Filterable(CompareMethod.Date)]
     public DateOnly? ContractDate { get; set; }
 
     [Filterable(CompareMethod.Between)]
