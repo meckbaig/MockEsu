@@ -15,7 +15,7 @@ public record GetKontragentsQuery : BaseRequest<GetKontragentsResponse>//, IJour
     public int skip { get; set; }
     public int take { get; set; }
     
-    public string[] filters { get; set; }
+    public string[]? filters { get; set; }
 }
 
 public class GetKontragentsResponse : BaseResponse
@@ -41,22 +41,14 @@ public class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery, G
                 .Include(k => k.Address).ThenInclude(a => a.City)
                 .Include(k => k.Address).ThenInclude(a => a.Street)
                 .Include(k => k.Address).ThenInclude(a => a.Region)
-                .Skip(request.skip).Take(request.take).OrderBy(k => k.Id)
+                //.Where(k => k.Id.Equals(30))
                 .AddFilters<Kontragent, KonragentPreviewDto>(_mapper, request.filters)
+                .Skip(request.skip).Take(request.take).OrderBy(k => k.Id)
                 .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider)
                 .ToListAsync();
-        //qwerty = qwerty.ПрименитьФильтрыКлиента(фильтры);
         return new GetKontragentsResponse()
         {
             Konragents = qwerty
-            //await _context.Kontragents
-            //     .Include(k => k.KontragentAgreement)
-            //     .Include(k => k.Address).ThenInclude(a => a.City)
-            //     .Include(k => k.Address).ThenInclude(a => a.Street)
-            //     .Include(k => k.Address).ThenInclude(a => a.Region)
-            //     .Skip(request.skip).Take(request.take).OrderBy(k => k.Id)
-            //     .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider)
-            //     .ToListAsync()
         };
     }
 }

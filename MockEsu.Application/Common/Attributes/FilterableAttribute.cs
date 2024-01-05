@@ -15,12 +15,26 @@ internal class FilterableAttribute : Attribute
     }
 }
 
+/// <summary>
+/// 
+/// </summary>
+/// <remarks>
+/// <code>
+/// Equals - 100% equality
+/// CellContainsValue - single 'cell contains value' statement
+/// ValueContainsCell - single 'value contains cell' statement
+/// Between - single 'between' statement
+/// Date - list of single dates or spans
+/// DateTime - list of single date-times or spans
+/// ById - list of single indexes or spans
+/// </code>
+/// </remarks>
 internal enum CompareMethod
 {
     Equals,
-    Between,
     CellContainsValue,
     ValueContainsCell,
+    Between, 
     Date,
     DateTime,
     ById

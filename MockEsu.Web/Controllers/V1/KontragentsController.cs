@@ -25,9 +25,10 @@ namespace MockEsu.Web.Controllers.V1
 
         [HttpGet]
         [Route("Get")]
-        public async Task<GetKontragentsResponse> GetList([FromQuery] GetKontragentsQuery query)
+        public async Task<ActionResult<GetKontragentsResponse>> GetList([FromQuery] GetKontragentsQuery query)
         {
-            return await _mediator.Send(query);
+            var result = await _mediator.Send(query);
+            return result.ToJsonResponseAsync();
         }
     }
 }

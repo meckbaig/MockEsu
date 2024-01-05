@@ -24,7 +24,7 @@ public record KonragentPreviewDto : BaseDto
     [Filterable(CompareMethod.CellContainsValue)]
     public string PersonalAccount { get; set; }
 
-    [Filterable(CompareMethod.Date)]
+    [Filterable(CompareMethod.Equals)]
     public DateOnly? ContractDate { get; set; }
 
     [Filterable(CompareMethod.Between)]
@@ -63,7 +63,8 @@ public record KonragentPreviewDto : BaseDto
                 .ForMember(m => m.AddressString, opt => opt.MapFrom(o => AddressToString(o.Address)))
                 .ForMember(m => m.RegionString, opt => opt.MapFrom(o => GetRegion(o.Address)))
                 .ForMember(m => m.CityName, opt => opt.MapFrom(o => o.Address.City.Name))
-                .ReverseMap();
+                //.ReverseMap()
+                ;
         }
 
         private static string GetRegion(Address? address)
