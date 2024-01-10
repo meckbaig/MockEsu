@@ -6,7 +6,7 @@ namespace MockEsu.Application.Common.Exceptions;
 public class ValidationException : Exception
 {
     public ValidationException()
-        : base("Ошибка валидации!")
+        : base("One or more validation errors occurred.")
     {
         Errors = new Dictionary<string, string[]>();
     }

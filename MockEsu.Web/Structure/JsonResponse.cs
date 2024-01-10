@@ -14,7 +14,6 @@ namespace MockEsu.Web.Structure
             var result = new ContentResult();
             if (response.GetException() != null)
                 throw response.GetException() ?? new Exception(response.GetMessage());
-                //await _exceptionHandler.TryHandleAsync(_httpContext, response.Exception ?? new Exception(), new CancellationToken());
             var settings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() };
             result.Content = JsonConvert.SerializeObject(response, settings);
             result.ContentType = "application/json";

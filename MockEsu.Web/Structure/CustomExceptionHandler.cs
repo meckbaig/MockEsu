@@ -1,6 +1,7 @@
 ﻿using MockEsu.Application.Common.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using MockEsu.Application.Common.BaseRequests;
+using static System.Net.WebRequestMethods;
 
 namespace MockEsu.Web.Structure;
 
@@ -32,7 +33,13 @@ public class CustomExceptionHandler : IExceptionHandler
         else
         {
             httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await httpContext.Response.WriteAsJsonAsync(new ResponseException(exception.Message));
+            await httpContext.Response.WriteAsJsonAsync(new ProblemDetails()
+            {
+                Status = StatusCodes.Status500InternalServerError,
+                Type = "https://datatracker.ietf.org/doc/html/rfc9110#section-15.6.1",
+                Title = "Unhandled exception occurred.",
+                Detail = exception.Message
+            });
         }
         return false;
     }
@@ -43,7 +50,11 @@ public class CustomExceptionHandler : IExceptionHandler
 
         httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
 
-        await httpContext.Response.WriteAsJsonAsync(new ResponseException(exception.Message, exception.Errors));
+        await httpContext.Response.WriteAsJsonAsync(new ValidationProblemDetails(exception.Errors)
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1"
+        });
     }
 
     //private async Task HandleNotFoundException(HttpContext httpContext, Exception ex)

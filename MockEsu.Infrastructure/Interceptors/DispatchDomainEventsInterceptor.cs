@@ -40,11 +40,11 @@ namespace MockEsu.Infrastructure.Interceptors
 
             var entities = context.ChangeTracker
                 .Entries<BaseEntity>()
-                .Where(e => e.Entity.DomainEvents.Any())
+                .Where(e => e.Entity.GetDomainEvents().Any())
                 .Select(e => e.Entity);
 
             var domainEvents = entities
-                .SelectMany(e => e.DomainEvents)
+                .SelectMany(e => e.GetDomainEvents())
                 .ToList();
 
             entities.ToList().ForEach(e => e.ClearDomainEvents());

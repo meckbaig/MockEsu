@@ -15,8 +15,9 @@ namespace MockEsu.Domain.Common
 
         private readonly List<BaseEvent> _domainEvents = new();
 
-        [NotMapped]
-        public IReadOnlyCollection<BaseEvent> DomainEvents => _domainEvents.AsReadOnly();
+        //[NotMapped]
+        public IReadOnlyCollection<BaseEvent> GetDomainEvents() 
+            => _domainEvents.AsReadOnly();
 
         public void AddDomainEvent(BaseEvent domainEvent)
         {
