@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.BaseRequests;
@@ -10,17 +11,20 @@ using MockEsu.Infrastructure.Extensions;
 
 namespace MockEsu.Application.Services.Kontragents;
 
-public record GetKontragentsQuery : BaseRequest<GetKontragentsResponse>//, IJournalQuery<KonragentPreviewDto>
-{
-    public int skip { get; set; }
-    public int take { get; set; }
-    
-    public string[]? filters { get; set; }
-}
+public record GetKontragentsQuery : BaseJournalQuery<GetKontragentsResponse>;
 
 public class GetKontragentsResponse : BaseResponse
 {
     public IList<KonragentPreviewDto> Konragents { get; set; }
+}
+
+public class GetKontragentsQueryValidator : AbstractValidator<GetKontragentsQuery>
+{
+    public GetKontragentsQueryValidator()
+    {
+        RuleFor(x => x.skip).GreaterThanOrEqualTo(0).WithMessage("skip is required");
+        RuleFor(x => x.take).GreaterThanOrEqualTo(0).WithMessage("take is required");
+    }
 }
 
 public class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery, GetKontragentsResponse>
@@ -41,8 +45,7 @@ public class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery, G
                 .Include(k => k.Address).ThenInclude(a => a.City)
                 .Include(k => k.Address).ThenInclude(a => a.Street)
                 .Include(k => k.Address).ThenInclude(a => a.Region)
-                //.Where(k => k.Id.Equals(30))
-                .AddFilters<Kontragent, KonragentPreviewDto>(_mapper, request.filters)
+                .AddFilters<Kontragent, KonragentPreviewDto>(_mapper.ConfigurationProvider, request.filters)
                 .Skip(request.skip).Take(request.take).OrderBy(k => k.Id)
                 .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider)
                 .ToListAsync();

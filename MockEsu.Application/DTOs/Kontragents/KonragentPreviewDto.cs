@@ -12,30 +12,23 @@ public record KonragentPreviewDto : BaseDto
     [Filterable(CompareMethod.Equals)]
     public int Id { get; set; }
 
-    [Filterable(CompareMethod.CellContainsValue)]
     public string Name { get; set; }
 
-    [Filterable(CompareMethod.CellContainsValue)]
     public string PhoneNumber { get; set; }
 
-    [Filterable(CompareMethod.CellContainsValue)]
     public string DocumentNumber { get; set; }
 
-    [Filterable(CompareMethod.CellContainsValue)]
     public string PersonalAccount { get; set; }
 
     [Filterable(CompareMethod.Equals)]
     public DateOnly? ContractDate { get; set; }
 
-    [Filterable(CompareMethod.Between)]
     public decimal Balance { get; set; }
 
-    [Filterable(CompareMethod.CellContainsValue)]
     public string? AddressString { get; set; }
 
-    [Filterable(CompareMethod.CellContainsValue)]
     public string RegionString { get; set; }
-    public string CityName { get; set; }
+
 
     //private Dictionary<string, string> Properties { get; set; }
 
@@ -62,7 +55,6 @@ public record KonragentPreviewDto : BaseDto
                 .ForMember(m => m.Balance, opt => opt.MapFrom(o => o.KontragentAgreement.Balance))
                 .ForMember(m => m.AddressString, opt => opt.MapFrom(o => AddressToString(o.Address)))
                 .ForMember(m => m.RegionString, opt => opt.MapFrom(o => GetRegion(o.Address)))
-                .ForMember(m => m.CityName, opt => opt.MapFrom(o => o.Address.City.Name))
                 //.ReverseMap()
                 ;
         }
