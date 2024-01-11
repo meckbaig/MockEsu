@@ -29,21 +29,6 @@ public record KonragentPreviewDto : BaseDto
 
     public string RegionString { get; set; }
 
-
-    //private Dictionary<string, string> Properties { get; set; }
-
-    //public IQueryable<TSource> AddFilters<TSource>(this IQueryable<TSource> source, IMapper mapper) where TSource : class
-    //{
-    //    var provider = mapper.ConfigurationProvider;
-    //    Properties = new Dictionary<string, string>();
-    //    foreach (var prop in this.GetType().GetProperties())
-    //    {
-    //        FilterableAttribute attribute = (FilterableAttribute)prop.GetCustomAttributes(true).FirstOrDefault(a => a.GetType() == typeof(FilterableAttribute));
-    //        Properties.Add(prop.Name, GetSource<Kontragent, KonragentPreviewDto>(provider, prop.Name));
-    //    }
-    //    return source;
-    //}
-
     private class Mapping : Profile
     {
         public Mapping()

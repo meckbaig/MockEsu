@@ -46,15 +46,29 @@ public class CustomExceptionHandler : IExceptionHandler
 
     private async Task HandleValidationException(HttpContext httpContext, Exception ex)
     {
-        var exception = (ValidationException)ex;
-
         httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-
-        await httpContext.Response.WriteAsJsonAsync(new ValidationProblemDetails(exception.Errors)
+        if (ex as ValidationException != null)
         {
-            Status = StatusCodes.Status400BadRequest,
-            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1"
-        });
+            var exception = (ValidationException)ex;
+            await httpContext.Response.WriteAsJsonAsync(new ValidationProblemDetails(exception.Errors)
+            {
+                Status = httpContext.Response.StatusCode,
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1"
+            });
+        }
+        //else if (ex as System.ComponentModel.DataAnnotations.ValidationException != null)
+        //{
+        //    var exception = (System.ComponentModel.DataAnnotations.ValidationException)ex;
+        //    await httpContext.Response.WriteAsJsonAsync(new ProblemDetails()
+        //    {
+        //        Status = httpContext.Response.StatusCode,
+        //        Type = "https://datatracker.ietf.org/doc/html/rfc9110#section-15.6.1",
+        //        Title = "One or more validation errors occurred.",
+        //        Detail = exception.Message
+        //    });
+        //}
+
+
     }
 
     //private async Task HandleNotFoundException(HttpContext httpContext, Exception ex)

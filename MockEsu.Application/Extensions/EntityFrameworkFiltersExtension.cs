@@ -1,19 +1,21 @@
 ﻿using AutoMapper;
 using MockEsu.Application.Common;
 using MockEsu.Application.Common.Attributes;
+using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Domain.Common;
 using MockEsu.Domain.Entities;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.Json;
 
 namespace MockEsu.Infrastructure.Extensions;
 
 /// <summary>
 /// Custom EF Core extencion class for dynamic filtering
 /// </summary>
-public static class EntityFrameworkExtension
+public static class EntityFrameworkFiltersExtension
 {
     /// <summary>
     /// Adds "Where" statements using input filters and mapping engine
@@ -54,17 +56,16 @@ public static class EntityFrameworkExtension
     {
         var filterEx = new FilterExpression<TSource, TDestintaion>(filter, provider);
         if (filterEx.ExpressionType == ExpressionType.Undefined)
-            return source;
+            throw FiltersValidationException($"{filter} - expression is undefined");
 
         PropertyInfo prop = typeof(TDestintaion).GetProperties()
             .FirstOrDefault(p => p.Name == filterEx.Key)!;
-        if (prop == null)
-            return source;
 
         FilterableAttribute attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
             .FirstOrDefault(a => a.GetType() == typeof(FilterableAttribute))!;
         if (attribute == null)
-            return source;
+            throw FiltersValidationException($"Property " +
+                $"'{JsonNamingPolicy.CamelCase.ConvertName(prop.Name)}' is not filterable");
 
         return AppendToQuery(source, attribute.CompareMethod, filterEx);
     }
@@ -209,6 +210,15 @@ public static class EntityFrameworkExtension
         return prop != null ? prop.Name : string.Empty;
     }
 
+    private static ValidationException FiltersValidationException(string message)
+    {
+        return new ValidationException(
+                    new Dictionary<string, string[]> {
+                        { "filters", [message] }
+                    }
+                );
+    }
+
     /// <summary>
     /// Class representing a filtering expression
     /// </summary>
@@ -247,11 +257,11 @@ public static class EntityFrameworkExtension
                 Value = filter.Substring(filter.IndexOf("!:") + 2);
                 ExpressionType = ExpressionType.Exclude;
             }
-            else if (filter.Contains(":"))
+            else if (filter.Contains(':'))
             {
-                Key = ToPascalCase(filter.Substring(0, filter.IndexOf(":")));
+                Key = ToPascalCase(filter.Substring(0, filter.IndexOf(':')));
                 EndPoint = BaseDto.GetSource<TSource, TDestintaion>(provider, Key);
-                Value = filter.Substring(filter.IndexOf(":") + 1);
+                Value = filter.Substring(filter.IndexOf(':') + 1);
                 ExpressionType = ExpressionType.Include;
             }
             else

@@ -4,6 +4,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.BaseRequests;
+using MockEsu.Application.Common.BaseRequests.JournalQuery;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Domain.Entities;

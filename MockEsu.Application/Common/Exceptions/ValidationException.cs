@@ -19,5 +19,11 @@ public class ValidationException : Exception
             .ToDictionary(failureGroup => failureGroup.Key, failureGroup => failureGroup.ToArray());
     }
 
+    public ValidationException(IDictionary<string, string[]> failures)
+        : this()
+    {
+        Errors = failures;
+    }
+
     public IDictionary<string, string[]> Errors { get; }
 }

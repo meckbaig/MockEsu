@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using AutoMapper.Execution;
 using AutoMapper.Internal;
+using MockEsu.Application.Common.Exceptions;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -40,8 +41,12 @@ namespace MockEsu.Application.Common
             var propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.DestinationMember.Name == sourceProperty);
 
             if (propertyMap == null)
-                throw new ArgumentException(
-                    $"Parameter '{JsonNamingPolicy.CamelCase.ConvertName(sourceProperty)}' does not exist");
+                throw new ValidationException(
+                    new Dictionary<string, string[]> {
+                        { "filters", [$"Parameter '{JsonNamingPolicy.CamelCase.ConvertName(sourceProperty)}' does not exist"] } 
+                    }
+                );
+
             if (propertyMap.CustomMapExpression == null)
                 return propertyMap?.SourceMember?.Name;
             else

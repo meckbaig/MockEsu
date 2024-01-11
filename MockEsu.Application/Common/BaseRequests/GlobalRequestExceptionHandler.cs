@@ -9,6 +9,10 @@ namespace MockEsu.Application.Common.BaseRequests
       where TResponse : BaseResponse, new()
       where TException : Exception
     {
+        private static readonly Type[] _notLoggedErrorTypes =
+        [
+            typeof(Exceptions.ValidationException)
+        ];
         private readonly ILogger<GlobalRequestExceptionHandler<TRequest, TResponse, TException>> _logger;
         public GlobalRequestExceptionHandler(
            ILogger<GlobalRequestExceptionHandler<TRequest, TResponse, TException>> logger)
@@ -19,7 +23,8 @@ namespace MockEsu.Application.Common.BaseRequests
             CancellationToken cancellationToken)
         {
             var ex = exception.Demystify();
-            _logger.LogError(ex, "Something went wrong while handling request of type {@requestType}", typeof(TRequest));
+            if (!_notLoggedErrorTypes.Contains(exception.GetType()))
+                _logger.LogError(ex, "Something went wrong while handling request of type {@requestType}", typeof(TRequest));
             var response = new TResponse { Message = ex.Message };
             response.SetException(ex);
             state.SetHandled(response);
