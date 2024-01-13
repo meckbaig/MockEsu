@@ -7,24 +7,27 @@ using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.BaseRequests.JournalQuery;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
+using MockEsu.Application.Extensions.JournalFilters;
 using MockEsu.Domain.Entities;
-using MockEsu.Infrastructure.Extensions;
 
 namespace MockEsu.Application.Services.Kontragents;
 
-public record GetKontragentsQuery : BaseJournalQuery<GetKontragentsResponse>;
-
-public class GetKontragentsResponse : BaseResponse
+public record GetKontragentsQuery : BaseJournalQuery<GetKontragentsResponse>
 {
-    public IList<KonragentPreviewDto> Konragents { get; set; }
+    public string qwerty { get; set; }
 }
 
-public class GetKontragentsQueryValidator : AbstractValidator<GetKontragentsQuery>
+public class GetKontragentsResponse : BaseJournalQueryResponse<KonragentPreviewDto>
 {
-    public GetKontragentsQueryValidator()
+    public override IList<KonragentPreviewDto> Journal { get; set; }
+}
+
+public class GetKontragentsQueryValidator : BaseJournalQueryValidator
+    <GetKontragentsQuery, GetKontragentsResponse, KonragentPreviewDto, Kontragent>
+{
+    public GetKontragentsQueryValidator(IMapper mapper) : base(mapper)
     {
-        RuleFor(x => x.skip).GreaterThanOrEqualTo(0).WithMessage("skip is required");
-        RuleFor(x => x.take).GreaterThanOrEqualTo(0).WithMessage("take is required");
+        RuleFor(x => x.qwerty).MinimumLength(10).WithMessage("qwerty must be longer than 9 symbols");
     }
 }
 
@@ -52,7 +55,7 @@ public class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery, G
                 .ToListAsync();
         return new GetKontragentsResponse()
         {
-            Konragents = qwerty
+            Journal = qwerty
         };
     }
 }

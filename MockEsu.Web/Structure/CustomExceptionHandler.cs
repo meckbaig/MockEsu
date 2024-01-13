@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using MockEsu.Application.Common.BaseRequests;
 using static System.Net.WebRequestMethods;
+using MockEsu.Web.Structure.CustomProblemDetails;
 
 namespace MockEsu.Web.Structure;
 
@@ -50,7 +51,7 @@ public class CustomExceptionHandler : IExceptionHandler
         if (ex as ValidationException != null)
         {
             var exception = (ValidationException)ex;
-            await httpContext.Response.WriteAsJsonAsync(new ValidationProblemDetails(exception.Errors)
+            await httpContext.Response.WriteAsJsonAsync(new CustomValidationProblemDetails(exception.Errors)
             {
                 Status = httpContext.Response.StatusCode,
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1"

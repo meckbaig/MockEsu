@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace MockEsu.Application.Common.Attributes;
 
-internal class FilterableAttribute : Attribute
+public class FilterableAttribute : Attribute
 {
     public CompareMethod CompareMethod { get; set; }
     public string Path { get; set; }
@@ -24,7 +24,7 @@ internal class FilterableAttribute : Attribute
 /// ById - list of single indexes or spans
 /// </code>
 /// </remarks>
-internal enum CompareMethod
+public enum CompareMethod
 {
     Equals,
     ById

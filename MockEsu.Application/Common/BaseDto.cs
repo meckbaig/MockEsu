@@ -42,8 +42,16 @@ namespace MockEsu.Application.Common
 
             if (propertyMap == null)
                 throw new ValidationException(
-                    new Dictionary<string, string[]> {
-                        { "filters", [$"Parameter '{JsonNamingPolicy.CamelCase.ConvertName(sourceProperty)}' does not exist"] } 
+                    new Dictionary<string, ErrorItem[]> {
+                        { 
+                            "filters", 
+                            [
+                                new ErrorItem(
+                                    $"Property '{JsonNamingPolicy.CamelCase.ConvertName(sourceProperty)}' does not exist", 
+                                    ValidationErrorCode.PropertyDoesNotExist
+                                )
+                            ] 
+                        } 
                     }
                 );
 

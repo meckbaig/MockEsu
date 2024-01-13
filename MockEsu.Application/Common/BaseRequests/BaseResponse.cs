@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 namespace MockEsu.Application.Common.BaseRequests
 {
-    public class BaseResponse
+    public abstract class BaseResponse
     {
         private Exception? _exception = null;
         public string? Message { private get; set; } = null;

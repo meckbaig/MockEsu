@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MockEsu.Application.Common.Attributes;
+using MockEsu.Application.Extensions.JournalFilters;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,9 +15,9 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
         public int take { get; set; } = int.MaxValue;
         public string[]? filters { get; set; }
 
-        private List<string>? _filterExpressions = [];
-        public List<string>? GetFilterExpressions() => _filterExpressions;
-        public void AddFilterExpression(string expression)
-            => _filterExpressions.Add(expression);
+        private readonly Dictionary<FilterExpression, FilterableAttribute>? _filterExpressions = [];
+        public Dictionary<FilterExpression, FilterableAttribute>? GetFilterExpressions() => _filterExpressions;
+        public void AddFilterExpression(FilterExpression expression, FilterableAttribute attribute)
+            => _filterExpressions!.Add(expression, attribute);
     }
 }
