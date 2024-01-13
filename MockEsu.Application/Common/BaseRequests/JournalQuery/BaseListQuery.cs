@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Application.Common.BaseRequests.JournalQuery
 {
-    public record BaseJournalQuery<TResponse> : BaseRequest<TResponse>
+    public record BaseListQuery<TResponse> : BaseRequest<TResponse>
         where TResponse : BaseResponse
     {
         public int skip { get; set; }

@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Application.Common.BaseRequests.JournalQuery
 {
-    public abstract class BaseJournalQueryResponse<TResult> : BaseResponse where TResult : BaseDto
+    public abstract class BaseListQueryResponse<TResult> : BaseResponse where TResult : BaseDto
     {
-        public abstract IList<TResult> Journal { get; set; }
+        public abstract IList<TResult> Items { get; set; }
     }
 }

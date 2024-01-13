@@ -13,6 +13,7 @@ namespace MockEsu.Application.Common.BaseRequests
         [
             typeof(Exceptions.ValidationException)
         ];
+
         private readonly ILogger<GlobalRequestExceptionHandler<TRequest, TResponse, TException>> _logger;
         public GlobalRequestExceptionHandler(
            ILogger<GlobalRequestExceptionHandler<TRequest, TResponse, TException>> logger)

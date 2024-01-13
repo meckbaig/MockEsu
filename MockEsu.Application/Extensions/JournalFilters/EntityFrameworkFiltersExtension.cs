@@ -65,6 +65,7 @@ public static class EntityFrameworkFiltersExtension
             {
                 message = $"Property '{JsonNamingPolicy.CamelCase
                     .ConvertName(prop.Name)}' is not filterable";
+                code = ValidationErrorCode.PropertyIsNotFilterable;
                 return (null, null);
             }
             return (filterEx, attribute);
@@ -171,7 +172,7 @@ public static class EntityFrameworkFiltersExtension
                 expression = EqualExpression(values, propExpression, filterEx.ExpressionType);
                 break;
             case CompareMethod.ById:
-                expression = ByIdExpression3(values, propExpression, filterEx.ExpressionType);
+                expression = ByIdExpression(values, propExpression, filterEx.ExpressionType);
                 break;
             default:
                 return source;
@@ -225,34 +226,6 @@ public static class EntityFrameworkFiltersExtension
             return Expression.Not(expression);
     }
 
-    // Делает лишний join, не обязательна конвенция
-    /// <summary>
-    /// Creates Equal() lambda expression by id from array of filter strings
-    /// </summary>
-    /// <param name="values">Filter strings</param>
-    /// <param name="propExpression">A field of property</param>
-    /// <param name="expressionType">Type of expression</param>
-    /// <returns>Lambda expression with Equal() filter by id</returns>
-    private static Expression ByIdExpression(object[] values, MemberExpression propExpression, ExpressionType expressionType)
-    {
-        propExpression = Expression.Property(propExpression, "Id");
-        return EqualExpression(values, propExpression, expressionType);
-    }
-
-    // Попытка убрать лишний join, нужно соблюдение код конвенции
-    /// <summary>
-    /// Creates Equal() lambda expression by id from array of filter strings
-    /// </summary>
-    /// <param name="values">Filter strings</param>
-    /// <param name="propExpression">A field of property</param>
-    /// <param name="expressionType">Type of expression</param>
-    /// <returns>Lambda expression with Equal() filter by id</returns>
-    private static Expression ByIdExpression2(object[] values, MemberExpression propExpression, ExpressionType expressionType)
-    {
-        propExpression = Expression.Property(propExpression.Expression, $"{propExpression.Member.Name}Id");
-        return EqualExpression(values, propExpression, expressionType);
-    }
-
     // Попытка убрать лишний join, нужно соблюдение указания foreign key
     /// <summary>
     /// Creates Equal() lambda expression by id from array of filter strings
@@ -261,7 +234,7 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="propExpression">A field of property</param>
     /// <param name="expressionType">Type of expression</param>
     /// <returns>Lambda expression with Equal() filter by id</returns>
-    private static Expression ByIdExpression3(object[] values, MemberExpression propExpression, ExpressionType expressionType)
+    private static Expression ByIdExpression(object[] values, MemberExpression propExpression, ExpressionType expressionType)
     {
         propExpression = Expression.Property(
             propExpression.Expression,
