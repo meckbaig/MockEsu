@@ -36,7 +36,7 @@ public static class EntityFrameworkFiltersExtension
             return source;
         foreach (var expression in filterExpressions)
         {
-            return AppendToQuery<TSource, TDestintaion>(source, expression.Value.CompareMethod, expression.Key);
+            source = source.AppendToQuery<TSource, TDestintaion>(expression.Value.CompareMethod, expression.Key);
         }
         return source;
     }
@@ -49,7 +49,7 @@ public static class EntityFrameworkFiltersExtension
         try
         {
             var filterEx = FilterExpression.Initialize<TSource, TDestintaion>(filter, provider);
-            if (filterEx.ExpressionType == ExpressionType.Undefined)
+            if (filterEx.ExpressionType == FilterExpressionType.Undefined)
             {
                 message = $"{filter} - expression is undefined";
                 code = ValidationErrorCode.ExpressionIsUndefined;
@@ -121,7 +121,7 @@ public static class EntityFrameworkFiltersExtension
         where TDestintaion : BaseDto
     {
         var filterEx = FilterExpression.Initialize<TSource, TDestintaion>(filter, provider);
-        if (filterEx.ExpressionType == ExpressionType.Undefined)
+        if (filterEx.ExpressionType == FilterExpressionType.Undefined)
             throw FiltersValidationException($"{filter} - expression is undefined", 
                 ValidationErrorCode.ExpressionIsUndefined);
 
@@ -135,7 +135,7 @@ public static class EntityFrameworkFiltersExtension
                 $"'{JsonNamingPolicy.CamelCase.ConvertName(prop.Name)}' is not filterable",
                 ValidationErrorCode.PropertyIsNotFilterable);
 
-        return AppendToQuery<TSource, TDestintaion>(source, attribute.CompareMethod, filterEx);
+        return source.AppendToQuery<TSource, TDestintaion>(attribute.CompareMethod, filterEx);
     }
 
     /// <summary>
@@ -148,7 +148,7 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="filterEx">Expression to apply to source</param>
     /// <returns>An <typeparamref name="IQueryable"/> that contains filter</returns>
     private static IQueryable<TSource> AppendToQuery<TSource, TDestintaion>
-        (IQueryable<TSource> source, CompareMethod compareMethod, FilterExpression filterEx)
+        (this IQueryable<TSource> source, CompareMethod compareMethod, FilterExpression filterEx)
         where TSource : BaseEntity
         where TDestintaion : BaseDto
     {
@@ -191,7 +191,7 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="propExpression">A field of property</param>
     /// <param name="expressionType">Type of expression</param>
     /// <returns>Lambda expression with Equal() filter</returns>
-    private static Expression EqualExpression(object[] values, MemberExpression propExpression, ExpressionType expressionType)
+    private static Expression EqualExpression(object[] values, MemberExpression propExpression, FilterExpressionType expressionType)
     {
         if (values.Length == 0)
             return Expression.Empty();
@@ -220,7 +220,7 @@ public static class EntityFrameworkFiltersExtension
             else
                 expression = Expression.OrElse(expression, newExpression);
         }
-        if (expressionType == ExpressionType.Include)
+        if (expressionType == FilterExpressionType.Include)
             return expression;
         else
             return Expression.Not(expression);
@@ -234,7 +234,7 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="propExpression">A field of property</param>
     /// <param name="expressionType">Type of expression</param>
     /// <returns>Lambda expression with Equal() filter by id</returns>
-    private static Expression ByIdExpression(object[] values, MemberExpression propExpression, ExpressionType expressionType)
+    private static Expression ByIdExpression(object[] values, MemberExpression propExpression, FilterExpressionType expressionType)
     {
         propExpression = Expression.Property(
             propExpression.Expression,

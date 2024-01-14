@@ -49,7 +49,7 @@ public class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery, G
                 .Include(k => k.Address).ThenInclude(a => a.City)
                 .Include(k => k.Address).ThenInclude(a => a.Street)
                 .Include(k => k.Address).ThenInclude(a => a.Region)
-                .AddFilters<Kontragent, KonragentPreviewDto>(_mapper.ConfigurationProvider, request.filters)
+                .AddFilters<Kontragent, KonragentPreviewDto>(request.GetFilterExpressions())
                 .Skip(request.skip).Take(request.take).OrderBy(k => k.Id)
                 .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider)
                 .ToListAsync();
