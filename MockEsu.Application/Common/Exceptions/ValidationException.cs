@@ -50,4 +50,5 @@ public enum ValidationErrorCode
     PropertyDoesNotExist,
     ExpressionIsUndefined,
     PropertyIsNotFilterable,
+    CanNotCreateExpression
 }

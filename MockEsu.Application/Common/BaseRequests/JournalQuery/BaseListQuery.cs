@@ -4,6 +4,7 @@ using MockEsu.Application.Extensions.ListFilters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,12 +18,12 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
         public string[]? filters { get; set; }
         public string? orderBy { get; set; }
 
-        private readonly Dictionary<FilterExpression, FilterableAttribute> _filterExpressions = [];
+        private readonly List<Expression> _filterExpressions = [];
         private readonly List<OrderByExpression> _orderExpressions = [];
-        public Dictionary<FilterExpression, FilterableAttribute> GetFilterExpressions() => _filterExpressions;
+        public List<Expression> GetFilterExpressions() => _filterExpressions;
         public List<OrderByExpression> GetOrderExpressions() => _orderExpressions;
-        public void AddFilterExpression(FilterExpression expression, FilterableAttribute attribute)
-            => _filterExpressions!.Add(expression, attribute);
+        public void AddFilterExpression(Expression expression)
+            => _filterExpressions!.Add(expression);
         public void AddOrderExpression(OrderByExpression expression)
             => _orderExpressions!.Add(expression);
     }

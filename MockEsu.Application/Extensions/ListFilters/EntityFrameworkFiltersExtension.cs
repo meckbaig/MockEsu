@@ -37,6 +37,19 @@ public static class EntityFrameworkFiltersExtension
         }
         return source;
     }
+    public static IQueryable<TSource> AddFilters<TSource, TDestintaion>
+        (this IQueryable<TSource> source, List<Expression>? filterExpressions)
+        where TSource : BaseEntity
+        where TDestintaion : BaseDto
+    {
+        if (filterExpressions == null)
+            return source;
+        foreach (var expression in filterExpressions)
+        {
+            source = source.AppendToQuery<TSource, TDestintaion>(expression);
+        }
+        return source;
+    }
 
     public static (FilterExpression, FilterableAttribute) ParseFilterToExpression<TSource, TDestintaion>
         (IConfigurationProvider provider, string filter, ref string message, ref ValidationErrorCode code)
@@ -81,9 +94,8 @@ public static class EntityFrameworkFiltersExtension
     }
 
     public static string GetExpressionEndpoint<TSource, TDestintaion>(string sourceProperty, IConfigurationProvider provider)
-    {
-        string res = BaseDto.GetSource<TSource, TDestintaion>(sourceProperty, provider, throwException: false);
-        return res;
+    { 
+        return BaseDto.GetSource<TSource, TDestintaion>(sourceProperty, provider, throwException: false);
     }
 
     public static FilterExpression GetFilterExpression<TSource, TDestintaion>(string filter, IConfigurationProvider provider)
@@ -93,7 +105,6 @@ public static class EntityFrameworkFiltersExtension
         try
         {
             return FilterExpression.Initialize<TSource, TDestintaion>(filter, provider);
-
         }
         catch (ValidationException)
         {
@@ -218,6 +229,44 @@ public static class EntityFrameworkFiltersExtension
             = Expression.Lambda<Func<TSource, bool>>(expression, param);
 
         return source.Where(filterLambda);
+    }
+
+    private static IQueryable<TSource> AppendToQuery<TSource, TDestintaion>
+        (this IQueryable<TSource> source, Expression expression)
+        where TSource : BaseEntity
+        where TDestintaion : BaseDto
+    {
+        var param = Expression.Parameter(typeof(TSource), "x");
+        Expression<Func<TSource, bool>> filterLambda
+            = Expression.Lambda<Func<TSource, bool>>(expression, param);
+
+        return source.Where(filterLambda);
+    }
+
+    public static Expression GetLinqExpression<TSource, TDestintaion>(CompareMethod compareMethod, FilterExpression filterEx)
+    {
+        var param = Expression.Parameter(typeof(TSource), "x");
+
+        string[] endpoint = filterEx.EndPoint.Split('.');
+        MemberExpression propExpression = Expression.Property(param, endpoint[0]);
+        if (endpoint.Length != 1)
+        {
+            for (int i = 1; i < endpoint.Length; i++)
+            {
+                propExpression = Expression.Property(propExpression, endpoint[i]);
+            }
+        }
+
+        object[] values = filterEx.Value.Split(',');
+        switch (compareMethod)
+        {
+            case CompareMethod.Equals:
+                return EqualExpression(values, propExpression, filterEx.ExpressionType);
+            case CompareMethod.ById:
+                return ByIdExpression(values, propExpression, filterEx.ExpressionType);
+            default:
+                return null;
+        }
     }
 
     /// <summary>

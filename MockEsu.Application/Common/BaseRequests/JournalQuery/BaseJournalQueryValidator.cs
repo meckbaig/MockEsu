@@ -4,7 +4,10 @@ using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Extensions.JournalFilters;
 using MockEsu.Domain.Common;
+using System;
+using System.Linq.Expressions;
 using System.Text.Json;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MockEsu.Application.Common.BaseRequests.JournalQuery
 {
@@ -20,6 +23,7 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             RuleFor(x => x.take).GreaterThanOrEqualTo(0);
             RuleForEach(x => x.filters).MinimumLength(3)
                 .ValidateFilterParsing<TQuery, TResponseList, TResponse, TSource>(mapper);
+
         }
     }
 
@@ -45,11 +49,18 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
                 .WithMessage((query, filter) => $"{filter} - expression is undefined")
                 .WithErrorCode(ValidationErrorCode.ExpressionIsUndefined.ToString());
 
+            FilterableAttribute attribute = null;
             ruleBuilder = ruleBuilder
-                .Must((query, filter) => PropertyIsFilterable<TQuery, TResponseList, TResponse, TSource>(filterEx, query))
+                .Must((query, filter) => PropertyIsFilterable<TResponse, TSource>(filterEx, ref attribute))
                 .WithMessage((query, filter) => $"Property " +
                     $"'{JsonNamingPolicy.CamelCase.ConvertName(filterEx.Key)}' is not filterable")
                 .WithErrorCode(ValidationErrorCode.PropertyIsNotFilterable.ToString());
+
+            string expressionErrorMessage = string.Empty;
+            ruleBuilder = ruleBuilder
+                .Must((query, filter) => CanCreateExpression<TQuery, TResponseList, TResponse, TSource>(query, filterEx, attribute, ref expressionErrorMessage))
+                .WithMessage(x => expressionErrorMessage)
+                .WithErrorCode(ValidationErrorCode.CanNotCreateExpression.ToString());
 
             return ruleBuilder;
         }
@@ -74,7 +85,8 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             return true;
         }
 
-        private static bool ExpressionIsValid<TSource, TDestintaion>(string filter, IConfigurationProvider provider, ref FilterExpression filterEx)
+        private static bool ExpressionIsValid<TSource, TDestintaion>
+            (string filter, IConfigurationProvider provider, ref FilterExpression filterEx)
             where TSource : BaseEntity
             where TDestintaion : BaseDto
         {
@@ -84,20 +96,46 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             return true;
         }
 
-        private static bool PropertyIsFilterable<TQuery, TResponseList, TDestintaion, TSource>(FilterExpression filterEx, TQuery query)
-            where TQuery : BaseListQuery<TResponseList>
-            where TResponseList : BaseListQueryResponse<TDestintaion>
+        private static bool PropertyIsFilterable<TDestintaion, TSource>
+            (FilterExpression filterEx, ref FilterableAttribute attribute)
             where TDestintaion : BaseDto
             where TSource : BaseEntity
         {
             if (filterEx == null || filterEx.ExpressionType == FilterExpressionType.Undefined)
                 return true;
-            FilterableAttribute attribute = EntityFrameworkFiltersExtension
+            attribute = EntityFrameworkFiltersExtension
                 .GetFilterAttribute<TSource, TDestintaion>(filterEx);
             if (attribute == null)
                 return false;
-            query.AddFilterExpression(filterEx, attribute);
+            //query.AddFilterExpression(filterEx, attribute);
             return true;
+        }
+
+        private static bool CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>
+            (TQuery query, FilterExpression? filterEx, FilterableAttribute? attribute, ref string errorMessage)
+            where TQuery : BaseListQuery<TResponseList>
+            where TResponseList : BaseListQueryResponse<TDestintaion>
+            where TDestintaion : BaseDto
+            where TSource : BaseEntity
+        {
+
+            if (filterEx == null || 
+                filterEx.ExpressionType == FilterExpressionType.Undefined || 
+                attribute == null)
+                return true;
+            try
+            {
+                var expression = EntityFrameworkFiltersExtension.GetLinqExpression<TSource, TDestintaion>(attribute.CompareMethod, filterEx);
+                if (expression == null)
+                    return false;
+                query.AddFilterExpression(expression);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                return false;
+            }
         }
     }
 
