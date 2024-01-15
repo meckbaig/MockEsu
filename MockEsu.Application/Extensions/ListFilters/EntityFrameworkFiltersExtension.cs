@@ -293,10 +293,16 @@ public static class EntityFrameworkFiltersExtension
                 string valueString = values[i].ToString();
                 object from = ConvertFromObject(valueString.Substring(0, valueString.IndexOf("..")), propExpression.Type);
                 object to = ConvertFromObject(valueString.Substring(valueString.IndexOf("..") + 2), propExpression.Type);
-                newExpression = Expression.AndAlso(
-                        Expression.GreaterThanOrEqual(propExpression, Expression.Constant(from, propExpression.Type)),
-                        Expression.LessThanOrEqual(propExpression, Expression.Constant(to, propExpression.Type))
-                    );
+                if (from != null && to != null)
+                    newExpression = Expression.AndAlso(
+                            Expression.GreaterThanOrEqual(propExpression, Expression.Constant(from, propExpression.Type)),
+                            Expression.LessThanOrEqual(propExpression, Expression.Constant(to, propExpression.Type))
+                        );
+                else if (from != null)
+                    newExpression = Expression.GreaterThanOrEqual(propExpression, Expression.Constant(from, propExpression.Type));
+                else if (to != null)
+                    newExpression = Expression.LessThanOrEqual(propExpression, Expression.Constant(to, propExpression.Type));
+                else throw new Exception($"Can not translate expression {valueString}");
             }
             else
             {
@@ -355,6 +361,8 @@ public static class EntityFrameworkFiltersExtension
 
     private static object ConvertFromString(this string value, Type type)
     {
+        if (value == "")
+            return null;
         if (type == typeof(DateOnly) || type == typeof(DateOnly?))
             return DateOnly.Parse(value);
         return Convert.ChangeType(value, type);
