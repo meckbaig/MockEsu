@@ -1,12 +1,5 @@
-﻿using MockEsu.Application.Common.Attributes;
-using MockEsu.Application.Common;
-using MockEsu.Application.Extensions.JournalFilters;
+﻿using MockEsu.Application.Common;
 using MockEsu.Domain.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Linq.Expressions;
 
 namespace MockEsu.Application.Extensions.ListFilters;
@@ -48,15 +41,29 @@ public static class EntityFrameworkOrderByExtension
             = Expression.Lambda<Func<TSource, object>>(propExpression, param);
 
         if (thenBy)
-            if (orderByEx.ExpressionType == OrderByExpressionType.Ascending)
-                (source as IOrderedQueryable<TSource>).ThenBy(filterLambda);
-            else
-                (source as IOrderedQueryable<TSource>).ThenByDescending(filterLambda);
+            switch (orderByEx.ExpressionType)
+            {
+                case OrderByExpressionType.Ascending:
+                    (source as IOrderedQueryable<TSource>).ThenBy(filterLambda);
+                    break;
+                case OrderByExpressionType.Descending:
+                    (source as IOrderedQueryable<TSource>).ThenByDescending(filterLambda);
+                    break;
+                default:
+                    break;
+            }
         else
-            if (orderByEx.ExpressionType == OrderByExpressionType.Ascending)
-                source.OrderBy(filterLambda);
-            else
-                source.OrderByDescending(filterLambda);
+            switch (orderByEx.ExpressionType)
+            {
+                case OrderByExpressionType.Ascending:
+                    source.OrderBy(filterLambda);
+                    break;
+                case OrderByExpressionType.Descending:
+                    source.OrderByDescending(filterLambda);
+                    break;
+                default:
+                    break;
+            }
         return (IOrderedQueryable<TSource>)source;
     }
 }

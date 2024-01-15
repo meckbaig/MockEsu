@@ -20,13 +20,13 @@ public record OrderByExpression : EntityFrameworkExpression<OrderByExpressionTyp
         if (!filter.Contains(' '))
         {
             f.Key = ToPascalCase(filter);
-            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(provider, f.Key);
+            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.ExpressionType = OrderByExpressionType.Ascending;
         }
         else if (filter[(filter.IndexOf(' ') + 1)..] == "desc")
         {
             f.Key = ToPascalCase(filter[..filter.IndexOf(' ')]);
-            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(provider, f.Key);
+            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.ExpressionType = OrderByExpressionType.Descending;
         }
         else
@@ -39,7 +39,7 @@ public record OrderByExpression : EntityFrameworkExpression<OrderByExpressionTyp
     /// </summary>
     /// <param name="value">input string</param>
     /// <returns>String in pascal case</returns>
-    private static string ToPascalCase(string value)
+    public static string ToPascalCase(string value)
     {
         if (value.Length <= 1)
             return value.ToUpper();

@@ -2,10 +2,7 @@
 using MockEsu.Application.Common;
 using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Exceptions;
-using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Domain.Common;
-using MockEsu.Domain.Entities;
-using System;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -83,6 +80,45 @@ public static class EntityFrameworkFiltersExtension
         }
     }
 
+    public static string GetExpressionEndpoint<TSource, TDestintaion>(string sourceProperty, IConfigurationProvider provider)
+    {
+        string res = BaseDto.GetSource<TSource, TDestintaion>(sourceProperty, provider, throwException: false);
+        return res;
+    }
+
+    public static FilterExpression GetFilterExpression<TSource, TDestintaion>(string filter, IConfigurationProvider provider)
+        where TSource : BaseEntity
+        where TDestintaion : BaseDto
+    {
+        try
+        {
+            return FilterExpression.Initialize<TSource, TDestintaion>(filter, provider);
+
+        }
+        catch (ValidationException)
+        {
+            return null;
+        }
+    }
+
+    public static FilterableAttribute GetFilterAttribute<TSource, TDestintaion>
+        (FilterExpression filterEx)
+        where TSource : BaseEntity
+        where TDestintaion : BaseDto
+    {
+        PropertyInfo prop = typeof(TDestintaion).GetProperties()
+                .FirstOrDefault(p => p.Name == filterEx.Key)!;
+
+        FilterableAttribute attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
+            .FirstOrDefault(a => a.GetType() == typeof(FilterableAttribute))!;
+        if (attribute == null)
+        {
+            return null;
+        }
+        return attribute;
+    }
+
+
     /// <summary>
     /// Adds "Where" statements using input filters and mapping engine
     /// </summary>
@@ -122,7 +158,7 @@ public static class EntityFrameworkFiltersExtension
     {
         var filterEx = FilterExpression.Initialize<TSource, TDestintaion>(filter, provider);
         if (filterEx.ExpressionType == FilterExpressionType.Undefined)
-            throw FiltersValidationException($"{filter} - expression is undefined", 
+            throw FiltersValidationException($"{filter} - expression is undefined",
                 ValidationErrorCode.ExpressionIsUndefined);
 
         PropertyInfo prop = typeof(TDestintaion).GetProperties()

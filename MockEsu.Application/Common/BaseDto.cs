@@ -34,26 +34,29 @@ namespace MockEsu.Application.Common
         /// <param name="provider">Configuraion provider for performing maps</param>
         /// <param name="sourceProperty">DTO property name</param>
         /// <returns>Source property path</returns>
-        public static string GetSource<TSource, TDestintaion>(IConfigurationProvider provider, string sourceProperty)
+        public static string GetSource<TSource, TDestintaion>(string sourceProperty, IConfigurationProvider provider, bool throwException = true)
         {
             var internalAPI = InternalApi.Internal(provider);
             var map = internalAPI.FindTypeMapFor<TSource, TDestintaion>();
             var propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.DestinationMember.Name == sourceProperty);
 
             if (propertyMap == null)
-                throw new ValidationException(
-                    new Dictionary<string, ErrorItem[]> {
-                        { 
-                            "filters", 
-                            [
-                                new ErrorItem(
-                                    $"Property '{JsonNamingPolicy.CamelCase.ConvertName(sourceProperty)}' does not exist", 
-                                    ValidationErrorCode.PropertyDoesNotExist
-                                )
-                            ] 
-                        } 
-                    }
-                );
+                if (throwException)
+                    throw new ValidationException(
+                        new Dictionary<string, ErrorItem[]> {
+                            {
+                                "filters",
+                                [
+                                    new ErrorItem(
+                                        $"Property '{JsonNamingPolicy.CamelCase.ConvertName(sourceProperty)}' does not exist",
+                                        ValidationErrorCode.PropertyDoesNotExist
+                                    )
+                                ]
+                            }
+                        }
+                    );
+                else
+                    return null;
 
             if (propertyMap.CustomMapExpression == null)
                 return propertyMap?.SourceMember?.Name;

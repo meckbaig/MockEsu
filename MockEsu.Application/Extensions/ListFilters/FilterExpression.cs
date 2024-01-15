@@ -54,14 +54,14 @@ public record FilterExpression : EntityFrameworkExpression<FilterExpressionType>
         if (filter.Contains("!:"))
         {
             f.Key = ToPascalCase(filter[..filter.IndexOf("!:")]);
-            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(provider, f.Key);
+            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.Value = filter[(filter.IndexOf("!:") + 2)..];
             f.ExpressionType = FilterExpressionType.Exclude;
         }
         else if (filter.Contains(':'))
         {
             f.Key = ToPascalCase(filter[..filter.IndexOf(':')]);
-            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(provider, f.Key);
+            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.Value = filter[(filter.IndexOf(':') + 1)..];
             f.ExpressionType = FilterExpressionType.Include;
         }
@@ -75,7 +75,7 @@ public record FilterExpression : EntityFrameworkExpression<FilterExpressionType>
     /// </summary>
     /// <param name="value">input string</param>
     /// <returns>String in pascal case</returns>
-    private static string ToPascalCase(string value)
+    public static string ToPascalCase(string value)
     {
         if (value.Length <= 1)
             return value.ToUpper();
