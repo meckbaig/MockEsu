@@ -74,7 +74,8 @@ namespace MockEsu.Application.Common
         /// </remarks>
         private static string GetPropertyMapSource(System.Linq.Expressions.Expression body)
         {
-            return body.ToString().Substring(body.ToString().IndexOf('.')+1);
+            Regex regex = new Regex("[^a-zA-Z0-9.]");
+            return regex.Replace(body.ToString().Substring(body.ToString().IndexOf('.')+1), "");
         }
     }
 }

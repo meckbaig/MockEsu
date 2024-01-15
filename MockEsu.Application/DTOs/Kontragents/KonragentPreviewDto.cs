@@ -23,6 +23,7 @@ public record KonragentPreviewDto : BaseDto
     [Filterable(CompareMethod.Equals)]
     public DateOnly? ContractDate { get; set; }
 
+    [Filterable(CompareMethod.Equals)]
     public decimal Balance { get; set; }
 
     public string? AddressString { get; set; }
