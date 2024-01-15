@@ -4,11 +4,12 @@ using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Domain.Common;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 
-namespace MockEsu.Application.Extensions.JournalFilters;
+namespace MockEsu.Application.Extensions.ListFilters;
 
 /// <summary>
 /// Custom EF Core extencion class for dynamic filtering
@@ -240,10 +241,13 @@ public static class EntityFrameworkFiltersExtension
         Expression<Func<TSource, bool>> filterLambda
             = Expression.Lambda<Func<TSource, bool>>(expression, param);
 
-        return source.Where(filterLambda);
+        return source.Where(filterLambda.ToString());
     }
 
-    public static Expression GetLinqExpression<TSource, TDestintaion>(CompareMethod compareMethod, FilterExpression filterEx)
+    public static Expression GetLinqExpression<TSource, TDestintaion>
+        (CompareMethod compareMethod, FilterExpression filterEx)
+        where TSource : BaseEntity
+        where TDestintaion : BaseDto
     {
         var param = Expression.Parameter(typeof(TSource), "x");
 

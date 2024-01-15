@@ -1,5 +1,8 @@
-﻿using MockEsu.Application.Common;
+﻿using AutoMapper;
+using MockEsu.Application.Common;
+using MockEsu.Application.Common.Exceptions;
 using MockEsu.Domain.Common;
+using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 
 namespace MockEsu.Application.Extensions.ListFilters;
@@ -13,15 +16,21 @@ public static class EntityFrameworkOrderByExtension
     {
         if (orderByExpressions == null)
             return (IOrderedQueryable<TSource>)source;
+        IOrderedQueryable<TSource> result = source.OrderBy(x => 0);
         for (int i = 0; i < orderByExpressions.Count; i++)
         {
-            source = source.AppendToQuery<TSource, TDestintaion>(orderByExpressions[i], i > 0);
+            result = result.AppendToQuery<TSource, TDestintaion>(orderByExpressions[i], i > 0);
         }
-        return (IOrderedQueryable<TSource>)source;
+        return result;
+    }
+
+    public static string GetExpressionEndpoint<TSource, TDestintaion>(string sourceProperty, IConfigurationProvider provider)
+    {
+        return BaseDto.GetSource<TSource, TDestintaion>(sourceProperty, provider, throwException: false);
     }
 
     private static IOrderedQueryable<TSource> AppendToQuery<TSource, TDestintaion>
-        (this IQueryable<TSource> source, OrderByExpression orderByEx, bool thenBy)
+        (this IOrderedQueryable<TSource> source, OrderByExpression orderByEx, bool thenBy)
         where TSource : BaseEntity
         where TDestintaion : BaseDto
     {
@@ -37,33 +46,32 @@ public static class EntityFrameworkOrderByExtension
             }
         }
 
-        Expression<Func<TSource, object>> filterLambda
-            = Expression.Lambda<Func<TSource, object>>(propExpression, param);
+        var func = typeof(Func<,>);
+        var genericFunc = func.MakeGenericType(typeof(TSource), propExpression.Type);
+        var lambda = Expression.Lambda(genericFunc, propExpression, param);
 
-        if (thenBy)
-            switch (orderByEx.ExpressionType)
-            {
-                case OrderByExpressionType.Ascending:
-                    (source as IOrderedQueryable<TSource>).ThenBy(filterLambda);
-                    break;
-                case OrderByExpressionType.Descending:
-                    (source as IOrderedQueryable<TSource>).ThenByDescending(filterLambda);
-                    break;
-                default:
-                    break;
-            }
-        else
-            switch (orderByEx.ExpressionType)
-            {
-                case OrderByExpressionType.Ascending:
-                    source.OrderBy(filterLambda);
-                    break;
-                case OrderByExpressionType.Descending:
-                    source.OrderByDescending(filterLambda);
-                    break;
-                default:
-                    break;
-            }
-        return (IOrderedQueryable<TSource>)source;
+        switch (orderByEx.ExpressionType)
+        {
+            case OrderByExpressionType.Ascending:
+                return source.ThenBy(lambda.ToString());
+            case OrderByExpressionType.Descending:
+                return source.ThenBy($"{lambda} desc");
+            default:
+                return source;
+        }
+    }
+
+    internal static OrderByExpression GetOrderByExpression<TSource, TDestintaion>(string filter, IConfigurationProvider provider)
+        where TSource : BaseEntity
+        where TDestintaion : BaseDto
+    {
+        try
+        {
+            return OrderByExpression.Initialize<TSource, TDestintaion>(filter, provider);
+        }
+        catch (ValidationException)
+        {
+            return null;
+        }
     }
 }

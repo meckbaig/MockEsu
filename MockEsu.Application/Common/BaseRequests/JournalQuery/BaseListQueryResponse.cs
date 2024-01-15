@@ -1,5 +1,5 @@
 ﻿using MockEsu.Application.Common.Attributes;
-using MockEsu.Application.Extensions.JournalFilters;
+using MockEsu.Application.Extensions.ListFilters;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

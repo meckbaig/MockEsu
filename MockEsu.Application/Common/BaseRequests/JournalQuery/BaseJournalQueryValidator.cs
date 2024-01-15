@@ -1,20 +1,19 @@
 ﻿using AutoMapper;
 using FluentValidation;
+using Microsoft.AspNetCore.Http;
 using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Exceptions;
-using MockEsu.Application.Extensions.JournalFilters;
+using MockEsu.Application.Extensions.ListFilters;
+using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Common;
-using System;
-using System.Linq.Expressions;
 using System.Text.Json;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MockEsu.Application.Common.BaseRequests.JournalQuery
 {
-    public class BaseJournalQueryValidator<TQuery, TResponseList, TResponse, TSource> : AbstractValidator<TQuery>
+    public class BaseJournalQueryValidator<TQuery, TResponseList, TDestintaion, TSource> : AbstractValidator<TQuery>
         where TQuery : BaseListQuery<TResponseList>
-        where TResponseList : BaseListQueryResponse<TResponse>
-        where TResponse : BaseDto
+        where TResponseList : BaseListQueryResponse<TDestintaion>
+        where TDestintaion : BaseDto
         where TSource : BaseEntity
     {
         public BaseJournalQueryValidator(IMapper mapper)
@@ -22,43 +21,44 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             RuleFor(x => x.skip).GreaterThanOrEqualTo(0);
             RuleFor(x => x.take).GreaterThanOrEqualTo(0);
             RuleForEach(x => x.filters).MinimumLength(3)
-                .ValidateFilterParsing<TQuery, TResponseList, TResponse, TSource>(mapper);
-
+                .ValidateFilterParsing<TQuery, TResponseList, TDestintaion, TSource>(mapper);
+            RuleForEach(x => x.orderBy).MinimumLength(1)
+                .ValidateSortParsing<TQuery, TResponseList, TDestintaion, TSource>(mapper);
         }
     }
 
     public static class BaseJournalQueryFilterValidatorExtension
     {
         public static IRuleBuilderOptions<TQuery, string> ValidateFilterParsing
-            <TQuery, TResponseList, TResponse, TSource>
+            <TQuery, TResponseList, TDestintaion, TSource>
             (this IRuleBuilderOptions<TQuery, string> ruleBuilder, IMapper mapper)
             where TQuery : BaseListQuery<TResponseList>
-            where TResponseList : BaseListQueryResponse<TResponse>
-            where TResponse : BaseDto
+            where TResponseList : BaseListQueryResponse<TDestintaion>
+            where TDestintaion : BaseDto
             where TSource : BaseEntity
         {
             string key = string.Empty;
             ruleBuilder = ruleBuilder
-                .Must((query, filter) => PropertyExists<TSource, TResponse>(filter, mapper.ConfigurationProvider, ref key))
+                .Must((query, filter) => PropertyExists<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref key))
                 .WithMessage(x => $"Property '{JsonNamingPolicy.CamelCase.ConvertName(key)}' does not exist")
                 .WithErrorCode(ValidationErrorCode.PropertyDoesNotExist.ToString());
 
             FilterExpression filterEx = null;
             ruleBuilder = ruleBuilder
-                .Must((query, filter) => ExpressionIsValid<TSource, TResponse>(filter, mapper.ConfigurationProvider, ref filterEx))
+                .Must((query, filter) => ExpressionIsValid<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref filterEx))
                 .WithMessage((query, filter) => $"{filter} - expression is undefined")
                 .WithErrorCode(ValidationErrorCode.ExpressionIsUndefined.ToString());
 
             FilterableAttribute attribute = null;
             ruleBuilder = ruleBuilder
-                .Must((query, filter) => PropertyIsFilterable<TResponse, TSource>(filterEx, ref attribute))
+                .Must((query, filter) => PropertyIsFilterable<TDestintaion, TSource>(filterEx, ref attribute))
                 .WithMessage((query, filter) => $"Property " +
                     $"'{JsonNamingPolicy.CamelCase.ConvertName(filterEx.Key)}' is not filterable")
                 .WithErrorCode(ValidationErrorCode.PropertyIsNotFilterable.ToString());
 
             string expressionErrorMessage = string.Empty;
             ruleBuilder = ruleBuilder
-                .Must((query, filter) => CanCreateExpression<TQuery, TResponseList, TResponse, TSource>(query, filterEx, attribute, ref expressionErrorMessage))
+                .Must((query, filter) => CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>(query, filterEx, attribute, ref expressionErrorMessage))
                 .WithMessage(x => expressionErrorMessage)
                 .WithErrorCode(ValidationErrorCode.CanNotCreateExpression.ToString());
 
@@ -119,8 +119,8 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             where TSource : BaseEntity
         {
 
-            if (filterEx == null || 
-                filterEx.ExpressionType == FilterExpressionType.Undefined || 
+            if (filterEx == null ||
+                filterEx.ExpressionType == FilterExpressionType.Undefined ||
                 attribute == null)
                 return true;
             try
@@ -141,6 +141,55 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
 
     public static class BaseJournalQuerySortValidatorExtension
     {
+        public static IRuleBuilderOptions<TQuery, string> ValidateSortParsing
+            <TQuery, TResponseList, TDestintaion, TSource>
+            (this IRuleBuilderOptions<TQuery, string> ruleBuilder, IMapper mapper)
+            where TQuery : BaseListQuery<TResponseList>
+            where TResponseList : BaseListQueryResponse<TDestintaion>
+            where TDestintaion : BaseDto
+            where TSource : BaseEntity
+        {
+            string key = string.Empty;
+            ruleBuilder = ruleBuilder
+                .Must((query, filter) => PropertyExists<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref key))
+                .WithMessage(x => $"Property '{JsonNamingPolicy.CamelCase.ConvertName(key)}' does not exist")
+                .WithErrorCode(ValidationErrorCode.PropertyDoesNotExist.ToString());
 
+            ruleBuilder = ruleBuilder
+                .Must((query, filter) => ExpressionIsValid<TQuery, TResponseList, TDestintaion, TSource>
+                (query, filter, mapper.ConfigurationProvider))
+                .WithMessage((query, filter) => $"{filter} - expression is undefined")
+                .WithErrorCode(ValidationErrorCode.ExpressionIsUndefined.ToString());
+
+            return ruleBuilder;
+        }
+
+        private static bool PropertyExists<TSource, TDestintaion>(string filter, IConfigurationProvider provider, ref string key)
+        {
+            if (filter.Contains(' '))
+                key = FilterExpression.ToPascalCase(filter[..filter.IndexOf(' ')]);
+            else
+                key = FilterExpression.ToPascalCase(filter);
+            string endPoint = EntityFrameworkOrderByExtension
+                .GetExpressionEndpoint<TSource, TDestintaion>(key, provider);
+            if (endPoint == null)
+                return false;
+            return true;
+        }
+
+        private static bool ExpressionIsValid
+            <TQuery, TResponseList, TDestintaion, TSource>
+            (TQuery query, string filter, IConfigurationProvider provider)
+            where TQuery : BaseListQuery<TResponseList>
+            where TResponseList : BaseListQueryResponse<TDestintaion>
+            where TDestintaion : BaseDto
+            where TSource : BaseEntity
+        {
+            OrderByExpression ex = EntityFrameworkOrderByExtension.GetOrderByExpression<TSource, TDestintaion>(filter, provider);
+            if (ex?.ExpressionType == OrderByExpressionType.Undefined)
+                return false;
+            query.AddOrderExpression(ex);
+            return true;
+        }
     }
 }

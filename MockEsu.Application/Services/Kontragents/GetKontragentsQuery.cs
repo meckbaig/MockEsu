@@ -7,7 +7,7 @@ using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.BaseRequests.JournalQuery;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
-using MockEsu.Application.Extensions.JournalFilters;
+using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Entities;
 
 namespace MockEsu.Application.Services.Kontragents;
@@ -50,7 +50,8 @@ public class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery, G
                 .Include(k => k.Address).ThenInclude(a => a.Street)
                 .Include(k => k.Address).ThenInclude(a => a.Region)
                 .AddFilters<Kontragent, KonragentPreviewDto>(request.GetFilterExpressions())
-                .Skip(request.skip).Take(request.take).OrderBy(k => k.Id)
+                .Skip(request.skip).Take(request.take)
+                .AddOrderBy<Kontragent, KonragentPreviewDto>(request.GetOrderExpressions())
                 .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider)
                 .ToListAsync();
         return new GetKontragentsResponse()

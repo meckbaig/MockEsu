@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using MockEsu.Application.Common;
-using MockEsu.Application.Extensions.JournalFilters;
+using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Common;
 using System;
 using System.Collections.Generic;

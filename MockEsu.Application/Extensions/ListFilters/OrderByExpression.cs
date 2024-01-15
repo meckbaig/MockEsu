@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using MockEsu.Application.Common;
-using MockEsu.Application.Extensions.JournalFilters;
+using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Common;
 
 namespace MockEsu.Application.Extensions.ListFilters;
@@ -17,7 +17,7 @@ public record OrderByExpression : EntityFrameworkExpression<OrderByExpressionTyp
     {
         var f = new OrderByExpression();
 
-        if (!filter.Contains(' '))
+        if (!filter.Contains(' ') || filter[(filter.IndexOf(' ') + 1)..] == "asc")
         {
             f.Key = ToPascalCase(filter);
             f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);

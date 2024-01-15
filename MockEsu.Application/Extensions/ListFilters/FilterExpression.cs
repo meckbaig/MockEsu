@@ -9,7 +9,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MockEsu.Application.Extensions.JournalFilters;
+namespace MockEsu.Application.Extensions.ListFilters;
 
 /// <summary>
 /// Class representing a filtering expression
