@@ -188,7 +188,8 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             OrderByExpression ex = EntityFrameworkOrderByExtension.GetOrderByExpression<TSource, TDestintaion>(filter, provider);
             if (ex?.ExpressionType == OrderByExpressionType.Undefined)
                 return false;
-            query.AddOrderExpression(ex);
+            if (ex != null) 
+                query.AddOrderExpression(ex);
             return true;
         }
     }

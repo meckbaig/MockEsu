@@ -17,27 +17,13 @@ namespace MockEsu.Application.Extensions.ListFilters;
 public static class EntityFrameworkFiltersExtension
 {
     /// <summary>
-    /// Adds "Where" statements using input filters and mapping engine
+    /// Adds 'Where' statements using input filters and mapping engine
     /// </summary>
     /// <typeparam name="TSource">Source of DTO type</typeparam>
     /// <typeparam name="TDestintaion">DTO type</typeparam>
     /// <param name="source">Queryable source</param>
-    /// <param name="provider">Configuraion provider for performing maps</param>
-    /// <param name="filters">Array of filters</param>
+    /// <param name="filterExpressions">Array of filter expressions</param>
     /// <returns>An <typeparamref name="IQueryable"/> that contains filters</returns>
-    public static IQueryable<TSource> AddFilters<TSource, TDestintaion>
-        (this IQueryable<TSource> source, Dictionary<FilterExpression, FilterableAttribute>? filterExpressions)
-        where TSource : BaseEntity
-        where TDestintaion : BaseDto
-    {
-        if (filterExpressions == null)
-            return source;
-        foreach (var expression in filterExpressions)
-        {
-            source = source.AppendToQuery<TSource, TDestintaion>(expression.Value.CompareMethod, expression.Key);
-        }
-        return source;
-    }
     public static IQueryable<TSource> AddFilters<TSource, TDestintaion>
         (this IQueryable<TSource> source, List<Expression>? filterExpressions)
         where TSource : BaseEntity
@@ -52,54 +38,43 @@ public static class EntityFrameworkFiltersExtension
         return source;
     }
 
-    public static (FilterExpression, FilterableAttribute) ParseFilterToExpression<TSource, TDestintaion>
-        (IConfigurationProvider provider, string filter, ref string message, ref ValidationErrorCode code)
+    private static IQueryable<TSource> AppendToQuery<TSource, TDestintaion>
+        (this IQueryable<TSource> source, Expression expression)
         where TSource : BaseEntity
         where TDestintaion : BaseDto
     {
-        try
-        {
-            var filterEx = FilterExpression.Initialize<TSource, TDestintaion>(filter, provider);
-            if (filterEx.ExpressionType == FilterExpressionType.Undefined)
-            {
-                message = $"{filter} - expression is undefined";
-                code = ValidationErrorCode.ExpressionIsUndefined;
-                return (null, null);
-            }
+        var param = Expression.Parameter(typeof(TSource), "x");
+        Expression<Func<TSource, bool>> filterLambda
+            = Expression.Lambda<Func<TSource, bool>>(expression, param);
 
-            PropertyInfo prop = typeof(TDestintaion).GetProperties()
-                .FirstOrDefault(p => p.Name == filterEx.Key)!;
-
-            FilterableAttribute attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
-                .FirstOrDefault(a => a.GetType() == typeof(FilterableAttribute))!;
-            if (attribute == null)
-            {
-                message = $"Property '{JsonNamingPolicy.CamelCase
-                    .ConvertName(prop.Name)}' is not filterable";
-                code = ValidationErrorCode.PropertyIsNotFilterable;
-                return (null, null);
-            }
-            return (filterEx, attribute);
-        }
-        catch (ValidationException ex)
-        {
-            message = ex.Errors.FirstOrDefault().Value[0].message;
-            code = Enum.Parse<ValidationErrorCode>(ex.Errors.FirstOrDefault().Value[0].code);
-            return (null, null);
-        }
-        catch (Exception ex)
-        {
-            message = ex.Message;
-            return (null, null);
-        }
+        return source.Where(filterLambda.ToString());
     }
 
-    public static string GetExpressionEndpoint<TSource, TDestintaion>(string sourceProperty, IConfigurationProvider provider)
+    /// <summary>
+    /// Gets full endpoint route string
+    /// </summary>
+    /// <typeparam name="TSource">Source of DTO type</typeparam>
+    /// <typeparam name="TDestintaion">DTO type</typeparam>
+    /// <param name="destinationPropertyName">Source prioer</param>
+    /// <param name="provider">Configuraion provider for performing maps</param>
+    /// <returns>Returns endpoint if success, null if error</returns>
+    public static string GetExpressionEndpoint<TSource, TDestintaion>(string destinationPropertyName, IConfigurationProvider provider)
     { 
-        return BaseDto.GetSource<TSource, TDestintaion>(sourceProperty, provider, throwException: false);
+        return BaseDto.GetSource<TSource, TDestintaion>(destinationPropertyName, provider, throwException: false);
     }
 
-    public static FilterExpression GetFilterExpression<TSource, TDestintaion>(string filter, IConfigurationProvider provider)
+    /// <summary>
+    /// Gets filter expression
+    /// </summary>
+    /// <typeparam name="TSource">Source of DTO type</typeparam>
+    /// <typeparam name="TDestintaion">DTO type</typeparam>
+    /// <param name="filter">Filter from client</param>
+    /// <param name="provider">Configuraion provider for performing maps</param>
+    /// <returns>Returns FilterExpression model if success, undefined FilterExpression
+    /// if can not parse expression, null if error</returns>
+    public static FilterExpression GetFilterExpression
+        <TSource, TDestintaion>
+        (string filter, IConfigurationProvider provider)
         where TSource : BaseEntity
         where TDestintaion : BaseDto
     {
@@ -113,6 +88,13 @@ public static class EntityFrameworkFiltersExtension
         }
     }
 
+    /// <summary>
+    /// Gets filter attribute
+    /// </summary>
+    /// <typeparam name="TSource">Source of DTO type</typeparam>
+    /// <typeparam name="TDestintaion">DTO type</typeparam>
+    /// <param name="filterEx">Filter expression to get the key</param>
+    /// <returns>Returns FilterableAttribute model if success, null if error</returns>
     public static FilterableAttribute GetFilterAttribute<TSource, TDestintaion>
         (FilterExpression filterEx)
         where TSource : BaseEntity
@@ -120,130 +102,19 @@ public static class EntityFrameworkFiltersExtension
     {
         PropertyInfo prop = typeof(TDestintaion).GetProperties()
                 .FirstOrDefault(p => p.Name == filterEx.Key)!;
-
         FilterableAttribute attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
             .FirstOrDefault(a => a.GetType() == typeof(FilterableAttribute))!;
-        if (attribute == null)
-        {
-            return null;
-        }
         return attribute;
     }
 
-
     /// <summary>
-    /// Adds "Where" statements using input filters and mapping engine
+    /// Gets filter expression for Where statement
     /// </summary>
     /// <typeparam name="TSource">Source of DTO type</typeparam>
     /// <typeparam name="TDestintaion">DTO type</typeparam>
-    /// <param name="source">Queryable source</param>
-    /// <param name="provider">Configuraion provider for performing maps</param>
-    /// <param name="filters">Array of filters</param>
-    /// <returns>An <typeparamref name="IQueryable"/> that contains filters</returns>
-    public static IQueryable<TSource> AddFilters<TSource, TDestintaion>
-        (this IQueryable<TSource> source, IConfigurationProvider provider, string[]? filters)
-        where TSource : BaseEntity
-        where TDestintaion : BaseDto
-    {
-        if (filters == null)
-            return source;
-        foreach (var filter in filters)
-        {
-            source = source.AddFilter<TSource, TDestintaion>(provider, filter);
-        }
-        return source;
-    }
-
-    /// <summary>
-    /// Adds "Where" statements using input filter and mapping engine
-    /// </summary>
-    /// <typeparam name="TSource">Source of DTO type</typeparam>
-    /// <typeparam name="TDestintaion">DTO type</typeparam>
-    /// <param name="source">Queryable source</param>
-    /// <param name="provider">Configuraion provider for performing maps</param>
-    /// <param name="filter">Filter string</param>
-    /// <returns>An <typeparamref name="IQueryable"/> that contains filter</returns>
-    private static IQueryable<TSource> AddFilter<TSource, TDestintaion>
-        (this IQueryable<TSource> source, IConfigurationProvider provider, string filter)
-        where TSource : BaseEntity
-        where TDestintaion : BaseDto
-    {
-        var filterEx = FilterExpression.Initialize<TSource, TDestintaion>(filter, provider);
-        if (filterEx.ExpressionType == FilterExpressionType.Undefined)
-            throw FiltersValidationException($"{filter} - expression is undefined",
-                ValidationErrorCode.ExpressionIsUndefined);
-
-        PropertyInfo prop = typeof(TDestintaion).GetProperties()
-            .FirstOrDefault(p => p.Name == filterEx.Key)!;
-
-        FilterableAttribute attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
-            .FirstOrDefault(a => a.GetType() == typeof(FilterableAttribute))!;
-        if (attribute == null)
-            throw FiltersValidationException($"Property " +
-                $"'{JsonNamingPolicy.CamelCase.ConvertName(prop.Name)}' is not filterable",
-                ValidationErrorCode.PropertyIsNotFilterable);
-
-        return source.AppendToQuery<TSource, TDestintaion>(attribute.CompareMethod, filterEx);
-    }
-
-    /// <summary>
-    /// Applies filter expression to source
-    /// </summary>
-    /// <typeparam name="TSource">Source of DTO type</typeparam>
-    /// <typeparam name="TDestintaion">DTO type</typeparam>
-    /// <param name="source">Queryable source</param>
-    /// <param name="compareMethod">Сomparison method</param>
-    /// <param name="filterEx">Expression to apply to source</param>
-    /// <returns>An <typeparamref name="IQueryable"/> that contains filter</returns>
-    private static IQueryable<TSource> AppendToQuery<TSource, TDestintaion>
-        (this IQueryable<TSource> source, CompareMethod compareMethod, FilterExpression filterEx)
-        where TSource : BaseEntity
-        where TDestintaion : BaseDto
-    {
-        var param = Expression.Parameter(typeof(TSource), "x");
-
-        string[] endpoint = filterEx.EndPoint.Split('.');
-        MemberExpression propExpression = Expression.Property(param, endpoint[0]);
-        if (endpoint.Length != 1)
-        {
-            for (int i = 1; i < endpoint.Length; i++)
-            {
-                propExpression = Expression.Property(propExpression, endpoint[i]);
-            }
-        }
-
-        object[] values = filterEx.Value.Split(',');
-        Expression expression;
-        switch (compareMethod)
-        {
-            case CompareMethod.Equals:
-                expression = EqualExpression(values, propExpression, filterEx.ExpressionType);
-                break;
-            case CompareMethod.ById:
-                expression = ByIdExpression(values, propExpression, filterEx.ExpressionType);
-                break;
-            default:
-                return source;
-        }
-
-        Expression<Func<TSource, bool>> filterLambda
-            = Expression.Lambda<Func<TSource, bool>>(expression, param);
-
-        return source.Where(filterLambda);
-    }
-
-    private static IQueryable<TSource> AppendToQuery<TSource, TDestintaion>
-        (this IQueryable<TSource> source, Expression expression)
-        where TSource : BaseEntity
-        where TDestintaion : BaseDto
-    {
-        var param = Expression.Parameter(typeof(TSource), "x");
-        Expression<Func<TSource, bool>> filterLambda
-            = Expression.Lambda<Func<TSource, bool>>(expression, param);
-
-        return source.Where(filterLambda.ToString());
-    }
-
+    /// <param name="compareMethod">Method of comparison</param>
+    /// <param name="filterEx">Filter expression</param>
+    /// <returns>Filter expression if success, null if error</returns>
     public static Expression GetLinqExpression<TSource, TDestintaion>
         (CompareMethod compareMethod, FilterExpression filterEx)
         where TSource : BaseEntity
@@ -293,16 +164,22 @@ public static class EntityFrameworkFiltersExtension
                 string valueString = values[i].ToString();
                 object from = ConvertFromObject(valueString.Substring(0, valueString.IndexOf("..")), propExpression.Type);
                 object to = ConvertFromObject(valueString.Substring(valueString.IndexOf("..") + 2), propExpression.Type);
-                if (from != null && to != null)
-                    newExpression = Expression.AndAlso(
-                            Expression.GreaterThanOrEqual(propExpression, Expression.Constant(from, propExpression.Type)),
-                            Expression.LessThanOrEqual(propExpression, Expression.Constant(to, propExpression.Type))
-                        );
-                else if (from != null)
-                    newExpression = Expression.GreaterThanOrEqual(propExpression, Expression.Constant(from, propExpression.Type));
-                else if (to != null)
-                    newExpression = Expression.LessThanOrEqual(propExpression, Expression.Constant(to, propExpression.Type));
-                else throw new Exception($"Can not translate expression {valueString}");
+                List<BinaryExpression> binaryExpressions = new List<BinaryExpression>();
+                if (from != null)
+                    binaryExpressions.Add(Expression.GreaterThanOrEqual(propExpression, Expression.Constant(from, propExpression.Type)));
+                if (to != null)
+                    binaryExpressions.Add(Expression.LessThanOrEqual(propExpression, Expression.Constant(to, propExpression.Type)));
+                switch (binaryExpressions.Count)
+                {
+                    case 2:
+                        newExpression = Expression.AndAlso(binaryExpressions[0], binaryExpressions[1]);
+                        break;
+                    case 1:
+                        newExpression = binaryExpressions[0];
+                        break;
+                    default:
+                        throw new Exception($"Can not translate expression {valueString}");
+                }
             }
             else
             {
@@ -321,7 +198,6 @@ public static class EntityFrameworkFiltersExtension
             return Expression.Not(expression);
     }
 
-    // Попытка убрать лишний join, нужно соблюдение указания foreign key
     /// <summary>
     /// Creates Equal() lambda expression by id from array of filter strings
     /// </summary>
@@ -343,20 +219,6 @@ public static class EntityFrameworkFiltersExtension
             p => ((ForeignKeyAttribute)p.GetCustomAttributes(true).FirstOrDefault(
                 a => a.GetType() == typeof(ForeignKeyAttribute)))?.Name == modelName)!;
         return prop != null ? prop.Name : string.Empty;
-    }
-
-    private static ValidationException FiltersValidationException(string message, string code)
-    {
-        return new ValidationException(
-                    new Dictionary<string, ErrorItem[]> {
-                        { "filters", [new ErrorItem(message, code)] }
-                    }
-                );
-    }
-
-    private static ValidationException FiltersValidationException(string message, ValidationErrorCode code)
-    {
-        return FiltersValidationException(message, code.ToString());
     }
 
     private static object ConvertFromString(this string value, Type type)

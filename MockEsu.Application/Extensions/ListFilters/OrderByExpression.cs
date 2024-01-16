@@ -17,7 +17,7 @@ public record OrderByExpression : EntityFrameworkExpression<OrderByExpressionTyp
     {
         var f = new OrderByExpression();
 
-        if (!filter.Contains(' ') || filter[(filter.IndexOf(' ') + 1)..] == "asc")
+        if (!filter.Contains(' '))
         {
             f.Key = ToPascalCase(filter);
             f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
