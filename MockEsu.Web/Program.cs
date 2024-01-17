@@ -78,3 +78,6 @@ app.UseCors(builder => builder
 //app.MapEndpoints();
 
 app.Run();
+
+
+public partial class Program { }
