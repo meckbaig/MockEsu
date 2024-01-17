@@ -49,7 +49,7 @@ namespace MockEsu.Application.Common
                                 [
                                     new ErrorItem(
                                         $"Property '{JsonNamingPolicy.CamelCase.ConvertName(sourceProperty)}' does not exist",
-                                        ValidationErrorCode.PropertyDoesNotExist
+                                        ValidationErrorCode.PropertyDoesNotExistValidator
                                     )
                                 ]
                             }

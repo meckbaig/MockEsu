@@ -75,9 +75,11 @@ public static class EntityFrameworkOrderByExtension
     /// <param name="destinationPropertyName">Source prioer</param>
     /// <param name="provider">Configuraion provider for performing maps</param>
     /// <returns>Returns endpoint if success, null if error</returns>
-    public static string GetExpressionEndpoint<TSource, TDestintaion>(string destinationPropertyName, IConfigurationProvider provider)
+    public static string GetExpressionEndpoint<TSource, TDestintaion>
+        (string destinationPropertyName, IConfigurationProvider provider)
     {
-        return BaseDto.GetSource<TSource, TDestintaion>(destinationPropertyName, provider, throwException: false);
+        return BaseDto.GetSource<TSource, TDestintaion>
+            (destinationPropertyName, provider, throwException: false);
     }
 
     /// <summary>
@@ -97,7 +99,8 @@ public static class EntityFrameworkOrderByExtension
     {
         try
         {
-            return OrderByExpression.Initialize<TSource, TDestintaion>(sortingExpressionString, provider);
+            return OrderByExpression.Initialize<TSource, TDestintaion>
+                (sortingExpressionString, provider);
         }
         catch (ValidationException)
         {

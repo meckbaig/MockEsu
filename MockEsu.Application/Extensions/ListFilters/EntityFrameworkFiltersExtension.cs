@@ -58,9 +58,11 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="destinationPropertyName">Source prioer</param>
     /// <param name="provider">Configuraion provider for performing maps</param>
     /// <returns>Returns endpoint if success, null if error</returns>
-    public static string GetExpressionEndpoint<TSource, TDestintaion>(string destinationPropertyName, IConfigurationProvider provider)
+    public static string GetExpressionEndpoint<TSource, TDestintaion>
+        (string destinationPropertyName, IConfigurationProvider provider)
     { 
-        return BaseDto.GetSource<TSource, TDestintaion>(destinationPropertyName, provider, throwException: false);
+        return BaseDto.GetSource<TSource, TDestintaion>
+            (destinationPropertyName, provider, throwException: false);
     }
 
     /// <summary>
@@ -151,7 +153,8 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="propExpression">A field of property</param>
     /// <param name="expressionType">Type of expression</param>
     /// <returns>Lambda expression with Equal() filter</returns>
-    private static Expression EqualExpression(object[] values, MemberExpression propExpression, FilterExpressionType expressionType)
+    private static Expression EqualExpression
+        (object[] values, MemberExpression propExpression, FilterExpressionType expressionType)
     {
         if (values.Length == 0)
             return Expression.Empty();
@@ -162,13 +165,17 @@ public static class EntityFrameworkFiltersExtension
             if (values[i].ToString()!.Contains(".."))
             {
                 string valueString = values[i].ToString();
-                object from = ConvertFromObject(valueString.Substring(0, valueString.IndexOf("..")), propExpression.Type);
-                object to = ConvertFromObject(valueString.Substring(valueString.IndexOf("..") + 2), propExpression.Type);
+                object from = ConvertFromObject(
+                    valueString.Substring(0, valueString.IndexOf("..")), propExpression.Type);
+                object to = ConvertFromObject(
+                    valueString.Substring(valueString.IndexOf("..") + 2), propExpression.Type);
                 List<BinaryExpression> binaryExpressions = new List<BinaryExpression>();
                 if (from != null)
-                    binaryExpressions.Add(Expression.GreaterThanOrEqual(propExpression, Expression.Constant(from, propExpression.Type)));
+                    binaryExpressions.Add(Expression.GreaterThanOrEqual(
+                        propExpression, Expression.Constant(from, propExpression.Type)));
                 if (to != null)
-                    binaryExpressions.Add(Expression.LessThanOrEqual(propExpression, Expression.Constant(to, propExpression.Type)));
+                    binaryExpressions.Add(Expression.LessThanOrEqual(
+                        propExpression, Expression.Constant(to, propExpression.Type)));
                 switch (binaryExpressions.Count)
                 {
                     case 2:
@@ -205,7 +212,8 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="propExpression">A field of property</param>
     /// <param name="expressionType">Type of expression</param>
     /// <returns>Lambda expression with Equal() filter by id</returns>
-    private static Expression ByIdExpression(object[] values, MemberExpression propExpression, FilterExpressionType expressionType)
+    private static Expression ByIdExpression
+        (object[] values, MemberExpression propExpression, FilterExpressionType expressionType)
     {
         propExpression = Expression.Property(
             propExpression.Expression,

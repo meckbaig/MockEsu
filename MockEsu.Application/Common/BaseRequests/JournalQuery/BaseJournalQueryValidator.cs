@@ -41,26 +41,26 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => PropertyExists<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref key))
                 .WithMessage(x => $"Property '{JsonNamingPolicy.CamelCase.ConvertName(key)}' does not exist")
-                .WithErrorCode(ValidationErrorCode.PropertyDoesNotExist.ToString());
+                .WithErrorCode(ValidationErrorCode.PropertyDoesNotExistValidator.ToString());
 
             FilterExpression filterEx = null;
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => ExpressionIsValid<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref filterEx))
                 .WithMessage((query, filter) => $"{filter} - expression is undefined")
-                .WithErrorCode(ValidationErrorCode.ExpressionIsUndefined.ToString());
+                .WithErrorCode(ValidationErrorCode.ExpressionIsUndefinedValidator.ToString());
 
             FilterableAttribute attribute = null;
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => PropertyIsFilterable<TDestintaion, TSource>(filterEx, ref attribute))
                 .WithMessage((query, filter) => $"Property " +
                     $"'{JsonNamingPolicy.CamelCase.ConvertName(filterEx.Key)}' is not filterable")
-                .WithErrorCode(ValidationErrorCode.PropertyIsNotFilterable.ToString());
+                .WithErrorCode(ValidationErrorCode.PropertyIsNotFilterableValidator.ToString());
 
             string expressionErrorMessage = string.Empty;
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>(query, filterEx, attribute, ref expressionErrorMessage))
                 .WithMessage(x => expressionErrorMessage)
-                .WithErrorCode(ValidationErrorCode.CanNotCreateExpression.ToString());
+                .WithErrorCode(ValidationErrorCode.CanNotCreateExpressionValidator.ToString());
 
             return ruleBuilder;
         }
@@ -153,13 +153,13 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => PropertyExists<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref key))
                 .WithMessage(x => $"Property '{JsonNamingPolicy.CamelCase.ConvertName(key)}' does not exist")
-                .WithErrorCode(ValidationErrorCode.PropertyDoesNotExist.ToString());
+                .WithErrorCode(ValidationErrorCode.PropertyDoesNotExistValidator.ToString());
 
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => ExpressionIsValid<TQuery, TResponseList, TDestintaion, TSource>
                 (query, filter, mapper.ConfigurationProvider))
                 .WithMessage((query, filter) => $"{filter} - expression is undefined")
-                .WithErrorCode(ValidationErrorCode.ExpressionIsUndefined.ToString());
+                .WithErrorCode(ValidationErrorCode.ExpressionIsUndefinedValidator.ToString());
 
             return ruleBuilder;
         }

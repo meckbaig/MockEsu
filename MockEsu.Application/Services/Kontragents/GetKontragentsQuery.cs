@@ -31,7 +31,7 @@ public class GetKontragentsQueryValidator : BaseJournalQueryValidator
     }
 }
 
-public class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery, GetKontragentsResponse>
+internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery, GetKontragentsResponse>
 {
     private readonly IAppDbContext _context;
     private readonly IMapper _mapper;

@@ -5,7 +5,6 @@ namespace MockEsu.Application.Common.Exceptions;
 
 public class ValidationException : Exception
 {
-
     public ValidationException()
         : base("One or more validation errors occurred.")
     {
@@ -46,9 +45,9 @@ public record ErrorItem
 
 public enum ValidationErrorCode
 {
-    NotSpecifiedValidationError,
-    PropertyDoesNotExist,
-    ExpressionIsUndefined,
-    PropertyIsNotFilterable,
-    CanNotCreateExpression
+    NotSpecifiedValidationErrorValidator,
+    PropertyDoesNotExistValidator,
+    ExpressionIsUndefinedValidator,
+    PropertyIsNotFilterableValidator,
+    CanNotCreateExpressionValidator
 }
