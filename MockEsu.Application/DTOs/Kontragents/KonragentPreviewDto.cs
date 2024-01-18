@@ -1,9 +1,7 @@
 ﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common;
 using MockEsu.Application.Common.Attributes;
 using MockEsu.Domain.Entities;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MockEsu.Application.DTOs.Kontragents;
 
@@ -33,7 +31,7 @@ public record KonragentPreviewDto : BaseDto
     private class Mapping : Profile
     {
         public Mapping()
-        { 
+        {
             CreateMap<Kontragent, KonragentPreviewDto>()
                 .ForMember(m => m.DocumentNumber, opt => opt.MapFrom(o => o.KontragentAgreement.DocumentNumber))
                 .ForMember(m => m.PersonalAccount, opt => opt.MapFrom(o => o.KontragentAgreement.PersonalAccount))
@@ -67,4 +65,6 @@ public record KonragentPreviewDto : BaseDto
         //    }
         //}
     }
+
+    internal static Profile GetMapping() => new Mapping();
 }
