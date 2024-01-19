@@ -65,6 +65,4 @@ public record KonragentPreviewDto : BaseDto
         //    }
         //}
     }
-
-    internal static Profile GetMapping() => new Mapping();
 }

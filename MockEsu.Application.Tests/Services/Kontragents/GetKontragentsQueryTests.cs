@@ -1,43 +1,43 @@
+using System.Reflection;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.Interfaces;
-using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Application.Services.Kontragents;
 using MockEsu.Infrastructure.Data;
 
-namespace MockEsu.Application.Tests.Services.Kontragents
+namespace MockEsu.Application.Tests.Services.Kontragents;
+
+public class GetKontragentsQueryTests //: KontragentsApiFactory
 {
-    public class GetKontragentsQueryTests //: KontragentsApiFactory
+    private readonly GetKontragentsQueryHandler _handler;
+
+    public GetKontragentsQueryTests()
     {
-        private readonly GetKontragentsQueryHandler _handler;
+        //_container.StartAsync().Wait();
+        var dbContextOptions = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(//_container.GetConnectionString())
+                "Server=localhost;Port=5433;Database=MockEsu;User ID=postgres;Password=testtest;")
+            .Options;
+        IAppDbContext inMemoryContext = new AppDbContext(dbContextOptions);
 
-        public GetKontragentsQueryTests()
-        {
-            //_container.StartAsync().Wait();
-            var dbContextOptions = new DbContextOptionsBuilder<AppDbContext>()
-                .UseNpgsql(connectionString: //_container.GetConnectionString())
-                    "Server=localhost;Port=5433;Database=MockEsu;User ID=postgres;Password=testtest;")
-                .Options;
-            IAppDbContext inMemoryContext = new AppDbContext(dbContextOptions);
-            
-            var config = new MapperConfiguration(c => c.AddProfile(KonragentPreviewDto.GetMapping()));
-            var mapper = config.CreateMapper();
-            
-            _handler = new GetKontragentsQueryHandler(inMemoryContext, mapper);
-        }
+        var config = new MapperConfiguration(c =>
+            c.AddMaps(Assembly.GetAssembly(typeof(IAppDbContext))));
+        var mapper = config.CreateMapper();
 
-        [Fact]
-        public async Task GetKontragentsQuery_ReturnList_WhenNothingProvided()
-        {
-            // Arrange
-            var command = new GetKontragentsQuery();
+        _handler = new GetKontragentsQueryHandler(inMemoryContext, mapper);
+    }
 
-            // Act
-            var result = await _handler.Handle(command, default);
+    [Fact]
+    public async Task GetKontragentsQuery_ReturnList_WhenNothingProvided()
+    {
+        // Arrange
+        var command = new GetKontragentsQuery();
 
-            // Assert
-            Assert.NotNull(result?.Items);
-            Assert.Equal(result?.Items.Count, 13021);
-        }
+        // Act
+        var result = await _handler.Handle(command, default);
+
+        // Assert
+        Assert.NotNull(result?.Items);
+        Assert.Equal(result?.Items.Count, 13021);
     }
 }

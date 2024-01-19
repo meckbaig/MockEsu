@@ -10,21 +10,21 @@ namespace MockEsu.Application.Common
 {
     public record BaseDto
     {
-        public object this[string propertyName]
-        {
-            get
-            {
-                Type myType = GetType();
-                PropertyInfo myPropInfo = myType.GetProperty(propertyName);
-                return myPropInfo.GetValue(this, null);
-            }
-            set
-            {
-                Type myType = GetType();
-                PropertyInfo myPropInfo = myType.GetProperty(propertyName);
-                myPropInfo.SetValue(this, value, null);
-            }
-        }
+        // public object this[string propertyName]
+        // {
+        //     get
+        //     {
+        //         Type myType = GetType();
+        //         PropertyInfo myPropInfo = myType.GetProperty(propertyName);
+        //         return myPropInfo.GetValue(this, null);
+        //     }
+        //     set
+        //     {
+        //         Type myType = GetType();
+        //         PropertyInfo myPropInfo = myType.GetProperty(propertyName);
+        //         myPropInfo.SetValue(this, value, null);
+        //     }
+        // }
 
         /// <summary>
         /// Get map source name from DTO property name
