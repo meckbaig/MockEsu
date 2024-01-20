@@ -54,7 +54,8 @@ public record KonragentPreviewDto : BaseDto
         {
             if (address == null)
                 return string.Empty;
-            return $"г. {address.City.Name}, ул. {address.Street.Name}, д. {address.HouseName}, под. {address.PorchNumber}, кв. {address.Apartment}";
+            return
+                $"г. {address.City.Name}, ул. {address.Street.Name}, д. {address.HouseName}, под. {address.PorchNumber}, кв. {address.Apartment}";
         }
 
         //public class CustomResolver : IMemberValueResolver<Kontragent, KonragentPreviewDto, Address?, string?>

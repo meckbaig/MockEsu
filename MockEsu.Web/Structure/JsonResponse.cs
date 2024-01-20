@@ -9,7 +9,7 @@ namespace MockEsu.Web.Structure
         //public static readonly CustomExceptionHandler _exceptionHandler = new CustomExceptionHandler();
         //public static HttpContext _httpContext;
 
-        public static ContentResult ToJsonResponseAsync(this BaseResponse response)
+        public static ContentResult ToJsonResponse(this BaseResponse response)
         {
             var result = new ContentResult();
             if (response.GetException() != null)
