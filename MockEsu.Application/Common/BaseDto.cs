@@ -36,8 +36,8 @@ namespace MockEsu.Application.Common
         /// <returns>Source property path</returns>
         public static string GetSource<TSource, TDestintaion>(string sourceProperty, IConfigurationProvider provider, bool throwException = true)
         {
-            var internalAPI = InternalApi.Internal(provider);
-            var map = internalAPI.FindTypeMapFor<TSource, TDestintaion>();
+            var internalApi = InternalApi.Internal(provider);
+            var map = internalApi.FindTypeMapFor<TSource, TDestintaion>();
             var propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.DestinationMember.Name == sourceProperty);
 
             if (propertyMap == null)
