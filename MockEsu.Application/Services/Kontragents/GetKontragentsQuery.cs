@@ -1,14 +1,15 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
-using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using MockEsu.Application.Common.BaseRequests;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using MockEsu.Application.Common.BaseRequests.JournalQuery;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Entities;
+using Newtonsoft.Json;
 
 namespace MockEsu.Application.Services.Kontragents;
 
@@ -35,28 +36,35 @@ internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery,
 {
     private readonly IAppDbContext _context;
     private readonly IMapper _mapper;
-
-    public GetKontragentsQueryHandler(IAppDbContext context, IMapper mapper)
+    private readonly IDistributedCache _cache;
+    
+    public GetKontragentsQueryHandler(IAppDbContext context, IMapper mapper, IDistributedCache cache)
     {
         _context = context;
         _mapper = mapper;
+        _cache = cache;
     }
 
     public async Task<GetKontragentsResponse> Handle(GetKontragentsQuery request, CancellationToken cancellationToken)
     {
-        var query = await _context.Kontragents
-                .Include(k => k.KontragentAgreement)
-                .Include(k => k.Address).ThenInclude(a => a.City)
-                .Include(k => k.Address).ThenInclude(a => a.Street)
-                .Include(k => k.Address).ThenInclude(a => a.Region)
-                .AddFilters<Kontragent, KonragentPreviewDto>(request.GetFilterExpressions())
-                .Skip(request.skip).Take(request.take)
-                .AddOrderBy<Kontragent, KonragentPreviewDto>(request.GetOrderExpressions())
-                .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider)
-                .ToListAsync();
-        return new GetKontragentsResponse()
+        var query = _context.Kontragents
+            .Include(k => k.KontragentAgreement)
+            .Include(k => k.Address).ThenInclude(a => a.City)
+            .Include(k => k.Address).ThenInclude(a => a.Street)
+            .Include(k => k.Address).ThenInclude(a => a.Region)
+            .AddFilters<Kontragent, KonragentPreviewDto>(request.GetFilterExpressions())
+            .Skip(request.skip).Take(request.take)
+            .AddOrderBy<Kontragent, KonragentPreviewDto>(request.GetOrderExpressions())
+            .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider);
+
+        var result = await _cache.GetOrCreate(
+            request.GetKey(), 
+            () => query.ToList(), 
+            cancellationToken);
+        
+        return new GetKontragentsResponse
         {
-            Items = query
+            Items = result
         };
     }
 }

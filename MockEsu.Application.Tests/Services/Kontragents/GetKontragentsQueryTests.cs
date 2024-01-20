@@ -24,7 +24,7 @@ public class GetKontragentsQueryTests //: KontragentsApiFactory
             c.AddMaps(Assembly.GetAssembly(typeof(IAppDbContext))));
         var mapper = config.CreateMapper();
 
-        _handler = new GetKontragentsQueryHandler(inMemoryContext, mapper);
+        _handler = new GetKontragentsQueryHandler(inMemoryContext, mapper, default);
     }
 
     [Fact]

@@ -16,7 +16,7 @@ builder.Services.AddSwaggerGen(options =>
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "MockEsu.Web.xml"));
     options.OperationFilter<SwaggerDefaultValues>();
 });
-builder.Services.AddApplicationServices();
+builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
 //builder.Services.AddExceptionHandler<CustomExceptionHandler>();
 builder.Services.AddApiVersioning(options =>
