@@ -1,28 +1,39 @@
-﻿using MockEsu.Application.Common.Exceptions;
-using Microsoft.AspNetCore.Diagnostics;
-using MockEsu.Application.Common.BaseRequests;
-using static System.Net.WebRequestMethods;
+﻿using Microsoft.AspNetCore.Diagnostics;
+using MockEsu.Application.Common.Exceptions;
 using MockEsu.Web.Structure.CustomProblemDetails;
 
 namespace MockEsu.Web.Structure;
 
+/// <summary>
+/// Global exceptions handler
+/// </summary>
 public class CustomExceptionHandler : IExceptionHandler
 {
     private readonly Dictionary<Type, Func<HttpContext, Exception, Task>> _exceptionHandlers;
 
+    /// <summary>
+    /// Register known exception types and handlers.
+    /// </summary>
     public CustomExceptionHandler()
     {
-        // Register known exception types and handlers.
         _exceptionHandlers = new()
-            {
-                { typeof(ValidationException), HandleValidationException },
-                //{ typeof(NotFoundException), HandleNotFoundException },
-                //{ typeof(UnauthorizedAccessException), HandleUnauthorizedAccessException },
-                //{ typeof(ForbiddenAccessException), HandleForbiddenAccessException },
-            };
+        {
+            { typeof(ValidationException), HandleValidationException },
+            //{ typeof(NotFoundException), HandleNotFoundException },
+            //{ typeof(UnauthorizedAccessException), HandleUnauthorizedAccessException },
+            //{ typeof(ForbiddenAccessException), HandleForbiddenAccessException },
+        };
     }
 
-    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
+    /// <summary>
+    /// Handle the exception according to registred types
+    /// </summary>
+    /// <param name="httpContext">Request context</param>
+    /// <param name="exception">Error to hendle</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns></returns>
+    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception,
+        CancellationToken cancellationToken)
     {
         var exceptionType = exception.GetType();
 
@@ -31,17 +42,15 @@ public class CustomExceptionHandler : IExceptionHandler
             await _exceptionHandlers[exceptionType].Invoke(httpContext, exception);
             return true;
         }
-        else
+
+        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
         {
-            httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await httpContext.Response.WriteAsJsonAsync(new ProblemDetails()
-            {
-                Status = StatusCodes.Status500InternalServerError,
-                Type = "https://datatracker.ietf.org/doc/html/rfc9110#section-15.6.1",
-                Title = "Unhandled exception occurred.",
-                Detail = exception.Message
-            });
-        }
+            Status = StatusCodes.Status500InternalServerError,
+            Type = "https://datatracker.ietf.org/doc/html/rfc9110#section-15.6.1",
+            Title = "Unhandled exception occurred.",
+            Detail = exception.Message
+        });
         return false;
     }
 
@@ -68,8 +77,6 @@ public class CustomExceptionHandler : IExceptionHandler
         //        Detail = exception.Message
         //    });
         //}
-
-
     }
 
     //private async Task HandleNotFoundException(HttpContext httpContext, Exception ex)

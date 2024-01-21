@@ -58,7 +58,7 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="destinationPropertyName">Source prioer</param>
     /// <param name="provider">Configuraion provider for performing maps</param>
     /// <returns>Returns endpoint if success, null if error</returns>
-    public static string GetExpressionEndpoint<TSource, TDestintaion>
+    public static string? GetExpressionEndpoint<TSource, TDestintaion>
         (string destinationPropertyName, IConfigurationProvider provider)
     { 
         return BaseDto.GetSource<TSource, TDestintaion>
@@ -74,7 +74,7 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="provider">Configuraion provider for performing maps</param>
     /// <returns>Returns FilterExpression model if success, undefined FilterExpression
     /// if can not parse expression, null if error</returns>
-    public static FilterExpression GetFilterExpression
+    public static FilterExpression? GetFilterExpression
         <TSource, TDestintaion>
         (string filter, IConfigurationProvider provider)
         where TSource : BaseEntity
@@ -102,9 +102,9 @@ public static class EntityFrameworkFiltersExtension
         where TSource : BaseEntity
         where TDestintaion : BaseDto
     {
-        PropertyInfo prop = typeof(TDestintaion).GetProperties()
+        var prop = typeof(TDestintaion).GetProperties()
                 .FirstOrDefault(p => p.Name == filterEx.Key)!;
-        FilterableAttribute attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
+        var attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
             .FirstOrDefault(a => a.GetType() == typeof(FilterableAttribute))!;
         return attribute;
     }
@@ -117,7 +117,7 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="compareMethod">Method of comparison</param>
     /// <param name="filterEx">Filter expression</param>
     /// <returns>Filter expression if success, null if error</returns>
-    public static Expression GetLinqExpression<TSource, TDestintaion>
+    public static Expression? GetLinqExpression<TSource, TDestintaion>
         (CompareMethod compareMethod, FilterExpression filterEx)
         where TSource : BaseEntity
         where TDestintaion : BaseDto

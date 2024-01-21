@@ -53,8 +53,8 @@ internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery,
             .Include(k => k.Address).ThenInclude(a => a.Street)
             .Include(k => k.Address).ThenInclude(a => a.Region)
             .AddFilters<Kontragent, KonragentPreviewDto>(request.GetFilterExpressions())
-            .Skip(request.skip).Take(request.take)
             .AddOrderBy<Kontragent, KonragentPreviewDto>(request.GetOrderExpressions())
+            .Skip(request.skip).Take(request.take)
             .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider);
 
         var result = await _cache.GetOrCreate(

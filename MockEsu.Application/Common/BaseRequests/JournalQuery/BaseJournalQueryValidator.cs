@@ -78,7 +78,7 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
                 return true;
             key = FilterExpression.ToPascalCase(filter[..expressionIndex]);
 
-            string endPoint = EntityFrameworkFiltersExtension
+            string? endPoint = EntityFrameworkFiltersExtension
                 .GetExpressionEndpoint<TSource, TDestintaion>(key, provider);
             if (endPoint == null)
                 return false;

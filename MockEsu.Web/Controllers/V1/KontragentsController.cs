@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MockEsu.Application.Services.Kontragents;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace MockEsu.Web.Controllers.V1
 {

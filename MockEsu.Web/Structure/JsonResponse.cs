@@ -4,11 +4,17 @@ using MockEsu.Application.Common.BaseRequests;
 
 namespace MockEsu.Web.Structure
 {
+    /// <summary>
+    /// Class for returning result as Json
+    /// </summary>
     public static class JsonResponseClass
     {
-        //public static readonly CustomExceptionHandler _exceptionHandler = new CustomExceptionHandler();
-        //public static HttpContext _httpContext;
-
+        /// <summary>
+        /// Returns response as Json or throws exception from response
+        /// </summary>
+        /// <param name="response">Response model</param>
+        /// <returns>Json content result</returns>
+        /// <exception cref="Exception">Exception from response</exception>
         public static ContentResult ToJsonResponse(this BaseResponse response)
         {
             var result = new ContentResult();
@@ -19,10 +25,5 @@ namespace MockEsu.Web.Structure
             result.ContentType = "application/json";
             return result;
         }
-
-        //public static void InitCustomExceptionHandler(HttpContext httpContext)
-        //{
-        //    _httpContext = httpContext;
-        //}
     }
 }
