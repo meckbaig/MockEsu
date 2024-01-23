@@ -16,6 +16,10 @@ namespace MockEsu.Application.Services.Kontragents;
 public record GetKontragentsQuery : BaseListQuery<GetKontragentsResponse>
 {
     //public string qwerty { get; set; }
+    public override int skip { get; set; }
+    public override int take { get; set; }
+    public override string[]? filters { get; set; }
+    public override string[]? orderBy { get; set; }
 }
 
 public class GetKontragentsResponse : BaseListQueryResponse<KonragentPreviewDto>
@@ -54,7 +58,7 @@ internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery,
             .Include(k => k.Address).ThenInclude(a => a.Region)
             .AddFilters<Kontragent, KonragentPreviewDto>(request.GetFilterExpressions())
             .AddOrderBy<Kontragent, KonragentPreviewDto>(request.GetOrderExpressions())
-            .Skip(request.skip).Take(request.take)
+            .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)
             .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider);
 
         var result = await _cache.GetOrCreate(

@@ -6,14 +6,14 @@ using MockEsu.Application.Extensions.ListFilters;
 
 namespace MockEsu.Application.Common.BaseRequests.JournalQuery;
 
-public record BaseListQuery<TResponse> : BaseRequest<TResponse>
+public abstract record BaseListQuery<TResponse> : BaseRequest<TResponse>
     where TResponse : BaseResponse
 {
     // ReSharper disable InconsistentNaming
-    public int skip { get; set; }
-    public int take { get; set; } = int.MaxValue;
-    public string[]? filters { get; set; }
-    public string[]? orderBy { get; set; }
+    public abstract int skip { get; set; }
+    public abstract int take { get; set; }
+    public abstract string[]? filters { get; set; }
+    public abstract string[]? orderBy { get; set; }
     // ReSharper restore InconsistentNaming
 
     private readonly List<Expression> _filterExpressions = [];
