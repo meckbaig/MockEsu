@@ -1,9 +1,12 @@
 using System.Reflection;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Services.Kontragents;
 using MockEsu.Infrastructure.Data;
+using Moq;
+using NSubstitute;
 
 namespace MockEsu.Application.Tests.Services.Kontragents;
 
@@ -23,8 +26,9 @@ public class GetKontragentsQueryTests //: KontragentsApiFactory
         var config = new MapperConfiguration(c =>
             c.AddMaps(Assembly.GetAssembly(typeof(IAppDbContext))));
         var mapper = config.CreateMapper();
+        var cache = Substitute.For<IDistributedCache>();
 
-        _handler = new GetKontragentsQueryHandler(inMemoryContext, mapper, default);
+        _handler = new GetKontragentsQueryHandler(inMemoryContext, mapper, cache);
     }
 
     [Fact]
