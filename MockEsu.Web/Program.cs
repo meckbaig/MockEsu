@@ -1,4 +1,8 @@
+using System.Diagnostics;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using MockEsu.Web.Structure.Swagger;
 
@@ -7,6 +11,27 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 var exceptionMiddleware = new CustomExceptionHandler();
+
+builder.Services.AddAuthentication(x =>
+{
+    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(x =>
+{
+    x.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidIssuer = "meckbaig",
+        ValidAudience = "users",
+        IssuerSigningKey = new SymmetricSecurityKey("MockEsuBackend123456565644665456"u8.ToArray()) ,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ClockSkew = Debugger.IsAttached ? TimeSpan.Zero : TimeSpan.FromMinutes(5),
+        ValidateIssuerSigningKey = true
+    };
+});
+builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -53,6 +78,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.Use(async (context, next) =>
