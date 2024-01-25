@@ -21,6 +21,7 @@ builder.Services.AddAuthentication(x =>
 {
     x.TokenValidationParameters = new TokenValidationParameters
     {
+        ///TODO: store securily
         ValidIssuer = "meckbaig",
         ValidAudience = "users",
         IssuerSigningKey = new SymmetricSecurityKey("MockEsuBackend123456565644665456"u8.ToArray()) ,
@@ -41,9 +42,6 @@ builder.Services.AddSwaggerGen(options =>
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "MockEsu.Web.xml"));
     options.OperationFilter<SwaggerDefaultValues>();
 });
-builder.Services.AddApplicationServices(builder.Configuration);
-builder.Services.AddInfrastructureServices(builder.Configuration);
-//builder.Services.AddExceptionHandler<CustomExceptionHandler>();
 builder.Services.AddApiVersioning(options =>
 {
     options.AssumeDefaultVersionWhenUnspecified = true;
@@ -55,6 +53,10 @@ builder.Services.AddApiVersioning(options =>
     options.GroupNameFormat = "'v'VVV";
     options.SubstituteApiVersionInUrl = true;
 });
+
+builder.Services.AddApplicationServices(builder.Configuration);
+builder.Services.AddInfrastructureServices(builder.Configuration);
+//builder.Services.AddExceptionHandler<CustomExceptionHandler>();
 
 var app = builder.Build();
 
@@ -94,9 +96,6 @@ app.Use(async (context, next) =>
 });
 
 app.MapControllers();
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=FilesController}");
 app.UseCors(builder => builder
      .AllowAnyOrigin()
      .AllowAnyMethod()
