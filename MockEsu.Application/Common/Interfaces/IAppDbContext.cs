@@ -13,6 +13,8 @@ public interface IAppDbContext
     DbSet<Region> Regions { get; }
     DbSet<Street> Streets { get; }
     DbSet<PaymentContract> PaymentContracts { get; }
+    DbSet<User> Users { get; }
+    DbSet<Role> Roles { get; }
 
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

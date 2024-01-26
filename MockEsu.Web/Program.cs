@@ -5,6 +5,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using MockEsu.Web.Structure.Swagger;
+using MockEsu.Web.Structure.OptionsSetup;
+using MockEsu.Application.Common.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,21 +19,9 @@ builder.Services.AddAuthentication(x =>
     x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     x.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(x =>
-{
-    x.TokenValidationParameters = new TokenValidationParameters
-    {
-        ///TODO: store securily
-        ValidIssuer = "meckbaig",
-        ValidAudience = "users",
-        IssuerSigningKey = new SymmetricSecurityKey("MockEsuBackend123456565644665456"u8.ToArray()) ,
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ClockSkew = Debugger.IsAttached ? TimeSpan.Zero : TimeSpan.FromMinutes(5),
-        ValidateIssuerSigningKey = true
-    };
-});
+}).AddJwtBearer();
+builder.Services.ConfigureOptions<JwtOptionsSetup>();
+builder.Services.ConfigureOptions<JwtBearerOptionsSetup>();
 builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();

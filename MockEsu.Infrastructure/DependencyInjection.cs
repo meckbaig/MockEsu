@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Infrastructure.Interceptors;
 using MockEsu.Infrastructure.Data;
+using MockEsu.Infrastructure.Authentification;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +24,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
+        services.AddSingleton<IJwtProvider, JwtProvider>();
 
         //services.AddScoped<AppDbContextInitialiser>();
 
