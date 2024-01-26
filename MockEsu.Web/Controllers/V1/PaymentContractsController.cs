@@ -23,4 +23,14 @@ public class PaymentContractsController : ControllerBase
         var result = await _mediator.Send(query);
         return result.ToJsonResponse();
     }
+    
+    [HttpGet]
+    [Route("Admin")]
+    [Authorize(Roles = "admin, boss")]
+    public async Task<ActionResult<GetPaymentContractsResponse>> GetListOnlyAdmin([FromQuery] GetPaymentContractsQuery query)
+    {
+        query.take = 1;
+        var result = await _mediator.Send(query);
+        return result.ToJsonResponse();
+    }
 }

@@ -1,22 +1,20 @@
-﻿using System.Linq.Dynamic.Core.Tokenizer;
-using System.Security.Authentication;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
-using AutoMapper;
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Domain.Entities;
+using System.Security.Authentication;
+using System.Security.Claims;
+using System.Text;
 
 namespace MockEsu.Application.Services.Authorization;
 
 public record AuthorizeUserQuery : BaseRequest<AuthorizeUserResponse>
 {
     public string login { get; set; }
+
     public int clientId { get; set; }
     //public Dictionary<string, string> customClaims { get; set; }
 }
@@ -37,15 +35,15 @@ public class AuthorizeUserQueryValidator : AbstractValidator<AuthorizeUserQuery>
 
 public class AuthorizeUserQueryHandler : IRequestHandler<AuthorizeUserQuery, AuthorizeUserResponse>
 {
+    ///TODO: store securily
     private const string TokenSecret = "MockEsuBackend123456565644665456";
+
     private static readonly TimeSpan TokenLifeTime = TimeSpan.FromMinutes(1);
     private readonly IAppDbContext _context;
-    private readonly IMapper _mapper;
 
-    public AuthorizeUserQueryHandler(IAppDbContext context, IMapper mapper)
+    public AuthorizeUserQueryHandler(IAppDbContext context)
     {
         _context = context;
-        _mapper = mapper;
     }
 
     public async Task<AuthorizeUserResponse> Handle(AuthorizeUserQuery request, CancellationToken cancellationToken)
@@ -55,16 +53,17 @@ public class AuthorizeUserQueryHandler : IRequestHandler<AuthorizeUserQuery, Aut
             throw new AuthenticationException($"Unable to find user with id {request.clientId}");
 
         var tokenHandler = new JsonWebTokenHandler();
-        
-        var claims = new List<Claim>()
+
+        var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Sub, request.login),
+            new(JwtRegisteredClaimNames.PhoneNumber, kontragent.PhoneNumber),
             new("userId", kontragent.Id.ToString()),
-            new("phone", kontragent.PhoneNumber)
+            new(ClaimTypes.Role, request.login == "meckbaig" ? "admin" : "user")
         };
 
-        var tokenDesctiptor = new SecurityTokenDescriptor()
+        var tokenDesctiptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.Add(TokenLifeTime),
@@ -76,6 +75,6 @@ public class AuthorizeUserQueryHandler : IRequestHandler<AuthorizeUserQuery, Aut
         };
         var token = tokenHandler.CreateToken(tokenDesctiptor);
         var jwt = tokenHandler.ReadJsonWebToken(token);
-        return new AuthorizeUserResponse() { Token = jwt.UnsafeToString() };
+        return new AuthorizeUserResponse { Token = jwt.UnsafeToString() };
     }
 }
