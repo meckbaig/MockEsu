@@ -1,12 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using MockEsu.Application.Common.Interfaces;
-using MockEsu.Infrastructure.Interceptors;
-using MockEsu.Infrastructure.Data;
-using MockEsu.Infrastructure.Authentification;
-using Microsoft.AspNetCore.Identity;
 using MockEsu.Domain.Entities;
+using MockEsu.Infrastructure.Authentification;
+using MockEsu.Infrastructure.Data;
+using MockEsu.Infrastructure.Interceptors;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
