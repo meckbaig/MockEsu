@@ -26,6 +26,8 @@ public class User : BaseEntity
     [Required]
     [ForeignKey(nameof(Role))]
     public int RoleId { get; set; }
+    [Required]
+    public bool Deleted { get; set; }
 
     public Role Role { get; set; }
 }

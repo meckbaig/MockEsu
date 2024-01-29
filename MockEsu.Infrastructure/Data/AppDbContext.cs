@@ -38,6 +38,8 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<User> Users
         => Set<User>();
 
+    public IQueryable<User> UsersInService => Users.Where(u => !u.Deleted);
+
     public DbSet<Role> Roles
         => Set<Role>();
 

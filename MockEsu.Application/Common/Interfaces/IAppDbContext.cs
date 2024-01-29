@@ -14,6 +14,7 @@ public interface IAppDbContext
     DbSet<Street> Streets { get; }
     DbSet<PaymentContract> PaymentContracts { get; }
     DbSet<User> Users { get; }
+    IQueryable<User> UsersInService { get; }
     DbSet<Role> Roles { get; }
 
 
