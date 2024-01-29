@@ -16,7 +16,7 @@ namespace MockEsu.Application.Extensions.ListFilters;
 /// </summary>
 /// <typeparam name="TSource">Source of DTO type</typeparam>
 /// <typeparam name="TDestintaion">DTO type</typeparam>
-public record FilterExpression : EntityFrameworkExpression<FilterExpressionType>
+public record FilterExpression : IEntityFrameworkExpression<FilterExpressionType>
 {
     /// <summary>
     /// DTO key

@@ -5,7 +5,7 @@ using MockEsu.Domain.Common;
 
 namespace MockEsu.Application.Extensions.ListFilters;
 
-public record OrderByExpression : EntityFrameworkExpression<OrderByExpressionType>
+public record OrderByExpression : IEntityFrameworkExpression<OrderByExpressionType>
 {
     public string? Key { get; set; }
     public string? EndPoint { get; set; }

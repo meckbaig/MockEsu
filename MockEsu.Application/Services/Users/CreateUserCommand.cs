@@ -2,8 +2,10 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Interfaces;
+using MockEsu.Application.Extensions;
 using MockEsu.Domain.Entities;
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
@@ -27,25 +29,11 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
 {
     public CreateUserCommandValidator(IAppDbContext context)
     {
-        RuleFor(x => x.name).MinimumLength(4);
-        RuleFor(x => x.password).MinimumLength(6);
-        RuleFor(x => x.email).Must(BeValidEmail)
-            .WithMessage((q, p) => $"'{p}' is not valid email")
-            .WithErrorCode("NotValidEmailValidator");
-        RuleFor(x => x.role).Must((q, p) => BeExistingRole(p, context))
-            .WithMessage((q, p) => $"'{p} is not existing role'")
-            .WithErrorCode("NotExistingRoleValidator");
-    }
-
-    private bool BeExistingRole(string role, IAppDbContext context)
-    {
-        return context.Roles.FirstOrDefault(r => r.Name.Equals(role, StringComparison.CurrentCultureIgnoreCase)) != null;
-    }
-
-    private bool BeValidEmail(string email)
-    {
-        Regex regex = new Regex(@"^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$");
-        return regex.IsMatch(email);
+        RuleFor(x => x.name).MinimumLength(4).MaximumLength(100);
+        RuleFor(x => x.password).MinimumLength(6).MaximumLength(30);
+        RuleFor(x => x.email).MaximumLength(320);
+        RuleFor(x => x.email).EmailAddress();
+        RuleFor(x => x.role).MustBeExistingRole(context);
     }
 }
 

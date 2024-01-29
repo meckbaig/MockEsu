@@ -7,7 +7,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text.Json;
 
 namespace MockEsu.Application.Extensions.ListFilters;
 
@@ -60,7 +59,7 @@ public static class EntityFrameworkFiltersExtension
     /// <returns>Returns endpoint if success, null if error</returns>
     public static string? GetExpressionEndpoint<TSource, TDestintaion>
         (string destinationPropertyName, IConfigurationProvider provider)
-    { 
+    {
         return BaseDto.GetSource<TSource, TDestintaion>
             (destinationPropertyName, provider, throwException: false);
     }
@@ -161,48 +160,52 @@ public static class EntityFrameworkFiltersExtension
         Expression expression = Expression.Empty();
         for (int i = 0; i < values.Length; i++)
         {
-            Expression newExpression;
-            if (values[i].ToString()!.Contains(".."))
-            {
-                string valueString = values[i].ToString();
-                object from = ConvertFromObject(
-                    valueString.Substring(0, valueString.IndexOf("..")), propExpression.Type);
-                object to = ConvertFromObject(
-                    valueString.Substring(valueString.IndexOf("..") + 2), propExpression.Type);
-                List<BinaryExpression> binaryExpressions = new List<BinaryExpression>();
-                if (from != null)
-                    binaryExpressions.Add(Expression.GreaterThanOrEqual(
-                        propExpression, Expression.Constant(from, propExpression.Type)));
-                if (to != null)
-                    binaryExpressions.Add(Expression.LessThanOrEqual(
-                        propExpression, Expression.Constant(to, propExpression.Type)));
-                switch (binaryExpressions.Count)
-                {
-                    case 2:
-                        newExpression = Expression.AndAlso(binaryExpressions[0], binaryExpressions[1]);
-                        break;
-                    case 1:
-                        newExpression = binaryExpressions[0];
-                        break;
-                    default:
-                        throw new Exception($"Can not translate expression {valueString}");
-                }
-            }
-            else
-            {
-                object value = ConvertFromObject(values[i], propExpression.Type);
-                newExpression = Expression.Equal(propExpression, Expression.Constant(value, propExpression.Type));
-            }
-
             if (i == 0)
-                expression = newExpression;
+                expression = GetSingleEqualExpression(values[i], propExpression);
             else
-                expression = Expression.OrElse(expression, newExpression);
+                expression = Expression.OrElse(expression,
+                    GetSingleEqualExpression(values[i], propExpression));
         }
         if (expressionType == FilterExpressionType.Include)
             return expression;
         else
             return Expression.Not(expression);
+    }
+
+    private static Expression GetSingleEqualExpression(object value, MemberExpression propExpression)
+    {
+        if (value.ToString()!.Contains(".."))
+        {
+            string valueString = value.ToString();
+            object from = ConvertFromObject(
+                valueString.Substring(0, valueString.IndexOf("..")), propExpression.Type);
+            object to = ConvertFromObject(
+                valueString.Substring(valueString.IndexOf("..") + 2), propExpression.Type);
+            List<BinaryExpression> binaryExpressions = new List<BinaryExpression>();
+            if (from != null)
+                binaryExpressions.Add(Expression.GreaterThanOrEqual(
+                    propExpression, Expression.Constant(from, propExpression.Type)));
+            if (to != null)
+                binaryExpressions.Add(Expression.LessThanOrEqual(
+                    propExpression, Expression.Constant(to, propExpression.Type)));
+            switch (binaryExpressions.Count)
+            {
+                case 2:
+                    return Expression.AndAlso(binaryExpressions[0], binaryExpressions[1]);
+                case 1:
+                    return binaryExpressions[0];
+                default:
+                    throw new Exception($"Can not translate expression {valueString}");
+            }
+        }
+        else
+        {
+            return Expression.Equal(
+                propExpression,
+                Expression.Constant(
+                    ConvertFromObject(value, propExpression.Type),
+                    propExpression.Type));
+        }
     }
 
     /// <summary>
