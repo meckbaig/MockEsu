@@ -19,6 +19,7 @@ public class AuthorizationController : ControllerBase
     }
 
     [HttpGet]
+    [Route("List")]
     [ApiVersion("1.1")]
     [ApiVersion("1.2")]
     public async Task<ActionResult<AuthorizeUserResponse>> GetList([FromQuery] AuthorizeUserQuery query)
@@ -26,7 +27,7 @@ public class AuthorizationController : ControllerBase
         var result = await _mediator.Send(query);
         return result.ToJsonResponse();
     }
-
+    
     [HttpGet]
     [Route("GetEndpoints")]
     public Task<List<EndpointInfo>> GetEndpoints()

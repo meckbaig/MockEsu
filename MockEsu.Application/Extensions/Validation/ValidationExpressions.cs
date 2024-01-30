@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace MockEsu.Application.Extensions;
+namespace MockEsu.Application.Extensions.Validation;
 
 internal static class ValidationExpressions
 {
@@ -19,9 +19,25 @@ internal static class ValidationExpressions
             .WithMessage((q, p) => $"'{p} is not existing role'")
             .WithErrorCode("NotExistingRoleValidator");
     }
+
+    public static IRuleBuilderOptions<T, int?> MustBeExistingRoleOrNull
+        <T>(this IRuleBuilder<T, int?> ruleBuilder, IAppDbContext context)
+    {
+        return ruleBuilder.Must((q, p) => BeExistingRoleOrNull(p, context))
+            .WithMessage((q, p) => $"Role with id '{p}' does not exists")
+            .WithErrorCode("NotExistingRoleValidator");
+    }
+
     private static bool BeExistingRole(string role, IAppDbContext context)
     {
         return context.Roles.FirstOrDefault(r => r.Name.ToLower() == role.ToLower()) != null;
+    }
+
+    private static bool BeExistingRoleOrNull(int? roleId, IAppDbContext context)
+    {
+        if (roleId == null)
+            return true;
+        return context.Roles.FirstOrDefault(r => r.Id == roleId) != null;
     }
 
     //private static bool BeValidEmail(string email)
