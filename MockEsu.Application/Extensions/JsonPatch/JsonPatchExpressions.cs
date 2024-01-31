@@ -1,26 +1,37 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.JsonPatch.Adapters;
 using MockEsu.Application.Common;
 using MockEsu.Domain.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Newtonsoft.Json.Serialization;
 
 namespace MockEsu.Application.Extensions.JsonPatch;
 
 internal static class JsonPatchExpressions
 {
-    internal static TDestination ApplyTo<TDto, TDestination>
+    private static IObjectAdapter? _adapter;
+
+    public static IObjectAdapter Adapter
+    {
+        get
+        {
+            if (_adapter == null)
+            {
+                IAdapterFactory factory = CustomAdapterFactory.Default;
+                _adapter = new ObjectAdapter(new DefaultContractResolver(), null, factory);
+            }
+            return _adapter;
+        }
+    }
+
+    internal static TDestination? ApplyToSource<TDto, TDestination>
         (this JsonPatchDocument<TDto> patch, TDestination? destination, IMapper mapper)
         where TDto : BaseDto
         where TDestination : BaseEntity
     {
         var dto = mapper.Map<TDto>(destination);
-        patch.ApplyTo(dto);
+        patch.ApplyTo(dto, Adapter);
         mapper.Map(dto, destination);
         return destination;
     }
-
 }
