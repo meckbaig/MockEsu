@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Traiffs;
 using System.Reflection;
 
 namespace MockEsu.Infrastructure.Data;
@@ -38,10 +39,17 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<User> Users
         => Set<User>();
 
-    public IQueryable<User> UsersInService => Users.Where(u => !u.Deleted);
+    public IQueryable<User> UsersInService 
+        => Users.Where(u => !u.Deleted);
 
     public DbSet<Role> Roles
         => Set<Role>();
+
+    public DbSet<Tariff> Tariffs
+        => Set<Tariff>();
+
+    public DbSet<TariffPrice> TariffPrices
+        => Set<TariffPrice>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

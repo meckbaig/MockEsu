@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Traiffs;
 
 namespace MockEsu.Application.Common.Interfaces;
 
@@ -16,6 +17,8 @@ public interface IAppDbContext
     DbSet<User> Users { get; }
     IQueryable<User> UsersInService { get; }
     DbSet<Role> Roles { get; }
+    DbSet<Tariff> Tariffs { get; }
+    DbSet<TariffPrice> TariffPrices { get; }
 
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
