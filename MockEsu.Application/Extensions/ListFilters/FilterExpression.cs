@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using MockEsu.Application.Common;
 using MockEsu.Application.Extensions.ListFilters;
+using MockEsu.Application.Extensions.StringExtencions;
 using MockEsu.Domain.Common;
 using System;
 using System.Collections.Generic;
@@ -53,14 +54,14 @@ public record FilterExpression : IEntityFrameworkExpression<FilterExpressionType
         var f = new FilterExpression();
         if (filter.Contains("!:"))
         {
-            f.Key = ToPascalCase(filter[..filter.IndexOf("!:")]);
+            f.Key = filter[..filter.IndexOf("!:")].ToPascalCase();
             f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.Value = filter[(filter.IndexOf("!:") + 2)..];
             f.ExpressionType = FilterExpressionType.Exclude;
         }
         else if (filter.Contains(':'))
         {
-            f.Key = ToPascalCase(filter[..filter.IndexOf(':')]);
+            f.Key = filter[..filter.IndexOf(':')].ToPascalCase();
             f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.Value = filter[(filter.IndexOf(':') + 1)..];
             f.ExpressionType = FilterExpressionType.Include;
@@ -68,18 +69,6 @@ public record FilterExpression : IEntityFrameworkExpression<FilterExpressionType
         else
             f.ExpressionType = FilterExpressionType.Undefined;
         return f;
-    }
-
-    /// <summary>
-    /// Converts a string to pascal case
-    /// </summary>
-    /// <param name="value">input string</param>
-    /// <returns>String in pascal case</returns>
-    public static string ToPascalCase(string value)
-    {
-        if (value.Length <= 1)
-            return value.ToUpper();
-        return $"{value[0].ToString().ToUpper()}{value.Substring(1)}";
     }
 }
 

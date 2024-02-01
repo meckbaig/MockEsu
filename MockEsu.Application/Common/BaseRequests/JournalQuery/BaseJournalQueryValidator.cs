@@ -1,10 +1,9 @@
 ﻿using AutoMapper;
 using FluentValidation;
-using Microsoft.AspNetCore.Http;
 using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Extensions.ListFilters;
-using MockEsu.Application.Extensions.ListFilters;
+using MockEsu.Application.Extensions.StringExtencions;
 using MockEsu.Domain.Common;
 using System.Text.Json;
 
@@ -76,7 +75,7 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
                 expressionIndex = filter.IndexOf(":");
             else
                 return true;
-            key = FilterExpression.ToPascalCase(filter[..expressionIndex]);
+            key = filter[..expressionIndex].ToPascalCase();
 
             string? endPoint = EntityFrameworkFiltersExtension
                 .GetExpressionEndpoint<TSource, TDestintaion>(key, provider);
@@ -167,9 +166,9 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
         private static bool PropertyExists<TSource, TDestintaion>(string filter, IConfigurationProvider provider, ref string key)
         {
             if (filter.Contains(' '))
-                key = FilterExpression.ToPascalCase(filter[..filter.IndexOf(' ')]);
+                key = filter[..filter.IndexOf(' ')].ToPascalCase();
             else
-                key = FilterExpression.ToPascalCase(filter);
+                key = filter.ToPascalCase();
             string endPoint = EntityFrameworkOrderByExtension
                 .GetExpressionEndpoint<TSource, TDestintaion>(key, provider);
             if (endPoint == null)
