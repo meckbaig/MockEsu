@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using MockEsu.Application.Common.Attributes;
+using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Application.Extensions.StringExtencions;
@@ -39,7 +40,7 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             string key = string.Empty;
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => PropertyExists<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref key))
-                .WithMessage(x => $"Property '{JsonNamingPolicy.CamelCase.ConvertName(key)}' does not exist")
+                .WithMessage(x => $"Property '{key.ToCamelCase()}' does not exist")
                 .WithErrorCode(ValidationErrorCode.PropertyDoesNotExistValidator.ToString());
 
             FilterExpression filterEx = null;
@@ -52,7 +53,7 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => PropertyIsFilterable<TDestintaion, TSource>(filterEx, ref attribute))
                 .WithMessage((query, filter) => $"Property " +
-                    $"'{JsonNamingPolicy.CamelCase.ConvertName(filterEx.Key)}' is not filterable")
+                    $"'{filterEx.Key.ToCamelCase()}' is not filterable")
                 .WithErrorCode(ValidationErrorCode.PropertyIsNotFilterableValidator.ToString());
 
             string expressionErrorMessage = string.Empty;
@@ -151,7 +152,7 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             string key = string.Empty;
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => PropertyExists<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref key))
-                .WithMessage(x => $"Property '{JsonNamingPolicy.CamelCase.ConvertName(key)}' does not exist")
+                .WithMessage(x => $"Property '{key.ToCamelCase()}' does not exist")
                 .WithErrorCode(ValidationErrorCode.PropertyDoesNotExistValidator.ToString());
 
             ruleBuilder = ruleBuilder

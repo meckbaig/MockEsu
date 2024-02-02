@@ -1,4 +1,6 @@
-﻿namespace MockEsu.Application.Extensions.StringExtencions;
+﻿using System.Text.Json;
+
+namespace MockEsu.Application.Extensions.StringExtencions;
 
 internal static class StringExtencions
 {
@@ -12,5 +14,15 @@ internal static class StringExtencions
         if (value.Length <= 1)
             return value.ToUpper();
         return $"{value[0].ToString().ToUpper()}{value.Substring(1)}";
+    }
+
+    /// <summary>
+    /// Converts a string to camel case
+    /// </summary>
+    /// <param name="value">input string</param>
+    /// <returns>String in camel case</returns>
+    public static string ToCamelCase(this string value)
+    {
+        return JsonNamingPolicy.CamelCase.ConvertName(value);
     }
 }
