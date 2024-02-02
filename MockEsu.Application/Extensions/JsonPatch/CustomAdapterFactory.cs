@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.JsonPatch.Adapters;
 using Microsoft.AspNetCore.JsonPatch.Internal;
+using Microsoft.EntityFrameworkCore;
 using MockEsu.Domain.Common;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -34,6 +35,11 @@ public class CustomAdapterFactory : IAdapterFactory
             return new CustomListAdapter();
         }
 
+        if (target is DbSet<BaseEntity>)
+        {
+            return new CustomDbSetAdapter();
+        }
+
         if (jsonContract is JsonDictionaryContract jsonDictionaryContract)
         {
             return (IAdapter)Activator
@@ -49,6 +55,70 @@ public class CustomAdapterFactory : IAdapterFactory
         }
 
         return new PocoAdapter();
+    }
+}
+
+public class CustomDbSetAdapter : IAdapter
+{
+    public bool TryAdd(
+        object target, 
+        string segment, 
+        IContractResolver contractResolver, 
+        object value, 
+        out string errorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool TryGet(
+        object target, 
+        string segment, 
+        IContractResolver 
+        contractResolver, 
+        out object value, 
+        out string errorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+    
+    public bool TryRemove(
+        object target,
+        string segment,
+        IContractResolver contractResolver,
+        out string errorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool TryReplace(
+        object target,
+        string segment,
+        IContractResolver contractResolver,
+        object value,
+        out string errorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool TryTest(
+        object target,
+        string segment,
+        IContractResolver contractResolver,
+        object value,
+        out string errorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool TryTraverse(
+        object target,
+        string segment,
+        IContractResolver contractResolver,
+        out object nextTarget,
+        out string errorMessage)
+    {
+        throw new NotImplementedException();
     }
 }
 

@@ -1,17 +1,14 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using MediatR;
-using MockEsu.Application.Common.BaseRequests;
-using MockEsu.Application.Common.Interfaces;
-using MockEsu.Application.Extensions;
-using MockEsu.Application.DTOs.Users;
-using MockEsu.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.JsonPatch;
-using MockEsu.Application.Common;
-using MockEsu.Domain.Common;
+using Microsoft.EntityFrameworkCore;
+using MockEsu.Application.Common.BaseRequests;
+using MockEsu.Application.Common.Interfaces;
+using MockEsu.Application.DTOs.Users;
 using MockEsu.Application.Extensions.JsonPatch;
+using MockEsu.Domain.Entities;
 
 namespace MockEsu.Application.Services.Users;
 
@@ -19,7 +16,7 @@ public record UpdateUserCommand : BaseRequest<UpdateUserResponse>
 {
     //public UserEditDto Item { get; set; }
     public int Id { get; set; }
-    public JsonPatchDocument<UserEditDto> Patch {  get; set; }
+    public JsonPatchDocument<UserEditDto> Patch { get; set; }
 }
 
 public class UpdateUserResponse : BaseResponse
@@ -60,7 +57,7 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Updat
         if (user == null)
             throw new KeyNotFoundException("Unable to find user");
 
-        request.Patch.ApplyTo(user, _mapper);
+        request.Patch.ApplyToSource(user, _mapper);
         _context.SaveChanges();
 
         return new UpdateUserResponse

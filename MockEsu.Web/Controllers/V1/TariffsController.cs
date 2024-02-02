@@ -1,9 +1,6 @@
 ﻿using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.AspNetCore.Mvc;
-using MockEsu.Application.DTOs.Tariffs;
-using MockEsu.Application.DTOs.Users;
+using MockEsu.Application.Services.Kontragents;
 using MockEsu.Application.Services.Tariffs;
-using MockEsu.Application.Services.Users;
 
 namespace MockEsu.Web.Controllers.V1
 {
@@ -30,16 +27,21 @@ namespace MockEsu.Web.Controllers.V1
             return result.ToJsonResponse();
         }
 
-        //[HttpPatch]
-        //[Route("{id}/prices/{priceId}")]
-        //public async Task<ActionResult<JsonPatchPricesResponse>> Update(
-        //    int id, string priceId,
-        //    [FromBody] JsonPatchDocument<TariffPriceEditDto> items)
-        //{
-        //    var pair = new JsonPatchPair<TariffPriceEditDto>(priceId, [items]);
-        //    JsonPatchPricesCommand command = new() { Id = id, Patch = [pair] };
-        //    var result = await _mediator.Send(command);
-        //    return result.ToJsonResponse();
-        //}
+        [HttpPatch]
+        public async Task<ActionResult<JsonPatchTariffsResponse>> UpdateList(
+            [FromBody] JsonPatchDocument<TariffDto> items)
+        {
+            JsonPatchTariffsCommand command = new() { Patch = items };
+            var result = await _mediator.Send(command);
+            return result.ToJsonResponse();
+        }
+
+        [HttpGet]
+        [Route("Get")]
+        public async Task<ActionResult<GetTariffsResponse>> GetList([FromQuery] GetTariffsQuery query)
+        {
+            var result = await _mediator.Send(query);
+            return result.ToJsonResponse();
+        }
     }
 }
