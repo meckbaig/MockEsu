@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
-using MockEsu.Application.Common;
 using MockEsu.Application.Common.Attributes;
+using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Domain.Common;
 using System.ComponentModel.DataAnnotations.Schema;

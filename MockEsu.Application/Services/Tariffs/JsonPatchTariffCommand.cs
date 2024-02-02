@@ -2,7 +2,6 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.JsonPatch;
-using MockEsu.Application.Common;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Tariffs;
@@ -12,6 +11,8 @@ using MockEsu.Application.Extensions.JsonPatch;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using AutoMapper.QueryableExtensions;
+using MockEsu.Application.Common.Dtos;
+using MockEsu.Application.Common.Attributes;
 
 namespace MockEsu.Application.Services.Tariffs;
 
@@ -60,18 +61,23 @@ public class JsonPatchTariffCommandHandler : IRequestHandler<JsonPatchTariffComm
     }
 }
 
-public record TariffDto : BaseDto
+public record TariffDto : BaseDto, IEditDto
 {
     public string Name { get; set; }
 
-    public List<TariffPriceEditDto> Prices { get; set; }
+    [Filterable(CompareMethod.ById)]
+    public List<TariffPriceEditDto> PricePoints { get; set; }
+
+    public static Type GetOriginType() => typeof(Tariff);
+
+    public static implicit operator Tariff(TariffDto dto) => throw new NotImplementedException();
 
     private class Mapping : Profile
     {
         public Mapping()
         {
             CreateMap<Tariff, TariffDto>()
-                .ForMember(m => m.Prices, opt => opt.MapFrom(o => o.Prices))
+                .ForMember(m => m.PricePoints, opt => opt.MapFrom(o => o.Prices))
                 .ReverseMap();
         }
     }

@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using MockEsu.Application.Common;
+using MockEsu.Application.Common.Dtos;
 using MockEsu.Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -11,12 +11,18 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Application.DTOs.Users;
 
-public record UserEditDto : BaseDto
+public record UserEditDto : BaseDto, IEditDto
 {
     public string Name { get; set; }
     public string Email { get; set; }
     public string Password { get; set; }
     public int RoleId { get; set; }
+
+    public static Type GetOriginType()
+    {
+        return typeof(User);
+    }
+
     private class Mapping : Profile
     {
         public Mapping()

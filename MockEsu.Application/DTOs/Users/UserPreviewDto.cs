@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using MockEsu.Application.Common;
+using MockEsu.Application.Common.Dtos;
 using MockEsu.Domain.Entities;
 
 namespace MockEsu.Application.DTOs.Users;
