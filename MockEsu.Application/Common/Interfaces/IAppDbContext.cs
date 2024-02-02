@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using MockEsu.Domain.Entities;
 using MockEsu.Domain.Entities.Traiffs;
 
@@ -15,10 +16,11 @@ public interface IAppDbContext
     DbSet<Street> Streets { get; }
     DbSet<PaymentContract> PaymentContracts { get; }
     DbSet<User> Users { get; }
-    IQueryable<User> UsersInService { get; }
+    IQueryable<User> UsersInServiceQuery { get; }
     DbSet<Role> Roles { get; }
     DbSet<Tariff> Tariffs { get; }
     DbSet<TariffPrice> TariffPrices { get; }
+    DatabaseFacade Database {  get; }
 
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
