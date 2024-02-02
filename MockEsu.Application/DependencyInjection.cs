@@ -1,17 +1,17 @@
 ﻿using FluentValidation;
 using MediatR;
 using MediatR.Pipeline;
-using Microsoft.Extensions.Logging;
-using System.Reflection;
 using Microsoft.Extensions.Configuration;
-using MockEsu.Application;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Behaviours;
+using MockEsu.Application.Common.Interfaces;
+using System.Reflection;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
 public static class DependencyInjection
 {
+
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddMediatR(cfg =>

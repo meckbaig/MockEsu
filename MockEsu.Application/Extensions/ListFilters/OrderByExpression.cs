@@ -1,11 +1,12 @@
 ﻿using AutoMapper;
-using MockEsu.Application.Common;
+using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Extensions.ListFilters;
+using MockEsu.Application.Extensions.StringExtencions;
 using MockEsu.Domain.Common;
 
 namespace MockEsu.Application.Extensions.ListFilters;
 
-public record OrderByExpression : EntityFrameworkExpression<OrderByExpressionType>
+public record OrderByExpression : IEntityFrameworkExpression<OrderByExpressionType>
 {
     public string? Key { get; set; }
     public string? EndPoint { get; set; }
@@ -19,31 +20,19 @@ public record OrderByExpression : EntityFrameworkExpression<OrderByExpressionTyp
 
         if (!filter.Contains(' '))
         {
-            f.Key = ToPascalCase(filter);
+            f.Key = filter.ToPascalCase();
             f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.ExpressionType = OrderByExpressionType.Ascending;
         }
         else if (filter[(filter.IndexOf(' ') + 1)..] == "desc")
         {
-            f.Key = ToPascalCase(filter[..filter.IndexOf(' ')]);
+            f.Key = filter[..filter.IndexOf(' ')].ToPascalCase();
             f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.ExpressionType = OrderByExpressionType.Descending;
         }
         else
             f.ExpressionType = OrderByExpressionType.Undefined;
         return f;
-    }
-
-    /// <summary>
-    /// Converts a string to pascal case
-    /// </summary>
-    /// <param name="value">input string</param>
-    /// <returns>String in pascal case</returns>
-    public static string ToPascalCase(string value)
-    {
-        if (value.Length <= 1)
-            return value.ToUpper();
-        return $"{value[0].ToString().ToUpper()}{value.Substring(1)}";
     }
 }
 

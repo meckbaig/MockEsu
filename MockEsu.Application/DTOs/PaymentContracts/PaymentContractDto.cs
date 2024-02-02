@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using MockEsu.Application.Common;
+using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Domain.Entities;
 

@@ -1,21 +1,18 @@
 ﻿using FluentValidation;
 using MediatR;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Domain.Entities;
 using System.Security.Authentication;
-using System.Security.Claims;
-using System.Text;
 
 namespace MockEsu.Application.Services.Authorization;
 
 public record AuthorizeUserQuery : BaseRequest<AuthorizeUserResponse>
 {
-    public string login { get; set; }
-
-    public int clientId { get; set; }
+    public int userId { get; set; }
+    public string password { get; set; }
     //public Dictionary<string, string> customClaims { get; set; }
 }
 
@@ -28,53 +25,39 @@ public class AuthorizeUserQueryValidator : AbstractValidator<AuthorizeUserQuery>
 {
     public AuthorizeUserQueryValidator()
     {
-        RuleFor(x => x.login).MinimumLength(5);
-        RuleFor(x => x.clientId).GreaterThan(0);
+        RuleFor(x => x.userId).GreaterThan(0);
+        RuleFor(x => x.password).MinimumLength(6);
     }
 }
 
 public class AuthorizeUserQueryHandler : IRequestHandler<AuthorizeUserQuery, AuthorizeUserResponse>
 {
-    ///TODO: store securily
-    private const string TokenSecret = "MockEsuBackend123456565644665456";
-
-    private static readonly TimeSpan TokenLifeTime = TimeSpan.FromMinutes(1);
     private readonly IAppDbContext _context;
+    private readonly IJwtProvider _jwtProvider;
+    private readonly IPasswordHasher<User> _passwordHasher;
 
-    public AuthorizeUserQueryHandler(IAppDbContext context)
+    public AuthorizeUserQueryHandler(
+        IAppDbContext context, 
+        IJwtProvider jwtProvider, 
+        IPasswordHasher<User> passwordHasher)
     {
         _context = context;
+        _jwtProvider = jwtProvider;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<AuthorizeUserResponse> Handle(AuthorizeUserQuery request, CancellationToken cancellationToken)
     {
-        Kontragent kontragent = _context.Kontragents.FirstOrDefault(k => k.Id == request.clientId);
-        if (kontragent is null)
-            throw new AuthenticationException($"Unable to find user with id {request.clientId}");
+        User? user = _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefault(k => k.Id == request.userId);
+        if (user is null)
+            throw new AuthenticationException($"Unable to find user with id {request.userId}");
+        if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.password) == PasswordVerificationResult.Failed)
+            throw new AuthenticationException($"Password is incorrect");
 
-        var tokenHandler = new JsonWebTokenHandler();
+        string jwt = _jwtProvider.GenerateToken(user);
 
-        var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(JwtRegisteredClaimNames.Sub, request.login),
-            new(JwtRegisteredClaimNames.PhoneNumber, kontragent.PhoneNumber),
-            new("userId", kontragent.Id.ToString()),
-            new(ClaimTypes.Role, request.login == "meckbaig" ? "admin" : "user")
-        };
-
-        var tokenDesctiptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.Add(TokenLifeTime),
-            Issuer = "meckbaig",
-            Audience = "users",
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TokenSecret)),
-                SecurityAlgorithms.HmacSha256)
-        };
-        var token = tokenHandler.CreateToken(tokenDesctiptor);
-        var jwt = tokenHandler.ReadJsonWebToken(token);
-        return new AuthorizeUserResponse { Token = jwt.UnsafeToString() };
+        return new AuthorizeUserResponse { Token = jwt };
     }
 }

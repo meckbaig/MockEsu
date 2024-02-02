@@ -1,10 +1,10 @@
 ﻿using AutoMapper;
 using FluentValidation;
-using Microsoft.AspNetCore.Http;
 using MockEsu.Application.Common.Attributes;
+using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Extensions.ListFilters;
-using MockEsu.Application.Extensions.ListFilters;
+using MockEsu.Application.Extensions.StringExtencions;
 using MockEsu.Domain.Common;
 using System.Text.Json;
 
@@ -40,7 +40,7 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             string key = string.Empty;
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => PropertyExists<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref key))
-                .WithMessage(x => $"Property '{JsonNamingPolicy.CamelCase.ConvertName(key)}' does not exist")
+                .WithMessage(x => $"Property '{key.ToCamelCase()}' does not exist")
                 .WithErrorCode(ValidationErrorCode.PropertyDoesNotExistValidator.ToString());
 
             FilterExpression filterEx = null;
@@ -53,7 +53,7 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => PropertyIsFilterable<TDestintaion, TSource>(filterEx, ref attribute))
                 .WithMessage((query, filter) => $"Property " +
-                    $"'{JsonNamingPolicy.CamelCase.ConvertName(filterEx.Key)}' is not filterable")
+                    $"'{filterEx.Key.ToCamelCase()}' is not filterable")
                 .WithErrorCode(ValidationErrorCode.PropertyIsNotFilterableValidator.ToString());
 
             string expressionErrorMessage = string.Empty;
@@ -76,7 +76,7 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
                 expressionIndex = filter.IndexOf(":");
             else
                 return true;
-            key = FilterExpression.ToPascalCase(filter[..expressionIndex]);
+            key = filter[..expressionIndex].ToPascalCase();
 
             string? endPoint = EntityFrameworkFiltersExtension
                 .GetExpressionEndpoint<TSource, TDestintaion>(key, provider);
@@ -152,7 +152,7 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
             string key = string.Empty;
             ruleBuilder = ruleBuilder
                 .Must((query, filter) => PropertyExists<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref key))
-                .WithMessage(x => $"Property '{JsonNamingPolicy.CamelCase.ConvertName(key)}' does not exist")
+                .WithMessage(x => $"Property '{key.ToCamelCase()}' does not exist")
                 .WithErrorCode(ValidationErrorCode.PropertyDoesNotExistValidator.ToString());
 
             ruleBuilder = ruleBuilder
@@ -167,9 +167,9 @@ namespace MockEsu.Application.Common.BaseRequests.JournalQuery
         private static bool PropertyExists<TSource, TDestintaion>(string filter, IConfigurationProvider provider, ref string key)
         {
             if (filter.Contains(' '))
-                key = FilterExpression.ToPascalCase(filter[..filter.IndexOf(' ')]);
+                key = filter[..filter.IndexOf(' ')].ToPascalCase();
             else
-                key = FilterExpression.ToPascalCase(filter);
+                key = filter.ToPascalCase();
             string endPoint = EntityFrameworkOrderByExtension
                 .GetExpressionEndpoint<TSource, TDestintaion>(key, provider);
             if (endPoint == null)

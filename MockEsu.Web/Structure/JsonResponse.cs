@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using MockEsu.Application.Common.BaseRequests;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace MockEsu.Web.Structure
 {
@@ -22,7 +23,13 @@ namespace MockEsu.Web.Structure
                 throw response.GetException() ?? new Exception(response.GetMessage());
             var settings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() };
             result.Content = JsonConvert.SerializeObject(response, settings);
-            result.ContentType = "application/json";
+            if (!string.IsNullOrEmpty(result.Content) && result.Content != "{}")
+            {
+                result.ContentType = "application/json";
+                return result;
+            }
+            result.ContentType = null;
+            result.Content = null;
             return result;
         }
     }

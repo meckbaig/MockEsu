@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Application.Extensions.ListFilters
 {
-    public interface EntityFrameworkExpression<T> where T : Enum
+    public interface IEntityFrameworkExpression<T> where T : Enum
     {
         public string? Key { get; set; }
         public string? EndPoint { get; set; }
