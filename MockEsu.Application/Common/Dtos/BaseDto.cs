@@ -3,6 +3,7 @@ using AutoMapper.Internal;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Extensions.StringExtencions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -32,10 +33,15 @@ public abstract record BaseDto
         Type type,
         IConfigurationProvider provider)
     {
+        if (value == null)
+            return value;
+        string serialized = JsonConvert.SerializeObject(value);
+        if (JToken.Parse(serialized).Type != JTokenType.Object)
+            return value;
+
         Dictionary<string, object> sourceProperties = new();
         Dictionary<string, object> properties
-            = JsonConvert.DeserializeObject<Dictionary<string, object>>(
-                JsonConvert.SerializeObject(value));
+            = JsonConvert.DeserializeObject<Dictionary<string, object>>(serialized);
         foreach (var prop in properties)
         {
             Type tmpType = type;
@@ -145,7 +151,7 @@ public abstract record BaseDto
             }
             else
             {
-                throw PropertyNotExistsValidationException(dtoProperty);
+                throw new ArgumentException($"Property '{dtoProperty.ToCamelCase()}' does not exist");
             }
         }
 
