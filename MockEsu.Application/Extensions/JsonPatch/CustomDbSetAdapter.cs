@@ -54,16 +54,6 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         DbSet<TEntity> dbSet = (DbSet<TEntity>)target;
 
         return TryReplaceWithNewQuery(target, dbSet, segments, contractResolver, value, out errorMessage);
-
-
-
-
-        //if (!TryGetListTypeArgument(dbSet, out Type typeArgument, out errorMessage))
-        //{
-        //    return false;
-        //}
-
-        throw new NotImplementedException();
     }
 
     private bool TryReplaceWithNewQuery(
@@ -79,10 +69,6 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             .GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(m =>
             m.Name == nameof(TryReplaceWithNewQuery) &&
             m.GetParameters().Length == 6);
-
-        //var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
-        //    .GetMethods()
-        //    
         var genericMethod = methodInfo.MakeGenericMethod(genericType);
         object[] parameters = [dbSet, query, segments, contractResolver, value, null];
         object result = genericMethod.Invoke(this, parameters);
@@ -101,10 +87,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         where TBaseEntity : BaseEntity
     {
         /// TODO:
-        /// проблема с тем, что во вложенности пересоздаётся IQueryable и ничего не работет
-        /// проблема в том, что [] всё поломает - решено
-        /// проблема в том, что не работает транзакция
-
+        /// заставить работать с транзакциями
         for (int i = 0; i < segments.Length; i++)
         {
             Type? propertyType = typeof(TBaseEntity).GetProperty(segments[i])?.PropertyType;
@@ -124,10 +107,6 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             else if (propertyType != null &&
                 TryConvertValue(value, propertyType!, segments[i], contractResolver, out var convertedValue, out errorMessage))
             {
-                //if (!TryGetExecuteUpdateLambda<TBaseEntity>(segments[i], convertedValue, out var expression, out errorMessage))
-                //    return false;
-                //query.Select(expression);
-
                 TryGetExecuteUpdateLambda<TBaseEntity>(segments[i], convertedValue, out var expression, out errorMessage);
                 query.ExecuteUpdate(expression);
             }
@@ -141,31 +120,6 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         errorMessage = null;
         return true;
     }
-
-    //private static bool TryGetExecuteUpdateLambda<TBaseEntity>(
-    //    string propertyName,
-    //    object? value,
-    //    out Expression<Func<TBaseEntity, object>> expression,
-    //    out string errorMessage)
-    //{
-    //    try
-    //    {
-    //        var parameter = Expression.Parameter(typeof(TBaseEntity), "x");
-    //        var property = Expression.Property(parameter, propertyName);
-    //        var constant = Expression.Constant(value, value.GetType());
-    //        var assignment = Expression.Assign(property, constant);
-
-    //        expression = Expression.Lambda<Func<TBaseEntity, object>>(assignment, parameter);
-    //        errorMessage = null;
-    //        return true;
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        expression = null;
-    //        errorMessage = ex.Message;
-    //        return false;
-    //    }
-    //}
 
     private static bool TryGetPropertyLambda<TBaseEntity>(
         string propertyName,
@@ -220,29 +174,6 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return true;
     }
 
-    //protected virtual bool TryGetJsonProperty(
-    //    Type targetType,
-    //    IContractResolver contractResolver,
-    //    string segment,
-    //    out JsonProperty jsonProperty)
-    //{
-    //    if (contractResolver.ResolveContract(targetType) is JsonObjectContract jsonObjectContract)
-    //    {
-    //        var pocoProperty = jsonObjectContract
-    //            .Properties
-    //            .FirstOrDefault(p => string.Equals(p.PropertyName, segment, StringComparison.OrdinalIgnoreCase));
-
-    //        if (pocoProperty != null)
-    //        {
-    //            jsonProperty = pocoProperty;
-    //            return true;
-    //        }
-    //    }
-
-    //    jsonProperty = null;
-    //    return false;
-    //}
-
     private static bool TryGetQueryFromSegment<TBaseEntity>(
         object dbSet,
         IQueryable<TBaseEntity> query,
@@ -259,19 +190,6 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             return false;
         Type genericOfSet = propertyInfo.PropertyType.GetGenericArguments()[0];
         return (dbSet as DbSet<TBaseEntity>).TryGetDbSetFromInterface(genericOfSet, out newQuery);
-
-        //var methodInfo = typeof(DataBaseProviderExtensions)
-        //    .GetMethods()
-        //    .FirstOrDefault(m => 
-        //        m.Name == nameof(DataBaseProviderExtensions.TryGetDbSetFromInterface) &&
-        //        m.GetParameters().Length == 2);
-        //var genericMethod = methodInfo.MakeGenericMethod(genericOfSet);
-        //object[] parameters = [typeof(IAppDbContext), null];
-        //object result = genericMethod.Invoke(null, parameters);
-
-        //if ((bool)result)
-        //    newQuery = (IQueryable)parameters[1];
-        //return (bool)result;
     }
 
     public bool TryTest(
@@ -292,24 +210,6 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         out string errorMessage)
     {
         throw new NotImplementedException();
-        var entities = (target as IQueryable).Cast<BaseEntity>();
-        if (entities == null)
-        {
-            value = null;
-            errorMessage = null;
-            return false;
-        }
-
-        if (!int.TryParse(segment, out var entityId))
-        {
-            value = null;
-            errorMessage = AdapterError.FormatInvalidIndexValue(segment);
-            return false;
-        }
-
-        value = string.Empty;
-        errorMessage = null;
-        return true;
     }
 
     protected virtual bool TryConvertValue(

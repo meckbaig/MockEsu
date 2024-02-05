@@ -45,20 +45,10 @@ internal static class JsonPatchExpressions
         where IDbSet : DbSet<TDestination>
         where TDestination : BaseEntity
     {
-        // понять, как передавать сюда DTO
-
-        // понять, как мапать DTO на модель без
-        // экземпляра (получать эндпоинты через рефлексию)
-
-        // плакать
         using (var transaction = context.Database.BeginTransaction())
         {
             try
             {
-                var query = dbSet.Where(e => e.Id == 5);
-
-                //TryGetExecuteUpdateLambda<TDestination>("Name", "Валенок", out var expression, out string _);
-
                 patch.ApplyTo(dbSet, Adapter);
                 //context.SaveChanges();
                 transaction.Commit();
@@ -96,17 +86,6 @@ internal static class JsonPatchExpressions
         }
     }
 
-    //internal static IList<TDestination>? ApplyToSource<TDto, TDestination>
-    //    (this JsonPatchDocument<IList<TDto>> patch, IList<TDestination>? destinations, IMapper mapper)
-    //    where TDto : BaseDto
-    //    where TDestination : BaseEntity
-    //{
-    //    var dtos = mapper.Map<IList<TDto>>(destinations);
-    //    patch.ApplyTo(dtos, Adapter);
-    //    mapper.Map(dtos, destinations);
-    //    return destinations;
-    //}
-
     internal static JsonPatchDocument<DbSet<TDestination>> ConvertToSourceDbSet
         <TDestination, TDto>(this JsonPatchDocument<TDto> patch, IMapper mapper) 
         where TDto : BaseDto
@@ -139,7 +118,6 @@ internal static class JsonPatchExpressions
 
             if (index != -1)
                 newOperation.path = $"{index}.{newOperation.path}";
-            //newOperation.path = $"/{index}{newOperation.path}";
             newOperations.Add(newOperation);
         }
         return new JsonPatchDocument<DbSet<TDestination>>(

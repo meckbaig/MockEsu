@@ -43,30 +43,8 @@ public class JsonPatchTariffsCommandHandler : IRequestHandler<JsonPatchTariffsCo
 
     public async Task<JsonPatchTariffsResponse> Handle(JsonPatchTariffsCommand request, CancellationToken cancellationToken)
     {
-        //var tariff = _context.Tariffs.Include(t => t.Prices).FirstOrDefault(t => t.Id == request.Id);
-        //request.Patch.ApplyToSource(tariff, _mapper);
-        //_context.SaveChanges();
-
         JsonPatchDocument<DbSet<Tariff>> jsonPatchDocument = request.Patch.ConvertToSourceDbSet<Tariff, TariffDto>(_mapper);
         jsonPatchDocument.ApplyTransactionToSource<DbSet<Tariff>, Tariff>(_context.Tariffs, _context);
-
-        //_context.TariffPrices
-        //    .Where(p => p.Id == 2)
-        //    .ExecuteUpdate(s => s.SetProperty(p => p.Name, "new name"));
-
-        ////_context.Tariffs
-        ////    .Include(t => t.Prices)
-        ////    .Where(t => t.Id == 5)
-        ////    .Select(t => t.Prices.FirstOrDefault(p => p.Id == 2))
-        ////    .ExecuteUpdate(s => s.SetProperty(p => p.Name, "new name"));
-
-        ////_context.Tariffs
-        ////    .Include(t => t.Prices)
-        ////    .Where(t => t.Id == 5)
-        ////    .ExecuteUpdate(
-        ////        s => s.SetProperty(
-        ////            t => t.Prices.FirstOrDefault(p => p.Id == 2).Name,
-        ////            "new name"));
 
         var tariffs = _context.Tariffs
             .Include(t => t.Prices)
