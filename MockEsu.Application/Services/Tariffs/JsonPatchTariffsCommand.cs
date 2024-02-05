@@ -46,20 +46,33 @@ public class JsonPatchTariffsCommandHandler : IRequestHandler<JsonPatchTariffsCo
         //var tariff = _context.Tariffs.Include(t => t.Prices).FirstOrDefault(t => t.Id == request.Id);
         //request.Patch.ApplyToSource(tariff, _mapper);
         //_context.SaveChanges();
+
         JsonPatchDocument<DbSet<Tariff>> jsonPatchDocument = request.Patch.ConvertToSourceDbSet<Tariff, TariffDto>(_mapper);
         jsonPatchDocument.ApplyTransactionToSource<DbSet<Tariff>, Tariff>(_context.Tariffs, _context);
-        //_context.Tariffs
-        //    .Include(t => t.Prices)
-        //    .Where(t => t.Id == 1)
-        //    .ExecuteUpdate(
-        //        s => s.SetProperty(
-        //            t => t.Prices.FirstOrDefault(p => p.Id == 1).Name,
-        //            "new name"));
+
+        //_context.TariffPrices
+        //    .Where(p => p.Id == 2)
+        //    .ExecuteUpdate(s => s.SetProperty(p => p.Name, "new name"));
+
+        ////_context.Tariffs
+        ////    .Include(t => t.Prices)
+        ////    .Where(t => t.Id == 5)
+        ////    .Select(t => t.Prices.FirstOrDefault(p => p.Id == 2))
+        ////    .ExecuteUpdate(s => s.SetProperty(p => p.Name, "new name"));
+
+        ////_context.Tariffs
+        ////    .Include(t => t.Prices)
+        ////    .Where(t => t.Id == 5)
+        ////    .ExecuteUpdate(
+        ////        s => s.SetProperty(
+        ////            t => t.Prices.FirstOrDefault(p => p.Id == 2).Name,
+        ////            "new name"));
 
         var tariffs = _context.Tariffs
             .Include(t => t.Prices)
             .ProjectTo<TariffDto>(_mapper.ConfigurationProvider)
             .ToList();
+        tariffs.ForEach(t => t.PricePoints = t.PricePoints.OrderBy(p => p.Id).ToList());
         return new JsonPatchTariffsResponse { Tariffs = tariffs };
     }
 }

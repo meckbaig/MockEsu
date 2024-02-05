@@ -7,8 +7,8 @@ using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.StringExtencions;
 using MockEsu.Domain.Common;
-using MockEsu.Domain.Entities.Traiffs;
 using Newtonsoft.Json.Serialization;
+using System.Linq.Expressions;
 
 namespace MockEsu.Application.Extensions.JsonPatch;
 
@@ -43,7 +43,7 @@ internal static class JsonPatchExpressions
     internal static void ApplyTransactionToSource<IDbSet, TDestination>
         (this JsonPatchDocument<IDbSet> patch, IDbSet dbSet, IAppDbContext context)
         where IDbSet : DbSet<TDestination>
-        where TDestination : class
+        where TDestination : BaseEntity
     {
         // понять, как передавать сюда DTO
 
@@ -55,13 +55,44 @@ internal static class JsonPatchExpressions
         {
             try
             {
+                var query = dbSet.Where(e => e.Id == 5);
+
+                //TryGetExecuteUpdateLambda<TDestination>("Name", "Валенок", out var expression, out string _);
+
                 patch.ApplyTo(dbSet, Adapter);
-                //transaction.Commit();
+                //context.SaveChanges();
+                transaction.Commit();
             }
             catch (Exception)
             {
                 transaction.Rollback();
             }
+        }
+    }
+
+
+    private static bool TryGetExecuteUpdateLambda<TBaseEntity>(
+        string propertyName,
+        object? value,
+        out Func<TBaseEntity, object> expression,
+        out string errorMessage)
+    {
+        try
+        {
+            var parameter = Expression.Parameter(typeof(TBaseEntity), "x");
+            var property = Expression.Property(parameter, propertyName);
+            var constant = Expression.Constant(value, value.GetType());
+            var assignment = Expression.Assign(property, constant);
+
+            expression = Expression.Lambda<Func<TBaseEntity, object>>(assignment, parameter).Compile();
+            errorMessage = null;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            expression = null;
+            errorMessage = ex.Message;
+            return false;
         }
     }
 
@@ -81,8 +112,6 @@ internal static class JsonPatchExpressions
         where TDto : BaseDto
         where TDestination : BaseEntity
     {
-        ///TODO:
-        ///Ремапать, если внутри value содержится объект
         var newOperations = new List<Operation<DbSet<TDestination>>>();
         foreach (var operation in patch.Operations)
         {
@@ -101,8 +130,7 @@ internal static class JsonPatchExpressions
                 BaseDto.GetSourceJsonPatch<TDto>(
                     operationPathAsProperty, 
                     mapper.ConfigurationProvider,
-                    out Type propertyType)
-                .ToPathFormat();
+                    out Type propertyType);
             newOperation.value =
                 BaseDto.GetSourceValueJsonPatch(
                     operation.value,
@@ -110,7 +138,8 @@ internal static class JsonPatchExpressions
                     mapper.ConfigurationProvider);
 
             if (index != -1)
-                newOperation.path = $"/{index}{newOperation.path}";
+                newOperation.path = $"{index}.{newOperation.path}";
+            //newOperation.path = $"/{index}{newOperation.path}";
             newOperations.Add(newOperation);
         }
         return new JsonPatchDocument<DbSet<TDestination>>(

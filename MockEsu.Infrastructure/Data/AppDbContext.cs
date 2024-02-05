@@ -49,7 +49,7 @@ public class AppDbContext : DbContext, IAppDbContext
         => Set<Tariff>();
 
     public DbSet<TariffPrice> TariffPrices
-        => Set<TariffPrice>();
+        => Set<TariffPrice>();    
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

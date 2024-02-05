@@ -54,8 +54,7 @@ public class CustomAdapterFactory : IAdapterFactory
 
         Type targetType = target.GetType();
 
-        bool isDbSet = typeof(IAppDbContext).TryGetDbSetFromInterface(targetType.GetGenericArguments()[0], out var _);
-        if (isDbSet)
+        if (typeof(IAppDbContext).CanGetDbSet(targetType.GetGenericArguments()[0]))
         {
             Type customDbSetAdapterType = typeof(CustomDbSetAdapter<>).MakeGenericType(targetType.GetGenericArguments()[0]);
             return (IAdapter)Activator.CreateInstance(customDbSetAdapterType);
@@ -72,6 +71,9 @@ internal static class AdapterError
 
     public static string FormatInvalidIndexValue(object p0)
            => $"The path segment '{p0}' is invalid for an item Id.";
+
+    public static string FormatInvalidValueForProperty(object p0)
+           => $"The value '{p0}' is invalid for target location.";
 
     public static string FormatInvalidListType()
            => $"List items do not inherit interface {nameof(IEntityWithId)}";

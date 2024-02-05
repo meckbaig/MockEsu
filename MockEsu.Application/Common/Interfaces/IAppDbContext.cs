@@ -21,6 +21,7 @@ public interface IAppDbContext
     DbSet<Tariff> Tariffs { get; }
     DbSet<TariffPrice> TariffPrices { get; }
     DatabaseFacade Database {  get; }
+    DbSet<T> Set<T>() where T : class;
 
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
