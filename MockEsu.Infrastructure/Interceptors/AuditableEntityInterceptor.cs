@@ -49,6 +49,12 @@ namespace MockEsu.Infrastructure.Interceptors
                 {
                     entry.Entity.LastModified = _dateTime.GetUtcNow();
                 }
+
+                if (entry.State == EntityState.Deleted && entry.Entity is INonDelitableEntity entity)
+                {
+                    entity.Deleted = true;
+                    entry.State = EntityState.Modified;
+                }
             }
         }
     }
