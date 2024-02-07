@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MockEsu.Domain.Common;
+using MockEsu.Domain.Entities;
 
 namespace MockEsu.Infrastructure.Interceptors
 {
@@ -53,7 +54,8 @@ namespace MockEsu.Infrastructure.Interceptors
                 if (entry.State == EntityState.Deleted && entry.Entity is INonDelitableEntity entity)
                 {
                     entity.Deleted = true;
-                    entry.State = EntityState.Modified;
+                    entry.State = EntityState.Unchanged;
+                    context.Entry(entity).Property(u => u.Deleted).IsModified = true;
                 }
             }
         }
