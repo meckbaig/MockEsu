@@ -8,6 +8,7 @@ using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.StringExtencions;
 using MockEsu.Domain.Common;
 using Newtonsoft.Json.Serialization;
+using System.Collections;
 using System.Linq.Expressions;
 
 namespace MockEsu.Application.Extensions.JsonPatch;
@@ -34,6 +35,7 @@ internal static class JsonPatchExpressions
         where TDto : BaseDto
         where TDestination : BaseEntity
     {
+        var tmpDestination = destination;
         var dto = mapper.Map<TDto>(destination);
         patch.ApplyTo(dto, Adapter);
         mapper.Map(dto, destination);
@@ -49,46 +51,27 @@ internal static class JsonPatchExpressions
         {
             try
             {
+                //Task[] tasks = new Task[patch.Operations.Count];
+                //for (int i = 0; i < patch.Operations.Count; i++)
+                //{
+                //    tasks[i] = Task.Run(() 
+                //        => patch.Operations[i].Apply(dbSet, Adapter));
+                //}
+                //Task.WaitAll(tasks);
                 patch.ApplyTo(dbSet, Adapter);
-                //context.SaveChanges();
                 transaction.Commit();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 transaction.Rollback();
+                throw;
             }
-        }
-    }
-
-
-    private static bool TryGetExecuteUpdateLambda<TBaseEntity>(
-        string propertyName,
-        object? value,
-        out Func<TBaseEntity, object> expression,
-        out string errorMessage)
-    {
-        try
-        {
-            var parameter = Expression.Parameter(typeof(TBaseEntity), "x");
-            var property = Expression.Property(parameter, propertyName);
-            var constant = Expression.Constant(value, value.GetType());
-            var assignment = Expression.Assign(property, constant);
-
-            expression = Expression.Lambda<Func<TBaseEntity, object>>(assignment, parameter).Compile();
-            errorMessage = null;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            expression = null;
-            errorMessage = ex.Message;
-            return false;
         }
     }
 
     internal static JsonPatchDocument<DbSet<TDestination>> ConvertToSourceDbSet
         <TDestination, TDto>(this JsonPatchDocument<TDto> patch, IMapper mapper) 
-        where TDto : BaseDto
+        where TDto : BaseDto, IEditDto
         where TDestination : BaseEntity
     {
         var newOperations = new List<Operation<DbSet<TDestination>>>();
@@ -96,9 +79,16 @@ internal static class JsonPatchExpressions
         {
             string operationPathAsProperty = operation.path.ToPropetyFormat();
             if (int.TryParse(operationPathAsProperty.Split('.')[0], out int index))
-                operationPathAsProperty = operationPathAsProperty[(index.GetLength() + 1)..];
+            {
+                if (index.GetLength() < operationPathAsProperty.Length)
+                    operationPathAsProperty = operationPathAsProperty[(index.GetLength() + 1)..];
+                else
+                    operationPathAsProperty = string.Empty;
+            }
             else
+            {
                 index = -1;
+            }
 
             var newOperation = new Operation<DbSet<TDestination>>()
             {
@@ -117,7 +107,12 @@ internal static class JsonPatchExpressions
                     mapper.ConfigurationProvider);
 
             if (index != -1)
-                newOperation.path = $"{index}.{newOperation.path}";
+            {
+                if (newOperation.path.Length > 0)
+                    newOperation.path = $"{index}.{newOperation.path}";
+                else
+                    newOperation.path = index.ToString();
+            }
             newOperations.Add(newOperation);
         }
         return new JsonPatchDocument<DbSet<TDestination>>(
@@ -125,7 +120,7 @@ internal static class JsonPatchExpressions
             new CamelCasePropertyNamesContractResolver());
     }
 
-    private static string ToPathFormat(this string property)
+    internal static string ToPathFormat(this string property)
     {
         return string.Format("/{0}",
             string.Join(
@@ -135,7 +130,7 @@ internal static class JsonPatchExpressions
                 .Select(x => x.ToCamelCase())));
     }
 
-    private static string ToPropetyFormat(this string path)
+    internal static string ToPropetyFormat(this string path)
     {
         return string.Join(
             '.', 

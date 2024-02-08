@@ -77,8 +77,11 @@ public record TariffDto : BaseDto, IEditDto
         public Mapping()
         {
             CreateMap<Tariff, TariffDto>()
-                .ForMember(m => m.PricePoints, opt => opt.MapFrom(o => o.Prices))
-                .ReverseMap();
+                .ForMember(m => m.PricePoints, opt => opt.MapFrom(o => o.Prices));
+            CreateMap<TariffDto, Tariff>()
+                .ForMember(m => m.Prices, opt => opt.MapFrom(o => o.PricePoints))
+                .ForMember(m => m.Created, opt => opt.Ignore())
+                .ForMember(m => m.LastModified, opt => opt.Ignore());
         }
     }
 }

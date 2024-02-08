@@ -7,7 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.JsonPatch;
+using MockEsu.Domain.Entities;
 using MockEsu.Domain.Entities.Traiffs;
+using StackExchange.Redis;
 
 namespace MockEsu.Application.Services.Tariffs;
 
@@ -46,9 +48,9 @@ public class JsonPatchTariffsCommandHandler : IRequestHandler<JsonPatchTariffsCo
         JsonPatchDocument<DbSet<Tariff>> jsonPatchDocument = request.Patch.ConvertToSourceDbSet<Tariff, TariffDto>(_mapper);
         jsonPatchDocument.ApplyTransactionToSource<DbSet<Tariff>, Tariff>(_context.Tariffs, _context);
 
-        var tariffs = _context.Tariffs
-            .Include(t => t.Prices)
-            .ProjectTo<TariffDto>(_mapper.ConfigurationProvider)
+        var tariffs = _context.Tariffs.AsNoTracking()
+            .Select(t => _mapper.Map<TariffDto>(t))
+            //.ProjectTo<TariffDto>(_mapper.ConfigurationProvider)
             .ToList();
         tariffs.ForEach(t => t.PricePoints = t.PricePoints.OrderBy(p => p.Id).ToList());
         return new JsonPatchTariffsResponse { Tariffs = tariffs };

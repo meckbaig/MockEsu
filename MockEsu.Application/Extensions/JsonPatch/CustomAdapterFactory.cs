@@ -54,7 +54,7 @@ public class CustomAdapterFactory : IAdapterFactory
 
         Type targetType = target.GetType();
 
-        if (typeof(IAppDbContext).CanGetDbSet(targetType.GetGenericArguments()[0]))
+        if (typeof(IEnumerable).IsAssignableFrom(targetType) && typeof(IAppDbContext).CanGetDbSet(targetType.GetGenericArguments()?[0]))
         {
             Type customDbSetAdapterType = typeof(CustomDbSetAdapter<>).MakeGenericType(targetType.GetGenericArguments()[0]);
             return (IAdapter)Activator.CreateInstance(customDbSetAdapterType);
