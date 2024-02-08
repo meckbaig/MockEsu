@@ -1,16 +1,23 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
+using Microsoft.Extensions.Logging;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Domain.Entities;
 using MockEsu.Domain.Entities.Traiffs;
+using MockEsu.Infrastructure.Interceptors;
 using System.Reflection;
 
 namespace MockEsu.Infrastructure.Data;
 
 public class AppDbContext : DbContext, IAppDbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    private readonly ILogger<TransactionLoggingInterceptor> _logger;
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, ILogger<TransactionLoggingInterceptor> logger) : base(options)
+    {
+        _logger = logger;
+    }
 
     public DbSet<Address> Addresses
         => Set<Address>();
@@ -57,6 +64,12 @@ public class AppDbContext : DbContext, IAppDbContext
         //builder.UseCustomFunctions();
 
         base.OnModelCreating(builder);
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.AddInterceptors(new TransactionLoggingInterceptor(_logger));
+        base.OnConfiguring(optionsBuilder);
     }
 }
 
