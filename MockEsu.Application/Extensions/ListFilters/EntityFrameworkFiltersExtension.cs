@@ -123,13 +123,13 @@ public static class EntityFrameworkFiltersExtension
     {
         var param = Expression.Parameter(typeof(TSource), "x");
 
-        string[] endpoint = filterEx.EndPoint.Split('.');
-        MemberExpression propExpression = Expression.Property(param, endpoint[0]);
-        if (endpoint.Length != 1)
+        string[] endpointSegments = filterEx.EndPoint.Split('.');
+        MemberExpression propExpression = Expression.Property(param, endpointSegments[0]);
+        if (endpointSegments.Length != 1)
         {
-            for (int i = 1; i < endpoint.Length; i++)
+            for (int i = 1; i < endpointSegments.Length; i++)
             {
-                propExpression = Expression.Property(propExpression, endpoint[i]);
+                propExpression = Expression.Property(propExpression, endpointSegments[i]);
             }
         }
 

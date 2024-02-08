@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Domain.Entities;
 
-public class User : BaseEntity
+public class User : BaseEntity, INonDelitableEntity
 {
     [Required]
     [StringLength(100)]

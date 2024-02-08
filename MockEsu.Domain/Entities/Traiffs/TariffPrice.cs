@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Domain.Entities.Traiffs;
 
-public class TariffPrice : BaseEntity
+public class TariffPrice : BaseEntity, INonDelitableEntity
 {
     [Required]
     public string Name { get; set; }
@@ -23,6 +23,8 @@ public class TariffPrice : BaseEntity
     public int TariffId { get; set; }
 
     public Tariff Tariff { get; set; }
+
+    public bool Deleted { get; set; }
 
     public TariffPrice() { }
     public TariffPrice(int tariffId)

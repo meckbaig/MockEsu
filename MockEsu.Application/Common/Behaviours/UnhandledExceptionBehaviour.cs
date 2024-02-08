@@ -18,8 +18,10 @@ public class UnhandledExceptionBehaviour<TRequest, TResponse> : IPipelineBehavio
         {
             return await next();
         }
-        catch (Exception)
+        catch (Exception ex)
         { 
+            if (ex.InnerException != null)
+                throw new Exception(ex.InnerException.Message, ex);
             throw;
         }
     }

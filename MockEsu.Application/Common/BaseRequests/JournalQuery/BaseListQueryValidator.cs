@@ -10,13 +10,13 @@ using System.Text.Json;
 
 namespace MockEsu.Application.Common.BaseRequests.JournalQuery
 {
-    public class BaseJournalQueryValidator<TQuery, TResponseList, TDestintaion, TSource> : AbstractValidator<TQuery>
+    public class BaseListQueryValidator<TQuery, TResponseList, TDestintaion, TSource> : AbstractValidator<TQuery>
         where TQuery : BaseListQuery<TResponseList>
         where TResponseList : BaseListQueryResponse<TDestintaion>
         where TDestintaion : BaseDto
         where TSource : BaseEntity
     {
-        public BaseJournalQueryValidator(IMapper mapper)
+        public BaseListQueryValidator(IMapper mapper)
         {
             RuleFor(x => x.skip).GreaterThanOrEqualTo(0);
             RuleFor(x => x.take).GreaterThanOrEqualTo(0);

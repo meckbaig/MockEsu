@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using MockEsu.Domain.Entities;
 using MockEsu.Domain.Entities.Traiffs;
@@ -16,11 +17,14 @@ public interface IAppDbContext
     DbSet<Street> Streets { get; }
     DbSet<PaymentContract> PaymentContracts { get; }
     DbSet<User> Users { get; }
-    IQueryable<User> UsersInServiceQuery { get; }
     DbSet<Role> Roles { get; }
     DbSet<Tariff> Tariffs { get; }
     DbSet<TariffPrice> TariffPrices { get; }
+    DbSet<OrganizationInRegion> OrganizationsInRegions { get; }
+
     DatabaseFacade Database {  get; }
+    DbSet<T> Set<T>() where T : class;
+    EntityEntry<T> Entry<T> (T entity) where T : class;
 
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

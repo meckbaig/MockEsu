@@ -1,0 +1,421 @@
+﻿using Microsoft.AspNetCore.JsonPatch.Internal;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Query;
+using MockEsu.Application.Common.Interfaces;
+using MockEsu.Application.Extensions.DataBaseProvider;
+using MockEsu.Application.Extensions.StringExtencions;
+using MockEsu.Domain.Common;
+using Newtonsoft.Json.Serialization;
+using System.Collections;
+using System.Linq.Expressions;
+using System.Reflection;
+
+namespace MockEsu.Application.Extensions.JsonPatch;
+
+public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
+{
+    public bool TryAdd(
+        object target,
+        string segment,
+        IContractResolver contractResolver,
+        object value,
+        out string errorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool TryGet(
+        object target,
+        string segment,
+        IContractResolver
+        contractResolver,
+        out object value,
+        out string errorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+
+    public bool TryRemove(
+        object target,
+        string segmentsString,
+        IContractResolver contractResolver,
+        out string errorMessage)
+    {
+        string[] segments = segmentsString.Split('.');
+        DbSet<TEntity> dbSet = (DbSet<TEntity>)target;
+
+        int entityId = 0;
+        int parentId = 0;
+        int? entityIndex = null;
+        int? parentIndex = null;
+        for (int i = segments.Length - 1; i >= 0; i--)
+        {
+            if (entityId == 0)
+            {
+                if (int.TryParse(segments[i], out entityId))
+                    entityIndex = i;
+            }
+            else if (parentId == 0)
+            {
+                if (int.TryParse(segments[i], out parentId))
+                    parentIndex = i;
+            }
+            else break;
+        }
+
+        if (entityId == 0)
+        {
+            errorMessage = "Could not recognize entity id";
+            return false;
+        }
+
+        List<Type> segmentTypes = [typeof(TEntity)];
+        for (int i = 1; i < segments.Length; i++)
+        {
+            if (int.TryParse(segments[i], out int _) && typeof(IList).IsAssignableFrom(segmentTypes.Last()))
+            {
+                segmentTypes.Add(segmentTypes.Last().GetGenericArguments().Single());
+            }
+            else
+            {
+                segmentTypes.Add(segmentTypes.Last().GetProperty(segments[i]).PropertyType);
+            }
+        }
+
+        IAppDbContext context = dbSet.GetService<IAppDbContext>();
+        if (parentId == 0)
+        {
+            Type entityType = segmentTypes[(int)entityIndex];
+            return TryRemoveEntityFromDb(
+                entityType,
+                entityId,
+                context,
+                out errorMessage);
+        }
+        else
+        {
+            int entityNameIndex = (int)entityIndex - 1;
+            string entityName = segments[entityNameIndex];
+            Type parentType = segmentTypes[(int)parentIndex];
+            Type entityType = segmentTypes[(int)entityIndex];
+            return TryRemoveEntityFromParent(
+                parentType,
+                entityType, 
+                parentId, 
+                entityId, 
+                entityName, 
+                context, 
+                out errorMessage);
+        }
+    }
+
+    public bool TryReplace(
+        object target,
+        string segmentsString,
+        IContractResolver contractResolver,
+        object value,
+        out string errorMessage)
+    {
+        string[] segments = segmentsString.Split('.');
+        DbSet<TEntity> dbSet = (DbSet<TEntity>)target;
+
+        return TryReplaceWithNewQuery(target, dbSet, segments, contractResolver, value, out errorMessage);
+    }
+
+    private bool TryRemoveEntityFromDb(
+        Type entityType, 
+        int entityId, 
+        IAppDbContext context, 
+        out string errorMessage)
+    {
+        var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static).FirstOrDefault(m =>
+            m.Name == nameof(TryRemoveEntity) &&
+            m.GetParameters().Length == 3);
+        var genericMethod = methodInfo.MakeGenericMethod(entityType);
+        object[] parameters = [entityId, context, null];
+        object result = genericMethod.Invoke(this, parameters);
+
+        errorMessage = (string)parameters.LastOrDefault();
+        return (bool)result;
+    }
+
+    private static bool TryRemoveEntity
+        <TEntityToDelete>(
+        int entityId,
+        IAppDbContext context,
+        out string errorMessage)
+        where TEntityToDelete : BaseEntity, new()
+    {
+        try
+        {
+            TEntityToDelete entity = new TEntityToDelete { Id = entityId };
+            context.Entry(entity).State = EntityState.Deleted;
+            context.SaveChanges();
+            errorMessage = null;
+            return true;
+        }
+        catch (Exception)
+        {
+            errorMessage = string.Format(
+                "Could not delete entity with id {0}",
+                entityId);
+            return false;
+        }
+    }
+
+    private bool TryRemoveEntityFromParent(
+        Type parentType,
+        Type entityType,
+        int parentId,
+        int entityId,
+        string entitiesInParentFieldName,
+        IAppDbContext context,
+        out string errorMessage)
+    {
+        var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static).FirstOrDefault(m =>
+            m.Name == nameof(TryRemoveEntityFromParent) &&
+            m.GetParameters().Length == 5);
+        var genericMethod = methodInfo.MakeGenericMethod(parentType, entityType);
+        object[] parameters = [parentId, entityId, entitiesInParentFieldName, context, null];
+        object result = genericMethod.Invoke(this, parameters);
+
+        errorMessage = (string)parameters.LastOrDefault();
+        return (bool)result;
+    }
+
+    private static bool TryRemoveEntityFromParent
+        <TParent, TEntityToDelete>(
+        int parentId,
+        int entityId,
+        string entitiesInParentFieldName,
+        IAppDbContext context,
+        out string errorMessage)
+        where TParent : BaseEntity, new()
+        where TEntityToDelete : BaseEntity, new()
+    {
+        try
+        {
+            TEntityToDelete entity = new TEntityToDelete { Id = entityId };
+            TParent parent = new TParent { Id = parentId };
+            var listProperty = typeof(TParent).GetProperty(entitiesInParentFieldName);
+            IList<TEntityToDelete> list = (IList<TEntityToDelete>)listProperty.GetValue(parent);
+            list.Add(entity);
+            context.Entry(parent).State = EntityState.Unchanged;
+            context.Entry(entity).State = EntityState.Unchanged;
+            list.Remove(entity);
+            context.SaveChanges();
+            errorMessage = null;
+            return true;
+        }
+        catch (Exception)
+        {
+            errorMessage = string.Format(
+                "Could not delete entity {0} with id {1} from parent",
+                entitiesInParentFieldName.ToCamelCase(),
+                entityId);
+            return false;
+        }
+    }
+
+    private bool TryReplaceWithNewQuery(
+        object dbSet,
+        IQueryable query,
+        Type genericType,
+        string[] segments,
+        IContractResolver contractResolver,
+        object value,
+        out string errorMessage)
+    {
+        var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(m =>
+            m.Name == nameof(TryReplaceWithNewQuery) &&
+            m.GetParameters().Length == 6);
+        var genericMethod = methodInfo.MakeGenericMethod(genericType);
+        object[] parameters = [dbSet, query, segments, contractResolver, value, null];
+        object result = genericMethod.Invoke(this, parameters);
+
+        errorMessage = (string)parameters.LastOrDefault();
+        return (bool)result;
+    }
+
+    private bool TryReplaceWithNewQuery<TBaseEntity>(
+        object dbSet,
+        IQueryable<TBaseEntity> query,
+        string[] segments,
+        IContractResolver contractResolver,
+        object value,
+        out string errorMessage)
+        where TBaseEntity : BaseEntity
+    {
+        for (int i = 0; i < segments.Length; i++)
+        {
+            Type? propertyType = typeof(TBaseEntity).GetProperty(segments[i])?.PropertyType;
+
+            if (propertyType == null && int.TryParse(segments[i], out int entityId))
+            {
+                query = query.Where(e => e.Id == entityId);
+            }
+
+            else if (i + 1 < segments.Length && typeof(IList).IsAssignableFrom(propertyType)
+                && TryGetQueryFromSegment(dbSet, query, segments[i], out var newQuery))
+            {
+                Type entityType = newQuery.ElementType;
+                return TryReplaceWithNewQuery(
+                    newQuery, 
+                    newQuery, 
+                    entityType, 
+                    segments[++i..], 
+                    contractResolver, 
+                    value, 
+                    out errorMessage);
+            }
+
+            if (propertyType != null && !typeof(IList).IsAssignableFrom(propertyType) &&
+                TryConvertValue(
+                    value, 
+                    propertyType!, 
+                    segments[i], 
+                    contractResolver, 
+                    out var convertedValue, 
+                    out errorMessage))
+            {
+                if (!TryGetExecuteUpdateLambda<TBaseEntity>(
+                    segments[i], 
+                    convertedValue, 
+                    out var expression, 
+                    out errorMessage))
+                {
+                    return false;
+                }
+                query.ExecuteUpdate(expression);
+            }
+
+            else
+            {
+                errorMessage = "Can not define expression while executing 'replace' method";
+                return false;
+            }
+        }
+        errorMessage = null;
+        return true;
+    }
+
+    private static bool TryGetPropertyLambda<TBaseEntity>(
+        string propertyName,
+        out Expression<Func<TBaseEntity, object>> expression,
+        out string errorMessage)
+    {
+        try
+        {
+            var parameter = Expression.Parameter(typeof(TBaseEntity), "x");
+            var property = Expression.Property(parameter, propertyName);
+
+            expression = Expression.Lambda<Func<TBaseEntity, object>>(property, parameter);
+            errorMessage = null;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            expression = null;
+            errorMessage = ex.Message;
+            return false;
+        }
+    }
+
+    private static bool TryGetExecuteUpdateLambda<TBaseEntity>(
+        string propertyName,
+        object? value,
+        out Expression<Func<SetPropertyCalls<TBaseEntity>, SetPropertyCalls<TBaseEntity>>> expression,
+        out string errorMessage)
+        where TBaseEntity : BaseEntity
+    {
+        if (!TryGetPropertyLambda<TBaseEntity>(propertyName, out var propExpr, out errorMessage))
+        {
+            expression = null;
+            return false;
+        }
+        var param = Expression.Parameter(typeof(SetPropertyCalls<TBaseEntity>));
+
+        // find method SetProperty(Func<T, TProp>, TProp):
+        var method = typeof(SetPropertyCalls<TBaseEntity>)
+            .GetMethods()
+            .Where(info => info.Name == nameof(SetPropertyCalls<TBaseEntity>.SetProperty))
+            // filter out SetProperty(Func<T, TProp>, Func<T, TProp>) overload
+            .Where(info => info.GetParameters() is [_, { ParameterType.IsConstructedGenericType: false }])
+            .Single();
+
+        // construct appropriately typed generic SetProperty
+        var makeGenericMethod = method.MakeGenericMethod(propExpr.Type.GetGenericArguments()[1]);
+
+        var methodCallExpression = Expression.Call(param, makeGenericMethod, propExpr, Expression.Constant(value, value.GetType()));
+
+        // construct final expression
+        var lambdaExpression = Expression.Lambda<Func<SetPropertyCalls<TBaseEntity>, SetPropertyCalls<TBaseEntity>>>(methodCallExpression, param);
+        lambdaExpression.Compile();
+        expression = lambdaExpression;
+        return true;
+    }
+
+    private static bool TryGetQueryFromSegment<TBaseEntity>(
+        object dbSet,
+        IQueryable<TBaseEntity> query,
+        string segment,
+        out IQueryable newQuery)
+        where TBaseEntity : BaseEntity
+    {
+        newQuery = null;
+        var propertyInfo = query
+            .GetType()
+            .GetGenericArguments()[0]
+            .GetProperty(segment);
+        if (propertyInfo == null || propertyInfo.PropertyType.GetGenericArguments().Length == 0)
+            return false;
+        Type genericOfSet = propertyInfo.PropertyType.GetGenericArguments()[0];
+        return (dbSet as DbSet<TBaseEntity>).TryGetDbSetFromInterface(genericOfSet, out newQuery);
+    }
+
+    public bool TryTest(
+        object target,
+        string segment,
+        IContractResolver contractResolver,
+        object value,
+        out string errorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool TryTraverse(
+        object target,
+        string segment,
+        IContractResolver contractResolver,
+        out object value,
+        out string errorMessage)
+    {
+        throw new NotImplementedException();
+    }
+
+    protected virtual bool TryConvertValue(
+        object originalValue,
+        Type listTypeArgument,
+        string segment,
+        IContractResolver contractResolver,
+        out object convertedValue,
+        out string errorMessage)
+    {
+        var conversionResult = ConversionResultProvider.ConvertTo(originalValue, listTypeArgument);
+        if (!conversionResult.CanBeConverted)
+        {
+            convertedValue = null;
+            errorMessage = AdapterError.FormatInvalidValueForProperty(originalValue);
+            return false;
+        }
+
+        convertedValue = conversionResult.ConvertedInstance;
+        errorMessage = null;
+        return true;
+    }
+}

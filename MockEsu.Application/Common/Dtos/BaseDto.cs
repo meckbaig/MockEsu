@@ -3,6 +3,7 @@ using AutoMapper.Internal;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Extensions.StringExtencions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -32,10 +33,15 @@ public abstract record BaseDto
         Type type,
         IConfigurationProvider provider)
     {
+        if (value == null)
+            return value;
+        string serialized = JsonConvert.SerializeObject(value);
+        if (JToken.Parse(serialized).Type != JTokenType.Object)
+            return value;
+
         Dictionary<string, object> sourceProperties = new();
         Dictionary<string, object> properties
-            = JsonConvert.DeserializeObject<Dictionary<string, object>>(
-                JsonConvert.SerializeObject(value));
+            = JsonConvert.DeserializeObject<Dictionary<string, object>>(serialized);
         foreach (var prop in properties)
         {
             Type tmpType = type;
@@ -50,8 +56,13 @@ public abstract record BaseDto
         string dtoPath,
         IConfigurationProvider provider,
         out Type propertyType)
-        where TSource : BaseDto
+        where TSource : BaseDto, IEditDto
     {
+        if (dtoPath.Length == 0)
+        {
+            propertyType = TSource.GetOriginType();
+            return dtoPath;
+        }
         string[] pathSegments = dtoPath.Split('.');
         List<string> sourcePathSegments = new();
         propertyType = typeof(TSource);
@@ -72,13 +83,18 @@ public abstract record BaseDto
         return string.Join(".", sourcePathSegments);
     }
 
-    private static bool InvokeTryGetSource(string pathSegment, IConfigurationProvider provider, ref Type nextSegmentType, out string sourceSegment)
+    public static bool InvokeTryGetSource(
+        string pathSegment, 
+        IConfigurationProvider provider, 
+        ref Type nextSegmentType, 
+        out string sourceSegment,
+        bool throwException = true)
     {
         var methodInfo = typeof(BaseDto).GetMethod(
                             nameof(TryGetSource),
                             BindingFlags.Static | BindingFlags.NonPublic);
         var genericMethod = methodInfo.MakeGenericMethod(GetDtoOriginType(nextSegmentType), nextSegmentType);
-        object[] parameters = [pathSegment, provider, null, null, true];
+        object[] parameters = [pathSegment, provider, null, null, throwException];
         object result = genericMethod.Invoke(null, parameters);
         bool boolResult = (bool)result;
         if (boolResult)
@@ -145,7 +161,7 @@ public abstract record BaseDto
             }
             else
             {
-                throw PropertyNotExistsValidationException(dtoProperty);
+                throw new ArgumentException($"Property '{dtoProperty.ToCamelCase()}' does not exist");
             }
         }
 

@@ -7,8 +7,9 @@ using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.StringExtencions;
 using MockEsu.Domain.Common;
-using MockEsu.Domain.Entities.Traiffs;
 using Newtonsoft.Json.Serialization;
+using System.Collections;
+using System.Linq.Expressions;
 
 namespace MockEsu.Application.Extensions.JsonPatch;
 
@@ -34,6 +35,7 @@ internal static class JsonPatchExpressions
         where TDto : BaseDto
         where TDestination : BaseEntity
     {
+        var tmpDestination = destination;
         var dto = mapper.Map<TDto>(destination);
         patch.ApplyTo(dto, Adapter);
         mapper.Map(dto, destination);
@@ -43,54 +45,50 @@ internal static class JsonPatchExpressions
     internal static void ApplyTransactionToSource<IDbSet, TDestination>
         (this JsonPatchDocument<IDbSet> patch, IDbSet dbSet, IAppDbContext context)
         where IDbSet : DbSet<TDestination>
-        where TDestination : class
+        where TDestination : BaseEntity
     {
-        // понять, как передавать сюда DTO
-
-        // понять, как мапать DTO на модель без
-        // экземпляра (получать эндпоинты через рефлексию)
-
-        // плакать
         using (var transaction = context.Database.BeginTransaction())
         {
             try
             {
+                //Task[] tasks = new Task[patch.Operations.Count];
+                //for (int i = 0; i < patch.Operations.Count; i++)
+                //{
+                //    tasks[i] = Task.Run(() 
+                //        => patch.Operations[i].Apply(dbSet, Adapter));
+                //}
+                //Task.WaitAll(tasks);
                 patch.ApplyTo(dbSet, Adapter);
-                //transaction.Commit();
+                transaction.Commit();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 transaction.Rollback();
+                throw;
             }
         }
     }
 
-    //internal static IList<TDestination>? ApplyToSource<TDto, TDestination>
-    //    (this JsonPatchDocument<IList<TDto>> patch, IList<TDestination>? destinations, IMapper mapper)
-    //    where TDto : BaseDto
-    //    where TDestination : BaseEntity
-    //{
-    //    var dtos = mapper.Map<IList<TDto>>(destinations);
-    //    patch.ApplyTo(dtos, Adapter);
-    //    mapper.Map(dtos, destinations);
-    //    return destinations;
-    //}
-
     internal static JsonPatchDocument<DbSet<TDestination>> ConvertToSourceDbSet
         <TDestination, TDto>(this JsonPatchDocument<TDto> patch, IMapper mapper) 
-        where TDto : BaseDto
+        where TDto : BaseDto, IEditDto
         where TDestination : BaseEntity
     {
-        ///TODO:
-        ///Ремапать, если внутри value содержится объект
         var newOperations = new List<Operation<DbSet<TDestination>>>();
         foreach (var operation in patch.Operations)
         {
             string operationPathAsProperty = operation.path.ToPropetyFormat();
             if (int.TryParse(operationPathAsProperty.Split('.')[0], out int index))
-                operationPathAsProperty = operationPathAsProperty[(index.GetLength() + 1)..];
+            {
+                if (index.GetLength() < operationPathAsProperty.Length)
+                    operationPathAsProperty = operationPathAsProperty[(index.GetLength() + 1)..];
+                else
+                    operationPathAsProperty = string.Empty;
+            }
             else
+            {
                 index = -1;
+            }
 
             var newOperation = new Operation<DbSet<TDestination>>()
             {
@@ -101,8 +99,7 @@ internal static class JsonPatchExpressions
                 BaseDto.GetSourceJsonPatch<TDto>(
                     operationPathAsProperty, 
                     mapper.ConfigurationProvider,
-                    out Type propertyType)
-                .ToPathFormat();
+                    out Type propertyType);
             newOperation.value =
                 BaseDto.GetSourceValueJsonPatch(
                     operation.value,
@@ -110,7 +107,12 @@ internal static class JsonPatchExpressions
                     mapper.ConfigurationProvider);
 
             if (index != -1)
-                newOperation.path = $"/{index}{newOperation.path}";
+            {
+                if (newOperation.path.Length > 0)
+                    newOperation.path = $"{index}.{newOperation.path}";
+                else
+                    newOperation.path = index.ToString();
+            }
             newOperations.Add(newOperation);
         }
         return new JsonPatchDocument<DbSet<TDestination>>(
@@ -118,7 +120,7 @@ internal static class JsonPatchExpressions
             new CamelCasePropertyNamesContractResolver());
     }
 
-    private static string ToPathFormat(this string property)
+    internal static string ToPathFormat(this string property)
     {
         return string.Format("/{0}",
             string.Join(
@@ -128,7 +130,7 @@ internal static class JsonPatchExpressions
                 .Select(x => x.ToCamelCase())));
     }
 
-    private static string ToPropetyFormat(this string path)
+    internal static string ToPropetyFormat(this string path)
     {
         return string.Join(
             '.', 
