@@ -27,7 +27,7 @@ public class GetKontragentsResponse : BaseListQueryResponse<KonragentPreviewDto>
     public override IList<KonragentPreviewDto> Items { get; set; }
 }
 
-public class GetKontragentsQueryValidator : BaseJournalQueryValidator
+public class GetKontragentsQueryValidator : BaseListQueryValidator
     <GetKontragentsQuery, GetKontragentsResponse, KonragentPreviewDto, Kontragent>
 {
     public GetKontragentsQueryValidator(IMapper mapper) : base(mapper)

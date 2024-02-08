@@ -26,7 +26,7 @@ public class GetUsersResponse : BaseListQueryResponse<UserPreviewDto>
     public override IList<UserPreviewDto> Items { get; set; }
 }
 
-public class GetUsersQueryValidator : BaseJournalQueryValidator
+public class GetUsersQueryValidator : BaseListQueryValidator
     <GetUsersQuery, GetUsersResponse, UserPreviewDto, User>
 {
     public GetUsersQueryValidator(IMapper mapper) : base(mapper) { }

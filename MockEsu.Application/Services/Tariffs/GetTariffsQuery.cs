@@ -26,13 +26,10 @@ public class GetTariffsResponse : BaseListQueryResponse<TariffDto>
     public override IList<TariffDto> Items { get; set; }
 }
 
-public class GetTariffsQueryValidator : BaseJournalQueryValidator
+public class GetTariffsQueryValidator : BaseListQueryValidator
     <GetTariffsQuery, GetTariffsResponse, TariffDto, Tariff>
 {
-    public GetTariffsQueryValidator(IMapper mapper) : base(mapper)
-    {
-
-    }
+    public GetTariffsQueryValidator(IMapper mapper) : base(mapper) { }
 }
 
 public class GetTariffsQueryHandler : IRequestHandler<GetTariffsQuery, GetTariffsResponse>
@@ -48,12 +45,11 @@ public class GetTariffsQueryHandler : IRequestHandler<GetTariffsQuery, GetTariff
 
     public async Task<GetTariffsResponse> Handle(GetTariffsQuery request, CancellationToken cancellationToken)
     {
-        var list = _context.Tariffs
-            .Include(t => t.Prices)
+        var list = _context.TariffsWithPricesInServiceQuery
             .AddFilters<Tariff, TariffDto>(request.GetFilterExpressions())
             .AddOrderBy<Tariff, TariffDto>(request.GetOrderExpressions())
             .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)
-            .ProjectTo<TariffDto>(_mapper.ConfigurationProvider)
+            .Select(t => _mapper.Map<TariffDto>(t))
             .ToList();
         return new GetTariffsResponse { Items = list };
     }

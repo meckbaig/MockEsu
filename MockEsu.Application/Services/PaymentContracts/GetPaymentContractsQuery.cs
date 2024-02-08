@@ -22,7 +22,7 @@ public class GetPaymentContractsResponse : BaseListQueryResponse<PaymentContract
     public override IList<PaymentContractDto> Items { get; set; }
 }
 
-public class GetPaymentContractsQueryValidator : BaseJournalQueryValidator
+public class GetPaymentContractsQueryValidator : BaseListQueryValidator
     <GetPaymentContractsQuery, GetPaymentContractsResponse, PaymentContractDto, PaymentContract>
 {
     public GetPaymentContractsQueryValidator(IMapper mapper) : base(mapper)
