@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Application.Common.Dtos;
 
-internal interface IEditDto
+public interface IEditDto
 {
     static abstract Type GetOriginType();
 }

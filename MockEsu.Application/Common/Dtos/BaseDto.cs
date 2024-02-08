@@ -56,8 +56,13 @@ public abstract record BaseDto
         string dtoPath,
         IConfigurationProvider provider,
         out Type propertyType)
-        where TSource : BaseDto
+        where TSource : BaseDto, IEditDto
     {
+        if (dtoPath.Length == 0)
+        {
+            propertyType = TSource.GetOriginType();
+            return dtoPath;
+        }
         string[] pathSegments = dtoPath.Split('.');
         List<string> sourcePathSegments = new();
         propertyType = typeof(TSource);
@@ -78,13 +83,18 @@ public abstract record BaseDto
         return string.Join(".", sourcePathSegments);
     }
 
-    private static bool InvokeTryGetSource(string pathSegment, IConfigurationProvider provider, ref Type nextSegmentType, out string sourceSegment)
+    public static bool InvokeTryGetSource(
+        string pathSegment, 
+        IConfigurationProvider provider, 
+        ref Type nextSegmentType, 
+        out string sourceSegment,
+        bool throwException = true)
     {
         var methodInfo = typeof(BaseDto).GetMethod(
                             nameof(TryGetSource),
                             BindingFlags.Static | BindingFlags.NonPublic);
         var genericMethod = methodInfo.MakeGenericMethod(GetDtoOriginType(nextSegmentType), nextSegmentType);
-        object[] parameters = [pathSegment, provider, null, null, true];
+        object[] parameters = [pathSegment, provider, null, null, throwException];
         object result = genericMethod.Invoke(null, parameters);
         bool boolResult = (bool)result;
         if (boolResult)
