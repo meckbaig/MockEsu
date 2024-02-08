@@ -8,6 +8,7 @@ using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.BaseRequests.JournalQuery;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
+using MockEsu.Application.Extensions.DataBaseProvider;
 using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Entities.Traiffs;
 
@@ -45,7 +46,7 @@ public class GetTariffsQueryHandler : IRequestHandler<GetTariffsQuery, GetTariff
 
     public async Task<GetTariffsResponse> Handle(GetTariffsQuery request, CancellationToken cancellationToken)
     {
-        var list = _context.TariffsWithPricesInServiceQuery
+        var list = _context.Tariffs.Include(t => t.Prices)
             .AddFilters<Tariff, TariffDto>(request.GetFilterExpressions())
             .AddOrderBy<Tariff, TariffDto>(request.GetOrderExpressions())
             .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Logging;
 using MockEsu.Application.Common.Interfaces;
+using MockEsu.Domain.Common;
 using MockEsu.Domain.Entities;
 using MockEsu.Domain.Entities.Traiffs;
 using MockEsu.Infrastructure.Interceptors;
@@ -46,7 +47,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<User> Users
         => Set<User>();
 
-    public IQueryable<User> UsersInServiceQuery 
+    public IQueryable<User> UsersInServiceQuery
         => Users.Where(u => !u.Deleted);
 
     public DbSet<Role> Roles
@@ -56,12 +57,32 @@ public class AppDbContext : DbContext, IAppDbContext
         => Set<Tariff>();
 
     public DbSet<TariffPrice> TariffPrices
-        => Set<TariffPrice>();    
+        => Set<TariffPrice>();
+
+    public DbSet<OrganizationInRegion> OrganizationsInRegions
+        => Set<OrganizationInRegion>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        builder.SetDeletedFilters();
+
+
         //builder.UseCustomFunctions();
+
+        //builder.Entity<OrganizationInRegion>().HasKey(or => new { or.OrganizationId, or.RegionId });
+        //builder.Entity<OrganizationInRegion>()
+        //    .HasOne(or => or.Organization)
+        //    .WithMany(o => o.OrganizationInRegions)
+        //    .HasForeignKey(or => or.OrganizationId);
+        //builder.Entity<OrganizationInRegion>()
+        //    .HasOne(or => or.Region)
+        //    .WithMany(r => r.OrganizationsInRegion)
+        //    .HasForeignKey(or => or.RegionId);
+        builder.Entity<Organization>()
+            .HasMany(o => o.Regions)
+            .WithMany(r => r.Organizations)
+            .UsingEntity<OrganizationInRegion>();
 
         base.OnModelCreating(builder);
     }
@@ -73,8 +94,36 @@ public class AppDbContext : DbContext, IAppDbContext
     }
 }
 
+
 internal static class AppDbContextCustomFunctions
 {
+    internal static void SetDeletedFilters(this ModelBuilder builder)
+    {
+        var types = typeof(IAppDbContext)
+            .GetProperties().Where(
+                p => p.PropertyType.IsGenericType &&
+                p.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>) &&
+                typeof(INonDelitableEntity).IsAssignableFrom(
+                    p.PropertyType.GetGenericArguments().FirstOrDefault()))
+            .Select(p => p.PropertyType.GetGenericArguments().FirstOrDefault())
+            .ToList();
+        foreach (var type in types)
+        {
+            var methodInfo = typeof(AppDbContext)
+                .GetMethods(BindingFlags.NonPublic | BindingFlags.Static).FirstOrDefault(m =>
+                m.Name == nameof(SetDeletedFilter));
+            var genericMethod = methodInfo.MakeGenericMethod(type);
+            object[] parameters = [builder];
+            genericMethod.Invoke(null, parameters);
+        }
+    }
+
+    private static void SetDeletedFilter<TEntity>(ModelBuilder builder)
+        where TEntity : BaseEntity, INonDelitableEntity
+    {
+        builder.Entity<TEntity>().HasQueryFilter(p => !p.Deleted);
+    }
+
     // TODO: delete
     internal static void UseCustomFunctions(this ModelBuilder modelBuilder) // Does not work
     {
