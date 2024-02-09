@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace MockEsu.Domain.Common
 {
-    public class BaseEntity : IEntityWithId
+    public abstract class BaseEntity : IEntityWithId
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

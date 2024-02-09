@@ -7,6 +7,7 @@ using Microsoft.Extensions.Caching.Memory;
 using MockEsu.Application.Common.BaseRequests.JournalQuery;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
+using MockEsu.Application.Extensions.DataBaseProvider;
 using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Entities;
 using Newtonsoft.Json;
@@ -51,11 +52,7 @@ internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery,
 
     public async Task<GetKontragentsResponse> Handle(GetKontragentsQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.Kontragents
-            .Include(k => k.KontragentAgreement)
-            .Include(k => k.Address).ThenInclude(a => a.City)
-            .Include(k => k.Address).ThenInclude(a => a.Street)
-            .Include(k => k.Address).ThenInclude(a => a.Region)
+        var query = _context.Kontragents.FullData()
             .AddFilters<Kontragent, KonragentPreviewDto>(request.GetFilterExpressions())
             .AddOrderBy<Kontragent, KonragentPreviewDto>(request.GetOrderExpressions())
             .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)

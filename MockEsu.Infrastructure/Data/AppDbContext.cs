@@ -47,9 +47,6 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<User> Users
         => Set<User>();
 
-    public IQueryable<User> UsersInServiceQuery
-        => Users.Where(u => !u.Deleted);
-
     public DbSet<Role> Roles
         => Set<Role>();
 
@@ -109,9 +106,9 @@ internal static class AppDbContextCustomFunctions
             .ToList();
         foreach (var type in types)
         {
-            var methodInfo = typeof(AppDbContext)
-                .GetMethods(BindingFlags.NonPublic | BindingFlags.Static).FirstOrDefault(m =>
-                m.Name == nameof(SetDeletedFilter));
+            var methodInfo = typeof(AppDbContextCustomFunctions)
+                .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+                .FirstOrDefault(m => m.Name == nameof(SetDeletedFilter));
             var genericMethod = methodInfo.MakeGenericMethod(type);
             object[] parameters = [builder];
             genericMethod.Invoke(null, parameters);

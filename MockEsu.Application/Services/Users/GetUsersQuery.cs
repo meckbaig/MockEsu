@@ -47,7 +47,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, GetUsersRespo
 
     public async Task<GetUsersResponse> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.UsersInServiceQuery
+        var query = _context.Users
             .Include(u => u.Role)
             .AddFilters<User, UserPreviewDto>(request.GetFilterExpressions())
             .AddOrderBy<User, UserPreviewDto>(request.GetOrderExpressions())
