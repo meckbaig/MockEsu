@@ -17,12 +17,69 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
 {
     public bool TryAdd(
         object target,
-        string segment,
+        string segmentsString,
         IContractResolver contractResolver,
         object value,
         out string errorMessage)
     {
-        throw new NotImplementedException();
+        string[] segments = segmentsString.Split('.');
+        DbSet<TEntity> dbSet = (DbSet<TEntity>)target;
+
+        int parentId = 0;
+        int? parentIndex = null;
+        for (int i = segments.Length - 2; i >= 0; i--)
+        {
+            if (parentId == 0)
+            {
+                if (int.TryParse(segments[i], out parentId))
+                    parentIndex = i;
+            }
+            else break;
+        }
+
+        List<Type> segmentTypes = [typeof(TEntity)];
+        for (int i = 1; i < segments.Length; i++)
+        {
+            if ((int.TryParse(segments[i], out int _) || segments[i] == "-")
+                && typeof(IList).IsAssignableFrom(segmentTypes.Last()))
+            {
+                segmentTypes.Add(segmentTypes.Last().GetGenericArguments().Single());
+            }
+            else
+            {
+                segmentTypes.Add(segmentTypes.Last().GetProperty(segments[i]).PropertyType);
+            }
+        }
+
+        Type entityType = segmentTypes.Last();
+        if (!TryConvertValue(value, entityType!, out var convertedValue, out errorMessage))
+        {
+            return false;
+        }
+
+        IAppDbContext context = dbSet.GetService<IAppDbContext>();
+        if (parentId == 0)
+        {
+            return TryAddEntityToDb(
+                entityType,
+                convertedValue,
+                context,
+                out errorMessage);
+        }
+        else
+        {
+            int entityNameIndex = segments.Length - 2;
+            string entityName = segments[entityNameIndex]; ;
+            Type parentType = segmentTypes[(int)parentIndex];
+            return TryAddEntityToParent(
+                parentType,
+                entityType,
+                parentId,
+                entityName,
+                convertedValue,
+                context,
+                out errorMessage);
+        }
     }
 
     public bool TryGet(
@@ -102,11 +159,11 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             Type entityType = segmentTypes[(int)entityIndex];
             return TryRemoveEntityFromParent(
                 parentType,
-                entityType, 
-                parentId, 
-                entityId, 
-                entityName, 
-                context, 
+                entityType,
+                parentId,
+                entityId,
+                entityName,
+                context,
                 out errorMessage);
         }
     }
@@ -124,25 +181,199 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return TryReplaceWithNewQuery(target, dbSet, segments, contractResolver, value, out errorMessage);
     }
 
-    private bool TryRemoveEntityFromDb(
-        Type entityType, 
-        int entityId, 
-        IAppDbContext context, 
+    #region ReflectionCalls
+
+    private bool TryAddEntityToDb(
+        Type entityType,
+        object convertedValue,
+        IAppDbContext context,
         out string errorMessage)
     {
         var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
             .GetMethods(BindingFlags.NonPublic | BindingFlags.Static).FirstOrDefault(m =>
-            m.Name == nameof(TryRemoveEntity) &&
+            m.Name == nameof(TryAddEntityToDb) &&
+            m.GetParameters().Length == 3);
+        var genericMethod = methodInfo.MakeGenericMethod(entityType);
+        object[] parameters = [convertedValue, context, null];
+        object result = genericMethod.Invoke(this, parameters);
+
+        errorMessage = (string)parameters.Last();
+        return (bool)result;
+    }
+
+    private bool TryAddEntityToParent(
+        Type parentType,
+        Type entityType,
+        int parentId,
+        string entitiesInParentFieldName,
+        object convertedValue,
+        IAppDbContext context,
+        out string errorMessage)
+    {
+        var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static).FirstOrDefault(m =>
+            m.Name == nameof(TryAddEntityToParent) &&
+            m.GetParameters().Length == 5);
+        var genericMethod = methodInfo.MakeGenericMethod(parentType, entityType);
+        object[] parameters = [parentId, entitiesInParentFieldName, convertedValue, context, null];
+        object result = genericMethod.Invoke(this, parameters);
+
+        errorMessage = (string)parameters.Last();
+        return (bool)result;
+    }
+
+    private bool TryRemoveEntityFromDb(
+        Type entityType,
+        int entityId,
+        IAppDbContext context,
+        out string errorMessage)
+    {
+        var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static).FirstOrDefault(m =>
+            m.Name == nameof(TryRemoveEntityFromDb) &&
             m.GetParameters().Length == 3);
         var genericMethod = methodInfo.MakeGenericMethod(entityType);
         object[] parameters = [entityId, context, null];
+        object result = genericMethod.Invoke(this, parameters);
+
+        errorMessage = (string)parameters.Last();
+        return (bool)result;
+    }
+
+    private bool TryRemoveEntityFromParent(
+        Type parentType,
+        Type entityType,
+        int parentId,
+        int entityId,
+        string entitiesInParentFieldName,
+        IAppDbContext context,
+        out string errorMessage)
+    {
+        var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static).FirstOrDefault(m =>
+            m.Name == nameof(TryRemoveEntityFromParent) &&
+            m.GetParameters().Length == 5);
+        var genericMethod = methodInfo.MakeGenericMethod(parentType, entityType);
+        object[] parameters = [parentId, entityId, entitiesInParentFieldName, context, null];
+        object result = genericMethod.Invoke(this, parameters);
+
+        errorMessage = (string)parameters.Last();
+        return (bool)result;
+    }
+
+    private bool TryReplaceWithNewQuery(
+        object dbSet,
+        IQueryable query,
+        Type genericType,
+        string[] segments,
+        IContractResolver contractResolver,
+        object value,
+        out string errorMessage)
+    {
+        var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(m =>
+            m.Name == nameof(TryReplaceWithNewQuery) &&
+            m.GetParameters().Length == 6);
+        var genericMethod = methodInfo.MakeGenericMethod(genericType);
+        object[] parameters = [dbSet, query, segments, contractResolver, value, null];
         object result = genericMethod.Invoke(this, parameters);
 
         errorMessage = (string)parameters.LastOrDefault();
         return (bool)result;
     }
 
-    private static bool TryRemoveEntity
+    #endregion
+
+    #region PrivateMethods
+
+    private static bool TryAddEntityToDb
+        <TEntityToAdd>(
+        object convertedValue,
+        IAppDbContext context,
+        out string errorMessage)
+        where TEntityToAdd : BaseEntity, new()
+    {
+        try
+        {
+            TEntityToAdd entity = (TEntityToAdd)convertedValue;
+            AddEntityAndItsChildrenToContext(entity, context);
+            context.SaveChanges();
+            errorMessage = null;
+            return true;
+        }
+        catch (Exception)
+        {
+            errorMessage = string.Format(
+                "Could not add entity {0}",
+                typeof(TEntityToAdd).Name.ToCamelCase());
+            return false;
+        }
+    }
+
+    private static void AddEntityAndItsChildrenToContext(object entity, IAppDbContext context)
+    {
+        foreach (var property in entity.GetType().GetProperties())
+        {
+            if (property.PropertyType.IsSubclassOf(typeof(BaseEntity)))
+            {
+                var childEntity = property.GetValue(entity);
+                if (childEntity != null)
+                {
+                    AddEntityAndItsChildrenToContext(childEntity, context);
+                }
+            }
+            else if (property.PropertyType.IsGenericType &&
+                     typeof(IList).IsAssignableFrom(property.PropertyType))
+            {
+                var childEntities = (IEnumerable)property.GetValue(entity);
+                if (childEntities != null)
+                {
+                    foreach (var childEntity in childEntities)
+                    {
+                        AddEntityAndItsChildrenToContext(childEntity, context);
+                    }
+                }
+            }
+        }
+
+        context.Entry(entity).State = EntityState.Added;
+    }
+
+    private static bool TryAddEntityToParent
+        <TParent, TEntityToAdd>(
+        int parentId,
+        string entitiesInParentFieldName,
+        object convertedValue,
+        IAppDbContext context,
+        out string errorMessage)
+        where TParent : BaseEntity, new()
+        where TEntityToAdd : BaseEntity, new()
+    {
+        try
+        {
+            TEntityToAdd entity = (TEntityToAdd)convertedValue;
+            TParent parent = new TParent { Id = parentId };
+            var listProperty = typeof(TParent).GetProperty(entitiesInParentFieldName);
+            IList<TEntityToAdd> list = (IList<TEntityToAdd>)listProperty.GetValue(parent);
+            context.Entry(parent).State = EntityState.Unchanged;
+            context.Entry(entity).State = EntityState.Unchanged;
+            AddEntityAndItsChildrenToContext(entity, context);
+            list.Add(entity);
+            context.SaveChanges();
+            errorMessage = null;
+            return true;
+        }
+        catch (Exception)
+        {
+            errorMessage = string.Format(
+                "Could not add entity {0} to {1} field",
+                typeof(TEntityToAdd).Name.ToCamelCase(),
+                entitiesInParentFieldName.ToCamelCase());
+            return false;
+        }
+    }
+
+    private static bool TryRemoveEntityFromDb
         <TEntityToDelete>(
         int entityId,
         IAppDbContext context,
@@ -164,27 +395,6 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                 entityId);
             return false;
         }
-    }
-
-    private bool TryRemoveEntityFromParent(
-        Type parentType,
-        Type entityType,
-        int parentId,
-        int entityId,
-        string entitiesInParentFieldName,
-        IAppDbContext context,
-        out string errorMessage)
-    {
-        var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
-            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static).FirstOrDefault(m =>
-            m.Name == nameof(TryRemoveEntityFromParent) &&
-            m.GetParameters().Length == 5);
-        var genericMethod = methodInfo.MakeGenericMethod(parentType, entityType);
-        object[] parameters = [parentId, entityId, entitiesInParentFieldName, context, null];
-        object result = genericMethod.Invoke(this, parameters);
-
-        errorMessage = (string)parameters.LastOrDefault();
-        return (bool)result;
     }
 
     private static bool TryRemoveEntityFromParent
@@ -221,27 +431,6 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         }
     }
 
-    private bool TryReplaceWithNewQuery(
-        object dbSet,
-        IQueryable query,
-        Type genericType,
-        string[] segments,
-        IContractResolver contractResolver,
-        object value,
-        out string errorMessage)
-    {
-        var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
-            .GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(m =>
-            m.Name == nameof(TryReplaceWithNewQuery) &&
-            m.GetParameters().Length == 6);
-        var genericMethod = methodInfo.MakeGenericMethod(genericType);
-        object[] parameters = [dbSet, query, segments, contractResolver, value, null];
-        object result = genericMethod.Invoke(this, parameters);
-
-        errorMessage = (string)parameters.LastOrDefault();
-        return (bool)result;
-    }
-
     private bool TryReplaceWithNewQuery<TBaseEntity>(
         object dbSet,
         IQueryable<TBaseEntity> query,
@@ -258,6 +447,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             if (propertyType == null && int.TryParse(segments[i], out int entityId))
             {
                 query = query.Where(e => e.Id == entityId);
+                continue;
             }
 
             else if (i + 1 < segments.Length && typeof(IList).IsAssignableFrom(propertyType)
@@ -265,28 +455,26 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             {
                 Type entityType = newQuery.ElementType;
                 return TryReplaceWithNewQuery(
-                    newQuery, 
-                    newQuery, 
-                    entityType, 
-                    segments[++i..], 
-                    contractResolver, 
-                    value, 
+                    newQuery,
+                    newQuery,
+                    entityType,
+                    segments[++i..],
+                    contractResolver,
+                    value,
                     out errorMessage);
             }
 
             if (propertyType != null && !typeof(IList).IsAssignableFrom(propertyType) &&
                 TryConvertValue(
-                    value, 
-                    propertyType!, 
-                    segments[i], 
-                    contractResolver, 
-                    out var convertedValue, 
+                    value,
+                    propertyType!,
+                    out var convertedValue,
                     out errorMessage))
             {
                 if (!TryGetExecuteUpdateLambda<TBaseEntity>(
-                    segments[i], 
-                    convertedValue, 
-                    out var expression, 
+                    segments[i],
+                    convertedValue,
+                    out var expression,
                     out errorMessage))
                 {
                     return false;
@@ -296,7 +484,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
 
             else
             {
-                errorMessage = "Can not define expression while executing 'replace' method";
+                errorMessage = "Could not define expression while executing 'replace' method";
                 return false;
             }
         }
@@ -378,6 +566,27 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return (dbSet as DbSet<TBaseEntity>).TryGetDbSetFromInterface(genericOfSet, out newQuery);
     }
 
+    protected virtual bool TryConvertValue(
+        object originalValue,
+        Type listTypeArgument,
+        out object convertedValue,
+        out string errorMessage)
+    {
+        var conversionResult = ConversionResultProvider.ConvertTo(originalValue, listTypeArgument);
+        if (!conversionResult.CanBeConverted)
+        {
+            convertedValue = null;
+            errorMessage = AdapterError.FormatInvalidValueForProperty(originalValue);
+            return false;
+        }
+
+        convertedValue = conversionResult.ConvertedInstance;
+        errorMessage = null;
+        return true;
+    }
+
+    #endregion
+
     public bool TryTest(
         object target,
         string segment,
@@ -396,26 +605,5 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         out string errorMessage)
     {
         throw new NotImplementedException();
-    }
-
-    protected virtual bool TryConvertValue(
-        object originalValue,
-        Type listTypeArgument,
-        string segment,
-        IContractResolver contractResolver,
-        out object convertedValue,
-        out string errorMessage)
-    {
-        var conversionResult = ConversionResultProvider.ConvertTo(originalValue, listTypeArgument);
-        if (!conversionResult.CanBeConverted)
-        {
-            convertedValue = null;
-            errorMessage = AdapterError.FormatInvalidValueForProperty(originalValue);
-            return false;
-        }
-
-        convertedValue = conversionResult.ConvertedInstance;
-        errorMessage = null;
-        return true;
     }
 }

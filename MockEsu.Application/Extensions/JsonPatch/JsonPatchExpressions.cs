@@ -78,16 +78,18 @@ internal static class JsonPatchExpressions
         foreach (var operation in patch.Operations)
         {
             string operationPathAsProperty = operation.path.ToPropetyFormat();
-            if (int.TryParse(operationPathAsProperty.Split('.')[0], out int index))
+            string indexString = operationPathAsProperty.Split('.')[0];
+            if (int.TryParse(operationPathAsProperty.Split('.')[0], out int _) || 
+                indexString == "-")
             {
-                if (index.GetLength() < operationPathAsProperty.Length)
-                    operationPathAsProperty = operationPathAsProperty[(index.GetLength() + 1)..];
+                if (indexString.Length < operationPathAsProperty.Length)
+                    operationPathAsProperty = operationPathAsProperty[(indexString.Length + 1)..];
                 else
                     operationPathAsProperty = string.Empty;
             }
             else
             {
-                index = -1;
+                indexString = string.Empty;
             }
 
             var newOperation = new Operation<DbSet<TDestination>>()
@@ -106,12 +108,12 @@ internal static class JsonPatchExpressions
                     propertyType,
                     mapper.ConfigurationProvider);
 
-            if (index != -1)
+            if (indexString != string.Empty)
             {
                 if (newOperation.path.Length > 0)
-                    newOperation.path = $"{index}.{newOperation.path}";
+                    newOperation.path = $"{indexString}.{newOperation.path}";
                 else
-                    newOperation.path = index.ToString();
+                    newOperation.path = indexString;
             }
             newOperations.Add(newOperation);
         }

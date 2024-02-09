@@ -4,6 +4,7 @@ using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Extensions.StringExtencions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Collections;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -30,24 +31,47 @@ public abstract record BaseDto
 
     public static object GetSourceValueJsonPatch(
         object value,
-        Type type,
+        Type dtoType,
         IConfigurationProvider provider)
     {
-        if (value == null)
-            return value;
         string serialized = JsonConvert.SerializeObject(value);
-        if (JToken.Parse(serialized).Type != JTokenType.Object)
-            return value;
+        var jsonValueType = JToken.Parse(serialized).Type;
+        switch (jsonValueType)
+        {
+            case JTokenType.Object:
+                return GetSourceValueFromJsonObject(dtoType, provider, serialized);
+            case JTokenType.Array:
+                return GetSourceValueFromJsonArray(dtoType, provider, serialized);
+            default:
+                return value;
+        }
+    }
 
+    private static object GetSourceValueFromJsonArray(Type dtoArrayType, IConfigurationProvider provider, string serialized)
+    {
+        List<object> sourceObjects = new();
+        List<Dictionary<string, object>> dtoDictionaries
+            = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(serialized);
+        Type dtoType = dtoArrayType.GetGenericArguments().Single();
+        foreach (var dtoDict in dtoDictionaries)
+        {
+            sourceObjects.Add(GetSourceValueFromJsonObject(dtoType, provider, JsonConvert.SerializeObject(dtoDict)));
+        }
+        return sourceObjects;
+    }
+
+    private static object GetSourceValueFromJsonObject(Type dtoType, IConfigurationProvider provider, string serialized)
+    {
         Dictionary<string, object> sourceProperties = new();
         Dictionary<string, object> properties
             = JsonConvert.DeserializeObject<Dictionary<string, object>>(serialized);
-        foreach (var prop in properties)
+        foreach (var property in properties)
         {
-            Type tmpType = type;
-            if (!InvokeTryGetSource(prop.Key.ToPascalCase(), provider, ref tmpType, out string newKey))
-                throw new ArgumentNullException($"Something went wrong while getting json patch source property path for '{prop.Key}'");
-            sourceProperties.Add(newKey.ToCamelCase(), prop.Value);
+            Type propertyType = dtoType;
+            if (!InvokeTryGetSource(property.Key.ToPascalCase(), provider, ref propertyType, out string newKey))
+                throw new ArgumentNullException($"Something went wrong while getting json patch source property path for '{property.Key}'");
+            object propValue = GetSourceValueJsonPatch(property.Value, propertyType, provider);
+            sourceProperties.Add(newKey.ToCamelCase(), propValue);
         }
         return JsonConvert.DeserializeObject(JsonConvert.SerializeObject(sourceProperties));
     }
@@ -58,14 +82,12 @@ public abstract record BaseDto
         out Type propertyType)
         where TSource : BaseDto, IEditDto
     {
+        propertyType = typeof(TSource);
         if (dtoPath.Length == 0)
-        {
-            propertyType = TSource.GetOriginType();
             return dtoPath;
-        }
+
         string[] pathSegments = dtoPath.Split('.');
         List<string> sourcePathSegments = new();
-        propertyType = typeof(TSource);
         foreach (string segment in pathSegments)
         {
             if (int.TryParse(segment, out int _) || segment == "-")

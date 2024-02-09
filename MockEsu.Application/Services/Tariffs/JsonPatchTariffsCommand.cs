@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Interfaces;
+using MockEsu.Application.Extensions.DataBaseProvider;
 using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Domain.Entities;
 using MockEsu.Domain.Entities.Traiffs;
@@ -48,7 +49,7 @@ public class JsonPatchTariffsCommandHandler : IRequestHandler<JsonPatchTariffsCo
         JsonPatchDocument<DbSet<Tariff>> jsonPatchDocument = request.Patch.ConvertToSourceDbSet<Tariff, TariffDto>(_mapper);
         jsonPatchDocument.ApplyTransactionToSource<DbSet<Tariff>, Tariff>(_context.Tariffs, _context);
 
-        var tariffs = _context.Tariffs.AsNoTracking()
+        var tariffs = _context.Tariffs.WithPrices().AsNoTracking()
             .Select(t => _mapper.Map<TariffDto>(t))
             //.ProjectTo<TariffDto>(_mapper.ConfigurationProvider)
             .ToList();
