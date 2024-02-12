@@ -286,16 +286,25 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
 
     #region PrivateMethods
 
+    /// <summary>
+    /// Adds entity and it's children into database.
+    /// </summary>
+    /// <typeparam name="TEntityToAdd">Type of entity to add.</typeparam>
+    /// <param name="value">Entity value.</param>
+    /// <param name="context">DbContext for performing actions.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if <typeparamref name="TEntityToAdd"/> was successfully added; otherwise, <see langword="false"/>.</returns>
     private static bool TryAddEntityToDb
         <TEntityToAdd>(
-        object convertedValue,
+        object value,
         IAppDbContext context,
         out string errorMessage)
         where TEntityToAdd : BaseEntity, new()
     {
         try
         {
-            TEntityToAdd entity = (TEntityToAdd)convertedValue;
+            TEntityToAdd entity = (TEntityToAdd)value;
+            (context as DbContext).ChangeTracker.Clear();
             AddEntityAndItsChildrenToContext(entity, context);
             context.SaveChanges();
             errorMessage = null;
@@ -310,40 +319,22 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         }
     }
 
-    private static void AddEntityAndItsChildrenToContext(object entity, IAppDbContext context)
-    {
-        foreach (var property in entity.GetType().GetProperties())
-        {
-            if (property.PropertyType.IsSubclassOf(typeof(BaseEntity)))
-            {
-                var childEntity = property.GetValue(entity);
-                if (childEntity != null)
-                {
-                    AddEntityAndItsChildrenToContext(childEntity, context);
-                }
-            }
-            else if (property.PropertyType.IsGenericType &&
-                     typeof(IList).IsAssignableFrom(property.PropertyType))
-            {
-                var childEntities = (IEnumerable)property.GetValue(entity);
-                if (childEntities != null)
-                {
-                    foreach (var childEntity in childEntities)
-                    {
-                        AddEntityAndItsChildrenToContext(childEntity, context);
-                    }
-                }
-            }
-        }
-
-        context.Entry(entity).State = EntityState.Added;
-    }
-
+    /// <summary>
+    /// Adds entity and it's children into parent entity.
+    /// </summary>
+    /// <typeparam name="TParent">Type of parent to which entity will be added.</typeparam>
+    /// <typeparam name="TEntityToAdd">Type of entity to add.</typeparam>
+    /// <param name="parentId">Id of parent entity.</param>
+    /// <param name="entitiesInParentPropertyName">Name of property, in which entity will be added.</param>
+    /// <param name="value">Entity value.</param>
+    /// <param name="context">DbContext for performing actions.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if <typeparamref name="TEntityToAdd"/> was successfully added; otherwise, <see langword="false"/>.</returns>
     private static bool TryAddEntityToParent
         <TParent, TEntityToAdd>(
         int parentId,
-        string entitiesInParentFieldName,
-        object convertedValue,
+        string entitiesInParentPropertyName,
+        object value,
         IAppDbContext context,
         out string errorMessage)
         where TParent : BaseEntity, new()
@@ -351,10 +342,11 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
     {
         try
         {
-            TEntityToAdd entity = (TEntityToAdd)convertedValue;
+            TEntityToAdd entity = (TEntityToAdd)value;
             TParent parent = new TParent { Id = parentId };
-            var listProperty = typeof(TParent).GetProperty(entitiesInParentFieldName);
+            var listProperty = typeof(TParent).GetProperty(entitiesInParentPropertyName);
             IList<TEntityToAdd> list = (IList<TEntityToAdd>)listProperty.GetValue(parent);
+            (context as DbContext).ChangeTracker.Clear();
             context.Entry(parent).State = EntityState.Unchanged;
             context.Entry(entity).State = EntityState.Unchanged;
             AddEntityAndItsChildrenToContext(entity, context);
@@ -368,11 +360,19 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             errorMessage = string.Format(
                 "Could not add entity {0} to {1} field",
                 typeof(TEntityToAdd).Name.ToCamelCase(),
-                entitiesInParentFieldName.ToCamelCase());
+                entitiesInParentPropertyName.ToCamelCase());
             return false;
         }
     }
 
+    /// <summary>
+    /// Removes entity from database.
+    /// </summary>
+    /// <typeparam name="TEntityToDelete">Type of entity to delete.</typeparam>
+    /// <param name="entityId">Id of entity.</param>
+    /// <param name="context">DbContext for performing actions.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>    
+    /// <returns><see langword="true"/> if <typeparamref name="TEntityToDelete"/> was successfully deleted; otherwise, <see langword="false"/>.</returns>
     private static bool TryRemoveEntityFromDb
         <TEntityToDelete>(
         int entityId,
@@ -383,6 +383,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         try
         {
             TEntityToDelete entity = new TEntityToDelete { Id = entityId };
+            (context as DbContext).ChangeTracker.Clear();
             context.Entry(entity).State = EntityState.Deleted;
             context.SaveChanges();
             errorMessage = null;
@@ -397,6 +398,17 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         }
     }
 
+    /// <summary>
+    /// Removes entity from parent entity.
+    /// </summary>
+    /// <typeparam name="TParent">Type of parent from which entity will be deleted.</typeparam>
+    /// <typeparam name="TEntityToDelete">Type of entity to delete.</typeparam>
+    /// <param name="parentId">Id of parent entity.</param>
+    /// <param name="entityId">Id of entity.</param>
+    /// <param name="entitiesInParentPropertyName">Name of property, from which entity will be deleted.</param>
+    /// <param name="context">DbContext for performing actions.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>    
+    /// <returns><see langword="true"/> if <typeparamref name="TEntityToDelete"/> was successfully deleted; otherwise, <see langword="false"/>.</returns>
     private static bool TryRemoveEntityFromParent
         <TParent, TEntityToDelete>(
         int parentId,
@@ -414,6 +426,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             var listProperty = typeof(TParent).GetProperty(entitiesInParentFieldName);
             IList<TEntityToDelete> list = (IList<TEntityToDelete>)listProperty.GetValue(parent);
             list.Add(entity);
+            (context as DbContext).ChangeTracker.Clear();
             context.Entry(parent).State = EntityState.Unchanged;
             context.Entry(entity).State = EntityState.Unchanged;
             list.Remove(entity);
@@ -431,6 +444,17 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         }
     }
 
+    /// <summary>
+    /// Creates new query to perform replace action.
+    /// </summary>
+    /// <typeparam name="TBaseEntity">Type of generic in <paramref name="query"/>.</typeparam>
+    /// <param name="dbSet">The DbSet from which the context will be taken.</param>
+    /// <param name="query">Request query.</param>
+    /// <param name="segments">Property path segments.</param>
+    /// <param name="contractResolver">Needs to be in API, idk.</param>
+    /// <param name="value">New property value.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>    
+    /// <returns><see langword="true"/> if update was successfully performed; otherwise, <see langword="false"/>.</returns>
     private bool TryReplaceWithNewQuery<TBaseEntity>(
         object dbSet,
         IQueryable<TBaseEntity> query,
@@ -451,7 +475,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             }
 
             else if (i + 1 < segments.Length && typeof(IList).IsAssignableFrom(propertyType)
-                && TryGetQueryFromSegment(dbSet, query, segments[i], out var newQuery))
+                && TryGetQueryFromProperty(dbSet, query, segments[i], out var newQuery))
             {
                 Type entityType = newQuery.ElementType;
                 return TryReplaceWithNewQuery(
@@ -492,6 +516,14 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return true;
     }
 
+    /// <summary>
+    /// Gets lambda of property itself.
+    /// </summary>
+    /// <typeparam name="TBaseEntity">Type of entity containing property.</typeparam>
+    /// <param name="propertyName">Name of property.</param>
+    /// <param name="expression">Result expression.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>    
+    /// <returns><see langword="true"/> if expression was successfully created; otherwise, <see langword="false"/>.</returns>
     private static bool TryGetPropertyLambda<TBaseEntity>(
         string propertyName,
         out Expression<Func<TBaseEntity, object>> expression,
@@ -514,6 +546,15 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         }
     }
 
+    /// <summary>
+    /// Gets expression for <c>ExecuteUpdate()</c> method.
+    /// </summary>
+    /// <typeparam name="TBaseEntity">Type of entity containing property.</typeparam>
+    /// <param name="propertyName">Name of property.</param>
+    /// <param name="value">New value for property.</param>
+    /// <param name="expression">Result expression.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>    
+    /// <returns><see langword="true"/> if expression was successfully created; otherwise, <see langword="false"/>.</returns>
     private static bool TryGetExecuteUpdateLambda<TBaseEntity>(
         string propertyName,
         object? value,
@@ -548,24 +589,67 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return true;
     }
 
-    private static bool TryGetQueryFromSegment<TBaseEntity>(
+    /// <summary>
+    /// Creates new DbSet query from property type.
+    /// </summary>
+    /// <typeparam name="TBaseEntity">Type of entity containing property.</typeparam>
+    /// <param name="dbSet">The DbSet from which the context will be taken.</param>
+    /// <param name="query">Query to get type of entity</param>
+    /// <param name="propertyName">Name of property.</param>
+    /// <param name="newQuery">Result DbSet query.</param>
+    /// <returns></returns>
+    private static bool TryGetQueryFromProperty<TBaseEntity>(
         object dbSet,
         IQueryable<TBaseEntity> query,
-        string segment,
+        string propertyName,
         out IQueryable newQuery)
         where TBaseEntity : BaseEntity
     {
         newQuery = null;
-        var propertyInfo = query
-            .GetType()
-            .GetGenericArguments()[0]
-            .GetProperty(segment);
+        var propertyInfo = typeof(TBaseEntity).GetProperty(propertyName);
         if (propertyInfo == null || propertyInfo.PropertyType.GetGenericArguments().Length == 0)
             return false;
         Type genericOfSet = propertyInfo.PropertyType.GetGenericArguments()[0];
-        return (dbSet as DbSet<TBaseEntity>).TryGetDbSetFromInterface(genericOfSet, out newQuery);
+        return (dbSet as DbSet<TBaseEntity>).TryGetDbSetFromAnotherDbSet(genericOfSet, out newQuery);
     }
 
+    /// <summary>
+    /// Labels entity and it's children as added.
+    /// </summary>
+    /// <param name="entity">Entity instance.</param>
+    /// <param name="context">DbContext for performing actions.</param>
+    private static void AddEntityAndItsChildrenToContext(object entity, IAppDbContext context)
+    {
+        foreach (var property in entity.GetType().GetProperties())
+        {
+            if (property.PropertyType.IsSubclassOf(typeof(BaseEntity)))
+            {
+                var childEntity = property.GetValue(entity);
+                if (childEntity != null)
+                {
+                    AddEntityAndItsChildrenToContext(childEntity, context);
+                }
+            }
+            else if (property.PropertyType.IsGenericType &&
+                     typeof(IList).IsAssignableFrom(property.PropertyType))
+            {
+                var childEntities = (IEnumerable)property.GetValue(entity);
+                if (childEntities != null)
+                {
+                    foreach (var childEntity in childEntities)
+                    {
+                        AddEntityAndItsChildrenToContext(childEntity, context);
+                    }
+                }
+            }
+        }
+
+        context.Entry(entity).State = EntityState.Added;
+    }
+
+    /// <summary>
+    /// Convert method from AspNerCore.JsonPatch library.
+    /// </summary>
     protected virtual bool TryConvertValue(
         object originalValue,
         Type listTypeArgument,

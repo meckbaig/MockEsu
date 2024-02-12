@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Adapters;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.StringExtencions;
@@ -30,38 +31,40 @@ internal static class JsonPatchExpressions
         }
     }
 
+    /// <summary>
+    /// Deprecated.
+    /// </summary>
     internal static TDestination? ApplyToSource<TDto, TDestination>
         (this JsonPatchDocument<TDto> patch, TDestination? destination, IMapper mapper)
         where TDto : BaseDto
         where TDestination : BaseEntity
     {
-        var tmpDestination = destination;
         var dto = mapper.Map<TDto>(destination);
         patch.ApplyTo(dto, Adapter);
         mapper.Map(dto, destination);
         return destination;
     }
 
-    internal static void ApplyTransactionToSource<IDbSet, TDestination>
-        (this JsonPatchDocument<IDbSet> patch, IDbSet dbSet, IAppDbContext context)
-        where IDbSet : DbSet<TDestination>
+    /// <summary>
+    /// Applies json patch to the database.
+    /// </summary>
+    /// <typeparam name="TDbSet">Type of DbSet to apply json patch to.</typeparam>
+    /// <typeparam name="TDestination">Type of entity.</typeparam>
+    /// <param name="patch">Json patch document containing operations</param>
+    /// <param name="dbSet">DbSet to apply json patch to.</param>
+    internal static void ApplyTransactionToSource<TDestination>
+        (this JsonPatchDocument<DbSet<TDestination>> patch, DbSet<TDestination> dbSet)
         where TDestination : BaseEntity
     {
+        IAppDbContext context = dbSet.GetService<IAppDbContext>();
         using (var transaction = context.Database.BeginTransaction())
         {
             try
             {
-                //Task[] tasks = new Task[patch.Operations.Count];
-                //for (int i = 0; i < patch.Operations.Count; i++)
-                //{
-                //    tasks[i] = Task.Run(() 
-                //        => patch.Operations[i].Apply(dbSet, Adapter));
-                //}
-                //Task.WaitAll(tasks);
                 patch.ApplyTo(dbSet, Adapter);
                 transaction.Commit();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 transaction.Rollback();
                 throw;
@@ -69,10 +72,18 @@ internal static class JsonPatchExpressions
         }
     }
 
+    /// <summary>
+    /// Converts json patch document from <typeparamref name="TDto"/> to DbSet of <typeparamref name="TDestination"/>.
+    /// </summary>
+    /// <typeparam name="TDestination">Entity type.</typeparam>
+    /// <typeparam name="TDto">DTO type.</typeparam>
+    /// <param name="patch">Json patch document containing operations.</param>
+    /// <param name="provider">Configuraion provider for performing maps.</param>
+    /// <returns>Json patch document of DbSet of <typeparamref name="TDestination"/></returns>
     internal static JsonPatchDocument<DbSet<TDestination>> ConvertToSourceDbSet
-        <TDestination, TDto>(this JsonPatchDocument<TDto> patch, IMapper mapper) 
-        where TDto : BaseDto, IEditDto
+        <TDto, TDestination>(this JsonPatchDocument<TDto> patch, IConfigurationProvider provider) 
         where TDestination : BaseEntity
+        where TDto : BaseDto, IEditDto
     {
         var newOperations = new List<Operation<DbSet<TDestination>>>();
         foreach (var operation in patch.Operations)
@@ -99,14 +110,14 @@ internal static class JsonPatchExpressions
             };
             newOperation.path = 
                 BaseDto.GetSourceJsonPatch<TDto>(
-                    operationPathAsProperty, 
-                    mapper.ConfigurationProvider,
+                    operationPathAsProperty,
+                    provider,
                     out Type propertyType);
             newOperation.value =
                 BaseDto.GetSourceValueJsonPatch(
                     operation.value,
                     propertyType,
-                    mapper.ConfigurationProvider);
+                    provider);
 
             if (indexString != string.Empty)
             {
@@ -120,6 +131,26 @@ internal static class JsonPatchExpressions
         return new JsonPatchDocument<DbSet<TDestination>>(
             newOperations, 
             new CamelCasePropertyNamesContractResolver());
+    }
+
+    /// <summary>
+    /// Converts operations from <typeparamref name="TDto"/> to DbSet of <typeparamref name="TDestination"/> and applies them to database.
+    /// </summary>
+    /// <typeparam name="TDestination">Type of database entity.</typeparam>
+    /// <typeparam name="TDto">Type of DTO.</typeparam>
+    /// <param name="patch">Json patch document containing operations.</param>
+    /// <param name="dbSet">DbSet to apply json patch to.</param>
+    /// <param name="provider">Configuraion provider for performing maps.</param>
+    internal static void ApplyDtoTransactionToSource
+        <TDestination, TDto>(
+        this JsonPatchDocument<TDto> patch,
+        DbSet<TDestination> dbSet,
+        IConfigurationProvider provider)
+        where TDestination : BaseEntity
+        where TDto : BaseDto, IEditDto
+    {
+        var convertedPatch = patch.ConvertToSourceDbSet<TDto, TDestination>(provider);
+        convertedPatch.ApplyTransactionToSource(dbSet);
     }
 
     internal static string ToPathFormat(this string property)

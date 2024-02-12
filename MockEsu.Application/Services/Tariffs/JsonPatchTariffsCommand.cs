@@ -46,8 +46,7 @@ public class JsonPatchTariffsCommandHandler : IRequestHandler<JsonPatchTariffsCo
 
     public async Task<JsonPatchTariffsResponse> Handle(JsonPatchTariffsCommand request, CancellationToken cancellationToken)
     {
-        JsonPatchDocument<DbSet<Tariff>> jsonPatchDocument = request.Patch.ConvertToSourceDbSet<Tariff, TariffDto>(_mapper);
-        jsonPatchDocument.ApplyTransactionToSource<DbSet<Tariff>, Tariff>(_context.Tariffs, _context);
+        request.Patch.ApplyDtoTransactionToSource(_context.Tariffs, _mapper.ConfigurationProvider);
 
         var tariffs = _context.Tariffs.WithPrices().AsNoTracking()
             .Select(t => _mapper.Map<TariffDto>(t))
