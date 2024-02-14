@@ -1,16 +1,11 @@
-using System.Diagnostics;
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using Swashbuckle.AspNetCore.SwaggerGen;
-using MockEsu.Web.Structure.Swagger;
+using MockEsu.Application.Common.Exceptions;
 using MockEsu.Web.Structure.OptionsSetup;
-using MockEsu.Application.Common.Interfaces;
+using MockEsu.Web.Structure.Swagger;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
 
 var exceptionMiddleware = new CustomExceptionHandler();
 
@@ -44,6 +39,21 @@ builder.Services.AddApiVersioning(options =>
     options.SubstituteApiVersionInUrl = true;
 });
 
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var ex = new ValidationException(context.ModelState);
+        var problemDetails = new
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+            Title = "One or more validation errors occurred.",
+            Status = StatusCodes.Status400BadRequest,
+            Errors = ex.Errors
+        };
+        return new BadRequestObjectResult(problemDetails);
+    };
+});
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
 //builder.Services.AddExceptionHandler<CustomExceptionHandler>();
@@ -79,9 +89,9 @@ app.Use(async (context, next) =>
     {
         await next(context);
     }
-    catch (Exception e)
+    catch (Exception ex)
     {
-        await exceptionMiddleware.TryHandleAsync(context, e, new CancellationToken());
+        await exceptionMiddleware.TryHandleAsync(context, ex, new CancellationToken());
     }
 });
 
