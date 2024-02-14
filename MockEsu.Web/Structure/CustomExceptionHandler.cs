@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.JsonPatch.Exceptions;
+using MockEsu.Application.Common.BaseRequests.JsonPatchCommand;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Web.Structure.CustomProblemDetails;
 
@@ -30,27 +32,32 @@ public class CustomExceptionHandler : IExceptionHandler
     /// Handle the exception according to registred types
     /// </summary>
     /// <param name="httpContext">Request context</param>
-    /// <param name="exception">Error to hendle</param>
+    /// <param name="ex">Error to hendle</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns></returns>
-    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception,
+    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception ex,
         CancellationToken cancellationToken)
     {
-        var exceptionType = exception.GetType();
+        var exceptionType = ex.GetType();
 
         if (_exceptionHandlers.ContainsKey(exceptionType))
         {
-            await _exceptionHandlers[exceptionType].Invoke(httpContext, exception);
+            await _exceptionHandlers[exceptionType].Invoke(httpContext, ex);
             return true;
         }
 
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
+
+        ErrorItem error = new(ex.Message, "UnhandledException");
+        await httpContext.Response.WriteAsJsonAsync(new
         {
             Status = StatusCodes.Status500InternalServerError,
             Type = "https://datatracker.ietf.org/doc/html/rfc9110#section-15.6.1",
             Title = "Unhandled exception occurred.",
-            Detail = exception.Message
+            Errors = new Dictionary<string, ErrorItem[]>
+            {
+                { "Undefined", [error] }
+            }
         });
         return false;
     }
