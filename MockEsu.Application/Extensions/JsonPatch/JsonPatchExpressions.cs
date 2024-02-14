@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using MockEsu.Application.Common.Dtos;
+using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
@@ -58,16 +59,27 @@ internal static class JsonPatchExpressions
         IAppDbContext context = dbSet.GetService<IAppDbContext>();
         using (var transaction = context.Database.BeginTransaction())
         {
+            int operationIndex = 0;
             try
             {
-                patch.ApplyTo(dbSet, Adapter);
+                while (operationIndex < patch.Operations.Count)
+                {
+                    patch.Operations[operationIndex].Apply(dbSet, Adapter);
+                    operationIndex++;
+                }
+                //patch.ApplyTo(dbSet, Adapter);
                 transaction.Commit();
             }
             catch (JsonPatchException ex)
             {
                 transaction.Rollback();
                 if (ex.FailedOperation != null)
-                    throw new JsonPatchException($"{(ex.FailedOperation as IDbSetOperation).dtoPath}: {ex.Message}", ex);
+                {
+                    throw new JsonPatchExceptionWithPosition(
+                        $"{(ex.FailedOperation as IDbSetOperation).dtoPath}: {ex.Message}", 
+                        ex,
+                        operationIndex);
+                }
                 throw;
             }
             catch (Exception ex)

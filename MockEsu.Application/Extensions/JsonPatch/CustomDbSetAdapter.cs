@@ -488,13 +488,18 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                     out errorMessage);
             }
 
-            if (propertyType != null && !typeof(IList).IsAssignableFrom(propertyType) &&
-                TryConvertValue(
+            if (propertyType != null && !typeof(IList).IsAssignableFrom(propertyType))
+            {
+                if (!TryConvertValue(
                     value,
                     propertyType!,
                     out var convertedValue,
                     out errorMessage))
-            {
+                {
+                    errorMessage = $"'{value}' is not correct value for '{propertyType.Name}' type";
+                    return false;
+                }
+
                 if (!TryGetExecuteUpdateLambda<TBaseEntity>(
                     segments[i],
                     convertedValue,

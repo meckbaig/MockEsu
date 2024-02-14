@@ -1,6 +1,7 @@
 ﻿using FluentValidation.Results;
 using MockEsu.Application.Common.Exceptions;
 using System.Text.Json.Serialization;
+using MockEsu.Application.Extensions.StringExtensions;
 
 namespace MockEsu.Web.Structure.CustomProblemDetails
 {
@@ -17,7 +18,9 @@ namespace MockEsu.Web.Structure.CustomProblemDetails
         /// <param name="errors">Validation errors</param>
         public CustomValidationProblemDetails(IDictionary<string, ErrorItem[]> errors)
         {
-            Errors = errors;
+            Errors = errors.ToDictionary(
+                kvp => string.Join(".", kvp.Key.Split('.').Select(x => x.ToCamelCase())), 
+                kvp => kvp.Value);
         }
 
         [JsonPropertyName("errors")]

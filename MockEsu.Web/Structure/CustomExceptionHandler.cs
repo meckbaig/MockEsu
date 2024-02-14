@@ -19,6 +19,7 @@ public class CustomExceptionHandler : IExceptionHandler
         _exceptionHandlers = new()
         {
             { typeof(ValidationException), HandleValidationException },
+            { typeof(JsonPatchExceptionWithPosition), HandleJsonPatchException },
             //{ typeof(NotFoundException), HandleNotFoundException },
             //{ typeof(UnauthorizedAccessException), HandleUnauthorizedAccessException },
             //{ typeof(ForbiddenAccessException), HandleForbiddenAccessException },
@@ -77,6 +78,23 @@ public class CustomExceptionHandler : IExceptionHandler
         //        Detail = exception.Message
         //    });
         //}
+    }
+
+    private async Task HandleJsonPatchException(HttpContext httpContext, Exception ex)
+    {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+        ErrorItem error = new(ex.Message, "JsonPatchException");
+        await httpContext.Response.WriteAsJsonAsync(new
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Type = "https://datatracker.ietf.org/doc/html/rfc9110#name-400-bad-request",
+            Title = "Exception occurred while executing Json Patch expression.",
+            Errors = new Dictionary<string, ErrorItem[]>
+            {
+                { $"patch.operations[{(ex as JsonPatchExceptionWithPosition).Position}]", [error] }
+            }
+        });
+
     }
 
     //private async Task HandleNotFoundException(HttpContext httpContext, Exception ex)

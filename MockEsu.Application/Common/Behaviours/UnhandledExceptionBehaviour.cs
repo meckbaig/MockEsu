@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.JsonPatch.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace MockEsu.Application.Common.Behaviours;
@@ -18,8 +19,12 @@ public class UnhandledExceptionBehaviour<TRequest, TResponse> : IPipelineBehavio
         {
             return await next();
         }
+        catch (JsonPatchException ex)
+        {
+            throw;
+        }
         catch (Exception ex)
-        { 
+        {
             if (ex.InnerException != null)
                 throw new Exception(ex.InnerException.Message, ex);
             throw;

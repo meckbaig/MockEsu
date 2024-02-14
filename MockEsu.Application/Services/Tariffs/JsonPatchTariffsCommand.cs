@@ -5,7 +5,9 @@ using MediatR;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.BaseRequests;
+using MockEsu.Application.Common.BaseRequests.JsonPatchCommand;
 using MockEsu.Application.Common.Interfaces;
+using MockEsu.Application.DTOs.Tariffs;
 using MockEsu.Application.Extensions.DataBaseProvider;
 using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Domain.Entities;
@@ -14,10 +16,9 @@ using StackExchange.Redis;
 
 namespace MockEsu.Application.Services.Tariffs;
 
-public record JsonPatchTariffsCommand : BaseRequest<JsonPatchTariffsResponse>
+public record JsonPatchTariffsCommand : BaseJsonPatchCommand<JsonPatchTariffsResponse, TariffEditDto>
 {
-    public JsonPatchDocument<TariffDto> Patch { get; set; }
-
+    public override JsonPatchDocument<TariffEditDto> Patch { get; set; }
 }
 
 public class JsonPatchTariffsResponse : BaseResponse
@@ -25,12 +26,10 @@ public class JsonPatchTariffsResponse : BaseResponse
     public List<TariffEditDto> Tariffs { get; set; }
 }
 
-public class JsonPatchTariffsCommandValidator : AbstractValidator<JsonPatchTariffsCommand>
+public class JsonPatchTariffsCommandValidator : BaseJsonPatchValidator
+    <JsonPatchTariffsCommand, JsonPatchTariffsResponse, TariffEditDto>
 {
-    public JsonPatchTariffsCommandValidator()
-    {
-
-    }
+    public JsonPatchTariffsCommandValidator(IMapper mapper) : base(mapper) { }
 }
 
 public class JsonPatchTariffsCommandHandler : IRequestHandler<JsonPatchTariffsCommand, JsonPatchTariffsResponse>

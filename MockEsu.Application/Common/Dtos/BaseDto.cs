@@ -119,19 +119,26 @@ public abstract record BaseDto
 
         string[] pathSegments = dtoPath.Split('.');
         List<string> sourcePathSegments = new();
+        bool nextSegmentMustBeElementOfCollection = false;
         foreach (string segment in pathSegments)
         {
-            if (int.TryParse(segment, out int _) || segment == "-")
+            if (nextSegmentMustBeElementOfCollection && 
+                (int.TryParse(segment, out int _) || segment == "-"))
             {
+                nextSegmentMustBeElementOfCollection = false;
                 sourcePathSegments.Add(segment);
                 propertyType = propertyType.GetGenericArguments().Single();
             }
-            else
+            else if (!nextSegmentMustBeElementOfCollection)
             {
                 if (!InvokeTryGetSource(segment, provider, ref propertyType, out string sourceSegment))
                     throw new ArgumentNullException($"Something went wrong while getting json patch source property path for '{dtoPath}'");
+                if (typeof(IList).IsAssignableFrom(propertyType))
+                    nextSegmentMustBeElementOfCollection = true;
                 sourcePathSegments.Add(sourceSegment);
             }
+            else
+                throw new ArgumentException($"Segment '{segment}' must be Id of entity in collection");
         }
         return string.Join(".", sourcePathSegments);
     }
@@ -180,6 +187,16 @@ public abstract record BaseDto
             throw new ArgumentException($"{dtoType.Name} does not implement the interface {nameof(IEditDto)}");
 
         MethodInfo method = dtoType.GetMethod("GetOriginType", BindingFlags.Static | BindingFlags.Public);
+        var result = method.Invoke(null, null);
+        return (Type)result;
+    }
+
+    private static Type GetDtoValidatorType(Type dtoType)
+    {
+        if (!typeof(IEditDto).IsAssignableFrom(dtoType))
+            throw new ArgumentException($"{dtoType.Name} does not implement the interface {nameof(IEditDto)}");
+
+        MethodInfo method = dtoType.GetMethod("GetValidatorType", BindingFlags.Static | BindingFlags.Public);
         var result = method.Invoke(null, null);
         return (Type)result;
     }
