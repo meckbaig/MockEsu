@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using AutoMapper.Internal;
 using MockEsu.Application.Common.Exceptions;
-using MockEsu.Application.Extensions.StringExtencions;
+using MockEsu.Application.Extensions.StringExtensions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections;

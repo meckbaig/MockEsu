@@ -29,7 +29,7 @@ namespace MockEsu.Web.Controllers.V1
 
         [HttpPatch]
         public async Task<ActionResult<JsonPatchTariffsResponse>> UpdateList(
-            [FromBody] JsonPatchDocument<TariffDto> items)
+            [FromBody] JsonPatchDocument<TariffEditDto> items)
         {
             JsonPatchTariffsCommand command = new() { Patch = items };
             var result = await _mediator.Send(command);

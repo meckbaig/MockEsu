@@ -22,7 +22,7 @@ public record JsonPatchTariffsCommand : BaseRequest<JsonPatchTariffsResponse>
 
 public class JsonPatchTariffsResponse : BaseResponse
 {
-    public List<TariffDto> Tariffs { get; set; }
+    public List<TariffEditDto> Tariffs { get; set; }
 }
 
 public class JsonPatchTariffsCommandValidator : AbstractValidator<JsonPatchTariffsCommand>
@@ -49,7 +49,7 @@ public class JsonPatchTariffsCommandHandler : IRequestHandler<JsonPatchTariffsCo
         request.Patch.ApplyDtoTransactionToSource(_context.Tariffs, _mapper.ConfigurationProvider);
 
         var tariffs = _context.Tariffs.WithPrices().AsNoTracking()
-            .Select(t => _mapper.Map<TariffDto>(t))
+            .Select(t => _mapper.Map<TariffEditDto>(t))
             //.ProjectTo<TariffDto>(_mapper.ConfigurationProvider)
             .ToList();
         tariffs.ForEach(t => t.PricePoints = t.PricePoints.OrderBy(p => p.Id).ToList());

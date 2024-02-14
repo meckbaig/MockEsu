@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.JsonPatch.Operations;
-using MockEsu.Application.Extensions.StringExtencions;
+using MockEsu.Application.Extensions.StringExtensions;
 using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
@@ -35,12 +35,6 @@ internal class JsonPatchPath
         }
         AsSingleProperty = operationPathAsProperty;
         Index = index;
-
-
-
-
-
-
     }
 
     public string ToFullPropertyPath(string newPropertyPath)

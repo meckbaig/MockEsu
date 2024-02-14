@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Interfaces;
-using MockEsu.Application.Extensions.StringExtencions;
+using MockEsu.Application.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
 using Newtonsoft.Json.Serialization;
 
