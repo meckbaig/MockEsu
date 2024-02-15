@@ -43,13 +43,19 @@ public abstract record BaseDto
     {
         string serialized = JsonConvert.SerializeObject(value);
         var jsonValueType = JToken.Parse(serialized).Type;
-        switch (jsonValueType)
+
+        if (typeof(BaseDto).IsAssignableFrom(dtoType))
         {
-            case JTokenType.Object:
+            if (jsonValueType == JTokenType.Object)
                 return GetSourceValueFromJsonObject(dtoType, provider, serialized);
-            case JTokenType.Array:
+            throw new ArgumentException("Value is not an object.");
+        }
+        if (dtoType.IsArray)
+        {
+            if (jsonValueType == JTokenType.Array)
                 return GetSourceValueFromJsonArray(dtoType, provider, serialized);
-            default:
+            throw new ArgumentException("Value is not an array.");
+        }
                 return value;
         }
     }

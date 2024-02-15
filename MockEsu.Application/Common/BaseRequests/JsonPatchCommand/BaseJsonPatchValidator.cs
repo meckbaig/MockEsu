@@ -2,23 +2,13 @@
 using FluentValidation;
 using FluentValidation.Internal;
 using FluentValidation.Results;
-using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using MockEsu.Application.Common.Dtos;
-using MockEsu.Application.DTOs.Tariffs;
 using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Application.Extensions.StringExtensions;
-using MockEsu.Application.Services.Tariffs;
-using Newtonsoft.Json.Bson;
-using StackExchange.Redis;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq.Dynamic.Core;
 using System.Reflection;
-using System.Xml;
-using System.Xml.Linq;
-using static StackExchange.Redis.Role;
 
 namespace MockEsu.Application.Common.BaseRequests.JsonPatchCommand;
 
@@ -36,7 +26,7 @@ public abstract class BaseJsonPatchValidator<TCommand, TResponse, TDto> : Abstra
 
 public static class BaseJsonPatchValidatorExtension
 {
-    public static IRuleBuilderOptions<TCommand, Operation<TDto>>ValidateOperations
+    public static IRuleBuilderOptions<TCommand, Operation<TDto>> ValidateOperations
         <TCommand, TResponse, TDto>(
             this IRuleBuilderOptions<TCommand, Operation<TDto>> ruleBuilder,
             IMapper mapper)
@@ -55,9 +45,9 @@ public static class BaseJsonPatchValidatorExtension
         ruleBuilder = ruleBuilder
             .Must((c, o) => CanParseValue(o, mapper, propertyType, out canParseValueErrorMessage))
             .WithMessage(x => canParseValueErrorMessage)
-            .WithErrorCode(JsonPatchValidationErrorCode.CanNotParseValueValidator.ToString());
-        
-        ruleBuilder.Custom((o, context) => ValidateValue(o, mapper, context, propertyType));
+            .WithErrorCode(JsonPatchValidationErrorCode.CanParseValueValidator.ToString());
+
+        ruleBuilder.Custom((o, context) => ValidateValue(o, mapper, context, propertyType, canParseValueErrorMessage));
 
         return ruleBuilder;
     }
@@ -81,7 +71,7 @@ public static class BaseJsonPatchValidatorExtension
         }
         catch (Exception ex)
         {
-            errorMessage = $"{operation.path}: {ex.Message}";
+            errorMessage = $"{operation.path}: {ex.InnerException.Message}";
             propertyType = null;
             return false;
         }
@@ -94,29 +84,31 @@ public static class BaseJsonPatchValidatorExtension
         out string errorMessage)
         where TDto : BaseDto, IEditDto, new()
     {
-        try
-        {
-            BaseDto.GetSourceValueJsonPatch(
+        errorMessage = null;
+        if (propertyType == null)
+            return true;
+
+        bool result = BaseDto.TryGetSourceValueJsonPatch(
                 operation.value,
                 propertyType,
-                mapper.ConfigurationProvider);
-            errorMessage = null;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"{operation.path}: {ex.Message}";
-            return false;
-        }
+                mapper.ConfigurationProvider,
+                out var _,
+                out errorMessage);
+        errorMessage = $"{operation.path}: {errorMessage}";
+        return result;
     }
 
     private static void ValidateValue<TCommand, TDto>(
         Operation<TDto> operation,
         IMapper mapper,
         ValidationContext<TCommand> context,
-        Type propertyType)
+        Type propertyType,
+        string parseValueError)
         where TDto : BaseDto, IEditDto, new()
     {
+        if (propertyType == null || parseValueError != null)
+            return;
+
         switch (operation.OperationType)
         {
             case OperationType.Add:
@@ -129,43 +121,51 @@ public static class BaseJsonPatchValidatorExtension
                 break;
             default:
                 throw new ArgumentException($"Operation {operation.op} is not supported.");
-        }        
+        }
     }
 
     private static void ValidateAddition<TCommand, TDto>(
         Operation<TDto> operation,
-        ValidationContext<TCommand> context, 
-        Type propertyType) 
+        ValidationContext<TCommand> context,
+        Type dtoType)
         where TDto : BaseDto, IEditDto, new()
     {
-        operation.path = '/' + operation.path.Split('/').Last();
-        object dtosList = Activator.CreateInstance(typeof(List<>).MakeGenericType(propertyType));
-        operation.Apply(dtosList, JsonPatchExpressions.Adapter);
-        if (typeof(IEditDto).IsAssignableFrom(propertyType))
+        if (!typeof(IEditDto).IsAssignableFrom(dtoType))
+            throw new FormatException("Something went wrong while getting type of DTO for 'add' operation");
+        object validator = GetValidatorForDto(dtoType, out Type validatorType);
+        object dtosList = Activator.CreateInstance(typeof(List<>).MakeGenericType(dtoType));
+
+        JsonPatchPath path = new(operation.path);
+        try
         {
-            MethodInfo getValidatorMethod = propertyType
-                .GetMethod(nameof(IEditDto.GetValidatorType),
-                    BindingFlags.Static | BindingFlags.Public)!;
-            Type validatorType = (Type)getValidatorMethod.Invoke(null, null);
-            if (validatorType != null)
-            {
-                object validator = Activator.CreateInstance(validatorType);
-                MethodInfo validateMethod = validatorType
-                    .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                    .FirstOrDefault(m =>
-                        m.Name == nameof(IValidator.Validate) &&
-                        m.GetParameters().Length == 1)!;
-                object[] parameters = [((IList)dtosList)[0]];
-                ValidationResult result = (ValidationResult)validateMethod.Invoke(validator, parameters);
-                foreach (var error in result.Errors)
-                {
-                    var failure = error;
-                    failure.PropertyName = context.PropertyName;
-                    //failure.PropertyName = string.Format("{0}.{1}", context.PropertyName, error.PropertyName);
-                    context.AddFailure(failure);
-                }
-            }
+            operation.path = '/' + operation.path.Split('/').Last();
+            operation.Apply(dtosList, JsonPatchExpressions.Adapter);
         }
+        catch (Exception ex)
+        {
+            return;
+        }
+        finally
+        {
+            operation.path = path.OriginalPath;
+        }
+
+        MethodInfo validateMethod = validatorType
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+            .FirstOrDefault(m =>
+                m.Name == nameof(IValidator.Validate) &&
+                m.GetParameters().Length == 1)!;
+        object[] parameters = [((IList)dtosList)[0]];
+        ValidationResult result = (ValidationResult)validateMethod.Invoke(validator, parameters);
+
+        foreach (var error in result.Errors)
+        {
+            var failure = error;
+            failure.PropertyName = context.PropertyName;
+            //failure.PropertyName = string.Format("{0}.{1}", context.PropertyName, error.PropertyName);
+            context.AddFailure(failure);
+        }
+
     }
 
     private static void ValidateReplace<TCommand, TDto>(
@@ -174,42 +174,65 @@ public static class BaseJsonPatchValidatorExtension
         ValidationContext<TCommand> context)
         where TDto : BaseDto, IEditDto, new()
     {
+        Type dtoType = GetLastDtoType(operation, mapper);
+        if (!typeof(IEditDto).IsAssignableFrom(dtoType))
+            throw new FormatException("Something went wrong while getting type of DTO for 'replace' operation");
+        object validator = GetValidatorForDto(dtoType, out _);
+        object dto = Activator.CreateInstance(dtoType);
+
+        JsonPatchPath path = new(operation.path);
+        try
+        {
+            operation.path = '/' + operation.path.Split('/').Last();
+            operation.Apply(dto, JsonPatchExpressions.Adapter);
+        }
+        catch (Exception ex)
+        {
+            return;
+        }
+        finally
+        {
+            operation.path = path.OriginalPath;
+        }
+
+        MethodInfo validateMethod = typeof(DefaultValidatorExtensions)
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .First(m => m.Name == nameof(DefaultValidatorExtensions.Validate));
+
+        var genericValidateMethod = validateMethod.MakeGenericMethod(dtoType);
+        var optionsAction = GetValidationOptionsAction(dtoType, operation.path.Trim('/').ToPascalCase());
+        object[] parameters = [validator, dto, optionsAction];
+        ValidationResult result = (ValidationResult)genericValidateMethod.Invoke(null, parameters);
+
+        foreach (var error in result.Errors)
+        {
+            var failure = error;
+            failure.PropertyName = context.PropertyName;
+            //failure.PropertyName = string.Format("{0}.{1}", context.PropertyName, error.PropertyName);
+            context.AddFailure(failure);
+        }
+    }
+
+    private static object GetValidatorForDto(Type dtoType, out Type validatorType)
+    {
+        MethodInfo getValidatorMethod = dtoType
+            .GetMethod(nameof(IEditDto.GetValidatorType),
+                BindingFlags.Static | BindingFlags.Public)!;
+        validatorType = (Type)getValidatorMethod.Invoke(null, null);
+        object validator = Activator.CreateInstance(validatorType);
+        return validator;
+    }
+
+    private static Type GetLastDtoType<TDto>(Operation<TDto> operation, IMapper mapper)
+        where TDto : BaseDto, IEditDto, new()
+    {
         string pathWithoutLastSegment = string.Join('/', operation.path.Split('/').SkipLast(1));
         var jsonPatchPath = new JsonPatchPath(pathWithoutLastSegment);
         BaseDto.GetSourceJsonPatch<TDto>(
             jsonPatchPath.AsSingleProperty,
                 mapper.ConfigurationProvider,
                 out Type propertyType);
-        operation.path = '/' + operation.path.Split('/').Last();
-        object dto = Activator.CreateInstance(propertyType);
-        operation.Apply(dto, JsonPatchExpressions.Adapter);
-        if (typeof(IEditDto).IsAssignableFrom(propertyType))
-        {
-            MethodInfo getValidatorMethod = propertyType
-                .GetMethod(nameof(IEditDto.GetValidatorType),
-                    BindingFlags.Static | BindingFlags.Public)!;
-            Type validatorType = (Type)getValidatorMethod.Invoke(null, null);
-            if (validatorType != null)
-            {
-                object validator = Activator.CreateInstance(validatorType);
-
-                MethodInfo validateMethod = typeof(DefaultValidatorExtensions)
-                    .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                    .First(m => m.Name == nameof(IValidator.Validate));
-                var genericValidateMethod = validateMethod.MakeGenericMethod(propertyType);
-
-                var optionsAction = GetValidationOptionsAction(propertyType, operation.path.Trim('/').ToPascalCase());
-                object[] parameters = [validator, dto, optionsAction];
-                ValidationResult result = (ValidationResult)genericValidateMethod.Invoke(null, parameters);
-                foreach (var error in result.Errors)
-                {
-                    var failure = error;
-                    failure.PropertyName = context.PropertyName;
-                    //failure.PropertyName = string.Format("{0}.{1}", context.PropertyName, error.PropertyName);
-                    context.AddFailure(failure);
-                }
-            }
-        }
+        return propertyType;
     }
 
     private static object GetValidationOptionsAction(Type propertyType, params string[] propertiesToValidate)
@@ -233,6 +256,6 @@ public static class BaseJsonPatchValidatorExtension
 internal enum JsonPatchValidationErrorCode
 {
     CanParsePathValidator,
-    CanNotParseValueValidator,
+    CanParseValueValidator,
 
 }
