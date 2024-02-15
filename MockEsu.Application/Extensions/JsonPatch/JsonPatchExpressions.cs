@@ -124,11 +124,14 @@ internal static class JsonPatchExpressions
                         out Type propertyType);
                 newOperation.path = jsonPatchPath.ToFullPropertyPath(newOperation.path);
 
-                newOperation.value =
-                    BaseDto.GetSourceValueJsonPatch(
-                        operation.value,
-                        propertyType,
-                        provider);
+                if (newOperation.OperationType != OperationType.Remove)
+                {
+                    newOperation.value =
+                        BaseDto.GetSourceValueJsonPatch(
+                            operation.value,
+                            propertyType,
+                            provider);
+                }
             }
             catch (Exception ex)
             {

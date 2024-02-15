@@ -47,7 +47,7 @@ public class GetTariffsQueryHandler : IRequestHandler<GetTariffsQuery, GetTariff
 
     public async Task<GetTariffsResponse> Handle(GetTariffsQuery request, CancellationToken cancellationToken)
     {
-        var list = _context.Tariffs.Include(t => t.Prices)
+        var list = _context.Tariffs.WithPrices()
             .AddFilters<Tariff, TariffEditDto>(request.GetFilterExpressions())
             .AddOrderBy<Tariff, TariffEditDto>(request.GetOrderExpressions())
             .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)

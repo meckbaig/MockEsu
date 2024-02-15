@@ -81,7 +81,7 @@ public static class BaseJsonPatchValidatorExtension
         where TDto : BaseDto, IEditDto, new()
     {
         errorMessage = null;
-        if (propertyType == null)
+        if (propertyType == null || operation.OperationType == OperationType.Remove)
             return true;
 
         bool result = BaseDto.TryGetSourceValueJsonPatch(
@@ -90,7 +90,6 @@ public static class BaseJsonPatchValidatorExtension
                 mapper.ConfigurationProvider,
                 out var _,
                 out errorMessage);
-
         if (errorMessage != null)
             errorMessage = $"{operation.path}: {errorMessage}";
         return result;

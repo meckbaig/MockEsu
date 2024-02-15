@@ -84,7 +84,7 @@ public abstract record BaseDto
             errorMessage = "Value is not an object.";
             return false;
         }
-        if (dtoType.IsArray)
+        if (dtoType.IsArray || dtoType.IsListType())
         {
             if (jsonValueType == JTokenType.Array)
             {
@@ -134,7 +134,7 @@ public abstract record BaseDto
         foreach (var property in properties)
         {
             Type propertyType = dtoType;
-            if (!InvokeTryGetSource(property.Key.ToPascalCase(), provider, ref propertyType, out string errorMessage, out string newKey))
+            if (!InvokeTryGetSource(property.Key.ToPascalCase(), provider, ref propertyType, out string newKey, out string errorMessage))
                 throw new ArgumentNullException(errorMessage ?? $"Something went wrong while getting json patch source property path for '{property.Key}'");
             object propValue = GetSourceValueJsonPatch(property.Value, propertyType, provider);
             sourceProperties.Add(newKey.ToCamelCase(), propValue);

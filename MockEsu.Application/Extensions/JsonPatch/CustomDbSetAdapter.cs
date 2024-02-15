@@ -437,9 +437,10 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         catch (Exception)
         {
             errorMessage = string.Format(
-                "Could not delete entity {0} with id {1} from parent",
+                "Could not delete entity '{0}' with id {1} from parent with id {2}",
                 entitiesInParentFieldName.ToCamelCase(),
-                entityId);
+                entityId,
+                parentId);
             return false;
         }
     }

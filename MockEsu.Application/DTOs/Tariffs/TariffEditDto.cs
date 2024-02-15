@@ -20,12 +20,7 @@ public record TariffEditDto : BaseDto, IEditDto
 
     public static Type GetOriginType() => typeof(Tariff);
 
-    public static Type GetValidatorType()
-    {
-        throw new NotImplementedException();
-    }
-
-    public static implicit operator Tariff(TariffEditDto dto) => throw new NotImplementedException();
+    public static Type GetValidatorType() => typeof(Validator);
 
     private class Mapping : Profile
     {
