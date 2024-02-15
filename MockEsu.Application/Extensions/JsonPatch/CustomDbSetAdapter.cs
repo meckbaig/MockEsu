@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Query;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.DataBaseProvider;
-using MockEsu.Application.Extensions.StringExtencions;
+using MockEsu.Application.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
 using Newtonsoft.Json.Serialization;
 using System.Collections;
@@ -488,13 +488,18 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                     out errorMessage);
             }
 
-            if (propertyType != null && !typeof(IList).IsAssignableFrom(propertyType) &&
-                TryConvertValue(
+            if (propertyType != null && !typeof(IList).IsAssignableFrom(propertyType))
+            {
+                if (!TryConvertValue(
                     value,
                     propertyType!,
                     out var convertedValue,
                     out errorMessage))
-            {
+                {
+                    errorMessage = $"'{value}' is not correct value for '{propertyType.Name}' type";
+                    return false;
+                }
+
                 if (!TryGetExecuteUpdateLambda<TBaseEntity>(
                     segments[i],
                     convertedValue,

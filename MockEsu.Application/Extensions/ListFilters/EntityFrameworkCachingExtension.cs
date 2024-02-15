@@ -24,8 +24,8 @@ public static class EntityFrameworkCachingExtension
         this IDistributedCache cache,
         string key,
         Func<TResult> factory,
-        DistributedCacheEntryOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        DistributedCacheEntryOptions? options = null)
     {
         string cachedMember = await cache.GetStringAsync(key, cancellationToken);
         if (!string.IsNullOrEmpty(cachedMember))
@@ -62,7 +62,7 @@ public static class EntityFrameworkCachingExtension
         return await cache.GetOrCreate(
             key, 
             factory,  
-            options,
-            cancellationToken);
+            cancellationToken,
+            options);
     }
 }

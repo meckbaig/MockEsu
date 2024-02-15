@@ -1,5 +1,7 @@
 ﻿using FluentValidation.Results;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Newtonsoft.Json;
+using System.Linq;
 
 namespace MockEsu.Application.Common.Exceptions;
 
@@ -13,8 +15,26 @@ public class ValidationException : Exception
 
     public ValidationException(IEnumerable<ValidationFailure> failures) : this()
     {
-        Errors = failures.GroupBy(e => e.PropertyName,  e => new ErrorItem(e.ErrorMessage, e.ErrorCode))
-            .ToDictionary(failureGroup => failureGroup.Key, failureGroup => failureGroup.ToArray());
+        Errors = failures
+            .GroupBy(
+                e => e.PropertyName,
+                e => new ErrorItem(e.ErrorMessage, e.ErrorCode))
+            .ToDictionary(
+                failureGroup => failureGroup.Key, 
+                failureGroup => failureGroup.ToArray());
+    }
+
+    public ValidationException(ModelStateDictionary failures) : this()
+    {
+        Errors = failures
+            .Where(e => e.Value.ValidationState == ModelValidationState.Invalid)
+            .GroupBy(
+                e => e.Key,
+                e => new ErrorItem(e.Value.Errors[0].ErrorMessage, ValidationErrorCode.DataTypeValidator.ToString()))
+            .ToDictionary(
+                failureGroup => failureGroup.Key,
+                failureGroup => failureGroup.ToArray());
+            
     }
 
     public ValidationException(IDictionary<string, ErrorItem[]> failures) : this()
@@ -49,5 +69,6 @@ public enum ValidationErrorCode
     PropertyDoesNotExistValidator,
     ExpressionIsUndefinedValidator,
     PropertyIsNotFilterableValidator,
-    CanNotCreateExpressionValidator
+    CanNotCreateExpressionValidator,
+    DataTypeValidator
 }

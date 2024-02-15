@@ -23,6 +23,11 @@ public record UserEditDto : BaseDto, IEditDto
         return typeof(User);
     }
 
+    public static Type GetValidatorType()
+    {
+        throw new NotImplementedException();
+    }
+
     private class Mapping : Profile
     {
         public Mapping()
