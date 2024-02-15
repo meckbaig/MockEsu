@@ -8,7 +8,7 @@ using MockEsu.Application.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
 using System.Text.Json;
 
-namespace MockEsu.Application.Common.BaseRequests.JournalQuery;
+namespace MockEsu.Application.Common.BaseRequests.ListQuery;
 
 public abstract class BaseListQueryValidator<TQuery, TResponseList, TDestintaion, TSource> : AbstractValidator<TQuery>
     where TQuery : BaseListQuery<TResponseList>

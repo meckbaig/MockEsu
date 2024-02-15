@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using MediatR;
-using MockEsu.Application.Common.BaseRequests.JournalQuery;
+using MockEsu.Application.Common.BaseRequests.ListQuery;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.PaymentContracts;
 using MockEsu.Application.Extensions.ListFilters;

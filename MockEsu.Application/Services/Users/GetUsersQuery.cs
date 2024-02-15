@@ -5,7 +5,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using MockEsu.Application.Common.BaseRequests;
-using MockEsu.Application.Common.BaseRequests.JournalQuery;
+using MockEsu.Application.Common.BaseRequests.ListQuery;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Users;
 using MockEsu.Application.Extensions.ListFilters;

@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 using System.Runtime.InteropServices.JavaScript;
 using MockEsu.Application.Extensions.ListFilters;
 
-namespace MockEsu.Application.Common.BaseRequests.JournalQuery;
+namespace MockEsu.Application.Common.BaseRequests.ListQuery;
 
 public abstract record BaseListQuery<TResponse> : BaseRequest<TResponse>
     where TResponse : BaseResponse
