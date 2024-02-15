@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 
-namespace MockEsu.Application.Extensions.StringExtencions;
+namespace MockEsu.Application.Extensions.StringExtensions;
 
-internal static class StringExtencions
+public static class StringExtensions
 {
     /// <summary>
     /// Converts a string to pascal case

@@ -9,4 +9,5 @@ namespace MockEsu.Application.Common.Dtos;
 public interface IEditDto
 {
     static abstract Type GetOriginType();
+    static abstract Type GetValidatorType();
 }

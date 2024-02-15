@@ -10,6 +10,16 @@ public static class EntityFrameworkCachingExtension
         AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30)
     };
 
+    /// <summary>
+    /// Gets data from cache if present; otherwise, executes factory and saves in cache.
+    /// </summary>
+    /// <typeparam name="TResult">Result type.</typeparam>
+    /// <param name="cache">Caching provider.</param>
+    /// <param name="key">Key for saving data.</param>
+    /// <param name="factory">Execution factory with operation to get data.</param>
+    /// <param name="options">Options for caching provider.</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns><typeparamref name="TResult"/> from <paramref name="factory"/> or from cache.</returns>
     public static async Task<TResult> GetOrCreate<TResult>(
         this IDistributedCache cache,
         string key,
@@ -28,6 +38,16 @@ public static class EntityFrameworkCachingExtension
         return result;
     }
 
+    /// <summary>
+    /// Gets data from cache if present; otherwise, executes factory and saves in cache.
+    /// </summary>
+    /// <typeparam name="TResult">Result type.</typeparam>
+    /// <param name="cache">Caching provider.</param>
+    /// <param name="key">Key for saving data.</param>
+    /// <param name="factory">Execution factory with operation to get data.</param>
+    /// <param name="absoluteExpirationRelativeToNow">Caching time.</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns><typeparamref name="TResult"/> from <paramref name="factory"/> or from cache.</returns>
     public static async Task<TResult> GetOrCreate<TResult>(
         this IDistributedCache cache,
         string key,
@@ -41,8 +61,8 @@ public static class EntityFrameworkCachingExtension
         };
         return await cache.GetOrCreate(
             key, 
-            factory, 
-            cancellationToken, 
+            factory,  
+            cancellationToken,
             options);
     }
 }

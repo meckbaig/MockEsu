@@ -21,7 +21,7 @@ public class GetKontragentsQueryTests //: KontragentsApiFactory
             .UseNpgsql(//_container.GetConnectionString())
                 "Server=localhost;Port=5433;Database=MockEsu;User ID=postgres;Password=testtest;")
             .Options;
-        IAppDbContext inMemoryContext = new AppDbContext(dbContextOptions);
+        IAppDbContext inMemoryContext = new AppDbContext(dbContextOptions, default);
 
         var config = new MapperConfiguration(c =>
             c.AddMaps(Assembly.GetAssembly(typeof(IAppDbContext))));

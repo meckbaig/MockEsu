@@ -12,6 +12,7 @@ using MockEsu.Domain.Entities;
 using MockEsu.Application.Common.Dtos;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.AspNetCore.JsonPatch;
+using FluentValidation;
 
 namespace MockEsu.Application.DTOs.Tariffs;
 
@@ -26,6 +27,11 @@ public record TariffPriceEditDto : BaseDto, IEntityWithId, IEditDto
         return typeof(TariffPrice);
     }
 
+    public static Type GetValidatorType()
+    {
+        return typeof(Validator);
+    }
+
     private class Mapping : Profile
     {
         public Mapping()
@@ -34,6 +40,18 @@ public record TariffPriceEditDto : BaseDto, IEntityWithId, IEditDto
                 .ForMember(m => m.Id, opt => opt.MapFrom(o => o.Id))
                 .ForMember(m => m.PriceName, opt => opt.MapFrom(o => o.Name))
                 .ReverseMap();
+        }
+    }
+
+    public class Validator : AbstractValidator<TariffPriceEditDto>
+    {
+        public Validator()
+        {
+            RuleFor(x => x.PriceName)
+                .MinimumLength(3)
+                .MaximumLength(100);
+            RuleFor(x => x.Price)
+                .GreaterThan(0);
         }
     }
 }
