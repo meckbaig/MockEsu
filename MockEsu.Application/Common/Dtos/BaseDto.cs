@@ -41,23 +41,61 @@ public abstract record BaseDto
         Type dtoType,
         IConfigurationProvider provider)
     {
+        if (!TryGetSourceValueJsonPatch(
+            value,
+            dtoType,
+            provider,
+            out object sourceValue,
+            out string errorMessage))
+        {
+            throw new ArgumentException(errorMessage);
+        }
+        return sourceValue;
+    }
+
+    /// <summary>
+    /// Gets source value from DTO mapping.
+    /// </summary>
+    /// <param name="value">DTO value.</param>
+    /// <param name="dtoType">DTO type.</param>
+    /// <param name="provider">Configuraion provider for performing maps.</param>
+    /// <param name="sourceValue">Source value.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if source value got successfully; otherwise, <see langword="false"/>.</returns>
+    public static bool TryGetSourceValueJsonPatch(
+        object value,
+        Type dtoType,
+        IConfigurationProvider provider,
+        out object sourceValue,
+        out string errorMessage)
+    {
         string serialized = JsonConvert.SerializeObject(value);
         var jsonValueType = JToken.Parse(serialized).Type;
 
+        errorMessage = null;
+        sourceValue = null;
         if (typeof(BaseDto).IsAssignableFrom(dtoType))
         {
             if (jsonValueType == JTokenType.Object)
-                return GetSourceValueFromJsonObject(dtoType, provider, serialized);
-            throw new ArgumentException("Value is not an object.");
+            {
+                sourceValue = GetSourceValueFromJsonObject(dtoType, provider, serialized);
+                return true;
+            }
+            errorMessage = "Value is not an object.";
+            return false;
         }
         if (dtoType.IsArray)
         {
             if (jsonValueType == JTokenType.Array)
-                return GetSourceValueFromJsonArray(dtoType, provider, serialized);
-            throw new ArgumentException("Value is not an array.");
+            {
+                sourceValue = GetSourceValueFromJsonArray(dtoType, provider, serialized);
+                return true;
+            }
+            errorMessage = "Value is not an array.";
+            return false;
         }
-                return value;
-        }
+        sourceValue = value;
+        return true;
     }
 
     /// <summary>
@@ -96,8 +134,8 @@ public abstract record BaseDto
         foreach (var property in properties)
         {
             Type propertyType = dtoType;
-            if (!InvokeTryGetSource(property.Key.ToPascalCase(), provider, ref propertyType, out string newKey))
-                throw new ArgumentNullException($"Something went wrong while getting json patch source property path for '{property.Key}'");
+            if (!InvokeTryGetSource(property.Key.ToPascalCase(), provider, ref propertyType, out string errorMessage, out string newKey))
+                throw new ArgumentNullException(errorMessage ?? $"Something went wrong while getting json patch source property path for '{property.Key}'");
             object propValue = GetSourceValueJsonPatch(property.Value, propertyType, provider);
             sourceProperties.Add(newKey.ToCamelCase(), propValue);
         }
@@ -119,16 +157,51 @@ public abstract record BaseDto
         out Type propertyType)
         where TSource : BaseDto, IEditDto
     {
+        if (!TryGetSourceJsonPatch<TSource>(
+            dtoPath,
+            provider,
+            out propertyType,
+            out string sourceJsonPach,
+            out string errorMessage))
+        {
+            throw new ArgumentException(errorMessage);
+        }
+        return sourceJsonPach;
+    }
+
+    /// <summary>
+    /// Gets source path from DTO path.
+    /// </summary>
+    /// <typeparam name="TSource">Source type.</typeparam>
+    /// <param name="dtoPath">DTO property path.</param>
+    /// <param name="provider">Configuraion provider for performing maps.</param>
+    /// <param name="propertyType">Endpoint property type.</param>
+    /// <param name="sourceJsonPatch">Source path.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if source path got successfully; otherwise, <see langword="false"/>.</returns>
+    public static bool TryGetSourceJsonPatch<TSource>(
+        string dtoPath,
+        IConfigurationProvider provider,
+        out Type propertyType,
+        out string sourceJsonPatch,
+        out string errorMessage)
+        where TSource : BaseDto, IEditDto
+    {
         propertyType = typeof(TSource);
+        errorMessage = null;
+        sourceJsonPatch = null;
         if (dtoPath.Length == 0)
-            return dtoPath;
+        {
+            sourceJsonPatch = dtoPath;
+            return true;
+        }
 
         string[] pathSegments = dtoPath.Split('.');
         List<string> sourcePathSegments = new();
         bool nextSegmentMustBeElementOfCollection = false;
         foreach (string segment in pathSegments)
         {
-            if (nextSegmentMustBeElementOfCollection && 
+            if (nextSegmentMustBeElementOfCollection &&
                 (int.TryParse(segment, out int _) || segment == "-"))
             {
                 nextSegmentMustBeElementOfCollection = false;
@@ -137,16 +210,23 @@ public abstract record BaseDto
             }
             else if (!nextSegmentMustBeElementOfCollection)
             {
-                if (!InvokeTryGetSource(segment, provider, ref propertyType, out string sourceSegment))
-                    throw new ArgumentNullException($"Something went wrong while getting json patch source property path for '{dtoPath}'");
+                if (!InvokeTryGetSource(segment, provider, ref propertyType, out string sourceSegment, out errorMessage, throwException: false))
+                {
+                    errorMessage ??= $"Something went wrong while getting json patch source property path for '{dtoPath}'";
+                    return false;
+                }
                 if (typeof(IList).IsAssignableFrom(propertyType))
                     nextSegmentMustBeElementOfCollection = true;
                 sourcePathSegments.Add(sourceSegment);
             }
             else
-                throw new ArgumentException($"Segment '{segment}' must be Id of entity in collection");
+            {
+                errorMessage = $"Segment '{segment}' must be Id of entity in collection";
+                return false;
+            }
         }
-        return string.Join(".", sourcePathSegments);
+        sourceJsonPatch = string.Join(".", sourcePathSegments);
+        return true;
     }
 
     /// <summary>
@@ -159,17 +239,18 @@ public abstract record BaseDto
     /// <param name="throwException">Throws exception if <see langword="true"/>; otherwise, returns <see langword="false"/>.</param>
     /// <returns><see langword="true"/> if <paramref name="sourceProperty" /> was found successfully; otherwise, <see langword="false"/>.</returns>
     public static bool InvokeTryGetSource(
-        string dtoProperty, 
-        IConfigurationProvider provider, 
-        ref Type nextPropertyType, 
+        string dtoProperty,
+        IConfigurationProvider provider,
+        ref Type nextPropertyType,
         out string sourceProperty,
+        out string errorMessage,
         bool throwException = true)
     {
         var methodInfo = typeof(BaseDto).GetMethod(
                             nameof(TryGetSource),
                             BindingFlags.Static | BindingFlags.NonPublic);
         var genericMethod = methodInfo.MakeGenericMethod(GetDtoOriginType(nextPropertyType), nextPropertyType);
-        object[] parameters = [dtoProperty, provider, null, null, throwException];
+        object[] parameters = [dtoProperty, provider, null, null, null, throwException];
         object result = genericMethod.Invoke(null, parameters);
         bool boolResult = (bool)result;
         if (boolResult)
@@ -178,7 +259,10 @@ public abstract record BaseDto
             nextPropertyType = (Type)parameters[3];
         }
         else
+        {
             sourceProperty = string.Empty;
+        }
+        errorMessage = (string)parameters[4];
         return boolResult;
     }
 
@@ -225,6 +309,7 @@ public abstract record BaseDto
             provider,
             out string source,
             out Type _,
+            out string _,
             throwException))
         {
             return source;
@@ -241,6 +326,7 @@ public abstract record BaseDto
     /// <param name="provider">Configuraion provider for performing maps.</param>
     /// <param name="sourceProperty">Source property name.</param>
     /// <param name="dtoPropertyType">DTO property type.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
     /// <param name="throwException">Throws exception if <see langword="true"/>; otherwise, returns false.</param>
     /// <returns><see langword="true"/> if <paramref name="dtoPropertyType" /> was found successfully; otherwise, <see langword="false"/>.</returns>
     private static bool TryGetSource<TSource, TDto>(
@@ -248,14 +334,17 @@ public abstract record BaseDto
         IConfigurationProvider provider,
         out string sourceProperty,
         out Type dtoPropertyType,
+        out string errorMessage,
         bool throwException = true)
     {
+        errorMessage = null;
         var internalApi = provider.Internal();
         var map = internalApi.FindTypeMapFor<TSource, TDto>();
         var propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.DestinationMember.Name == dtoProperty);
 
         if (propertyMap == null)
         {
+            errorMessage = $"Property '{dtoProperty.ToCamelCase()}' does not exist";
             if (!throwException)
             {
                 sourceProperty = null;
@@ -264,7 +353,7 @@ public abstract record BaseDto
             }
             else
             {
-                throw new ArgumentException($"Property '{dtoProperty.ToCamelCase()}' does not exist");
+                throw new ArgumentException(errorMessage);
             }
         }
 
@@ -276,22 +365,6 @@ public abstract record BaseDto
         }
         sourceProperty = GetPropertyMapSource(propertyMap.CustomMapExpression.Body);
         return true;
-    }
-
-    private static ValidationException PropertyNotExistsValidationException(string sourceProperty)
-    {
-        return new ValidationException(new Dictionary<string, ErrorItem[]>
-                    {
-                        {
-                            "filters",
-                            [
-                                new ErrorItem(
-                                    $"Property '{sourceProperty.ToCamelCase()}' does not exist",
-                                    ValidationErrorCode.PropertyDoesNotExistValidator
-                                )
-                            ]
-                        }
-                    });
     }
 
     /// <summary>

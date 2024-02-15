@@ -59,22 +59,18 @@ public static class BaseJsonPatchValidatorExtension
         out string errorMessage)
         where TDto : BaseDto, IEditDto, new()
     {
-        try
-        {
-            var jsonPatchPath = new JsonPatchPath(operation.path);
-            BaseDto.GetSourceJsonPatch<TDto>(
-                jsonPatchPath.AsSingleProperty,
-                mapper.ConfigurationProvider,
-                out propertyType);
-            errorMessage = null;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"{operation.path}: {ex.InnerException.Message}";
-            propertyType = null;
-            return false;
-        }
+        var jsonPatchPath = new JsonPatchPath(operation.path);
+
+        bool result = BaseDto.TryGetSourceJsonPatch<TDto>(
+            jsonPatchPath.AsSingleProperty,
+            mapper.ConfigurationProvider,
+            out propertyType,
+            out string _,
+            out errorMessage);
+
+        if (errorMessage != null)
+            errorMessage = $"{operation.path}: {errorMessage}";
+        return result;
     }
 
     private static bool CanParseValue<TDto>(
@@ -94,7 +90,9 @@ public static class BaseJsonPatchValidatorExtension
                 mapper.ConfigurationProvider,
                 out var _,
                 out errorMessage);
-        errorMessage = $"{operation.path}: {errorMessage}";
+
+        if (errorMessage != null)
+            errorMessage = $"{operation.path}: {errorMessage}";
         return result;
     }
 
