@@ -144,7 +144,7 @@ public static class BaseJsonPatchValidatorExtension
         if (typeof(IEditDto).IsAssignableFrom(propertyType))
         {
             MethodInfo getValidatorMethod = propertyType
-                .GetMethod("GetValidatorType",
+                .GetMethod(nameof(IEditDto.GetValidatorType),
                     BindingFlags.Static | BindingFlags.Public)!;
             Type validatorType = (Type)getValidatorMethod.Invoke(null, null);
             if (validatorType != null)
@@ -153,7 +153,7 @@ public static class BaseJsonPatchValidatorExtension
                 MethodInfo validateMethod = validatorType
                     .GetMethods(BindingFlags.Public | BindingFlags.Instance)
                     .FirstOrDefault(m =>
-                        m.Name == "Validate" &&
+                        m.Name == nameof(IValidator.Validate) &&
                         m.GetParameters().Length == 1)!;
                 object[] parameters = [((IList)dtosList)[0]];
                 ValidationResult result = (ValidationResult)validateMethod.Invoke(validator, parameters);
@@ -186,7 +186,7 @@ public static class BaseJsonPatchValidatorExtension
         if (typeof(IEditDto).IsAssignableFrom(propertyType))
         {
             MethodInfo getValidatorMethod = propertyType
-                .GetMethod("GetValidatorType",
+                .GetMethod(nameof(IEditDto.GetValidatorType),
                     BindingFlags.Static | BindingFlags.Public)!;
             Type validatorType = (Type)getValidatorMethod.Invoke(null, null);
             if (validatorType != null)
@@ -195,7 +195,7 @@ public static class BaseJsonPatchValidatorExtension
 
                 MethodInfo validateMethod = typeof(DefaultValidatorExtensions)
                     .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                    .First(m => m.Name == "Validate");
+                    .First(m => m.Name == nameof(IValidator.Validate));
                 var genericValidateMethod = validateMethod.MakeGenericMethod(propertyType);
 
                 var optionsAction = GetValidationOptionsAction(propertyType, operation.path.Trim('/').ToPascalCase());

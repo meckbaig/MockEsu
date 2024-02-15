@@ -186,7 +186,7 @@ public abstract record BaseDto
         if (!typeof(IEditDto).IsAssignableFrom(dtoType))
             throw new ArgumentException($"{dtoType.Name} does not implement the interface {nameof(IEditDto)}");
 
-        MethodInfo method = dtoType.GetMethod("GetOriginType", BindingFlags.Static | BindingFlags.Public);
+        MethodInfo method = dtoType.GetMethod(nameof(IEditDto.GetOriginType), BindingFlags.Static | BindingFlags.Public);
         var result = method.Invoke(null, null);
         return (Type)result;
     }
@@ -196,7 +196,7 @@ public abstract record BaseDto
         if (!typeof(IEditDto).IsAssignableFrom(dtoType))
             throw new ArgumentException($"{dtoType.Name} does not implement the interface {nameof(IEditDto)}");
 
-        MethodInfo method = dtoType.GetMethod("GetValidatorType", BindingFlags.Static | BindingFlags.Public);
+        MethodInfo method = dtoType.GetMethod(nameof(IEditDto.GetValidatorType), BindingFlags.Static | BindingFlags.Public);
         var result = method.Invoke(null, null);
         return (Type)result;
     }
