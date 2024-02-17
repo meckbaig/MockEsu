@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MockEsu.Domain.Entities;
+namespace MockEsu.Domain.Entities.Authentification;
 
 public class Role : BaseEntity
 {

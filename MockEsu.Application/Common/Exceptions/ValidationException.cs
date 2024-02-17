@@ -77,5 +77,8 @@ public enum ValidationErrorCode
     CanNotCreateExpressionValidator,
     DataTypeValidator,
     PasswordIncorrectValidator,
-    EntityIdValidator
+
+    EntityIdValidator,
+    RefreshTokenNotValid,
+    RefreshTokenHasExpired
 }

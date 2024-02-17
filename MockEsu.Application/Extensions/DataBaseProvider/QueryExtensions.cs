@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 using MockEsu.Domain.Entities.Traiffs;
 using System;
 using System.Collections.Generic;

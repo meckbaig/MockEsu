@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.Validation;
-using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 using System.Data;
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;

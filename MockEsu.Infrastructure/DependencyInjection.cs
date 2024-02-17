@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using MockEsu.Application.Common.Interfaces;
-using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 using MockEsu.Infrastructure.Authentification;
 using MockEsu.Infrastructure.Data;
 using MockEsu.Infrastructure.Interceptors;

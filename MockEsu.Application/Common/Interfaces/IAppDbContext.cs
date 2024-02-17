@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 using MockEsu.Domain.Entities.Traiffs;
 
 namespace MockEsu.Application.Common.Interfaces;
@@ -21,6 +22,7 @@ public interface IAppDbContext
     DbSet<Tariff> Tariffs { get; }
     DbSet<TariffPrice> TariffPrices { get; }
     DbSet<OrganizationInRegion> OrganizationsInRegions { get; }
+    DbSet<RefreshToken> RefreshTokens { get; }
 
     DatabaseFacade Database {  get; }
     DbSet<T> Set<T>() where T : class;

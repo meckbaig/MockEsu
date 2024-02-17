@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Domain.Common;
 using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 using MockEsu.Domain.Entities.Traiffs;
 using MockEsu.Infrastructure.Interceptors;
 using System.Reflection;
@@ -58,6 +59,9 @@ public class AppDbContext : DbContext, IAppDbContext
 
     public DbSet<OrganizationInRegion> OrganizationsInRegions
         => Set<OrganizationInRegion>();
+
+    public DbSet<RefreshToken> RefreshTokens
+        => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -5,13 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.DataBaseProvider;
-using MockEsu.Domain.Entities;
 using System.Security.Authentication;
 using MockEsu.Application.Common.Exceptions;
+using MockEsu.Domain.Entities.Authentification;
 
 namespace MockEsu.Application.Services.Authorization;
 
-public record AuthorizeUserQuery : BaseRequest<AuthorizeUserResponse>
+public record AuthorizeUserCommand : BaseRequest<AuthorizeUserResponse>
 {
     public int userId { get; set; }
     public string password { get; set; }
@@ -21,24 +21,25 @@ public record AuthorizeUserQuery : BaseRequest<AuthorizeUserResponse>
 public class AuthorizeUserResponse : BaseResponse
 {
     public string Token { get; set; }
+    public string RefreshToken { get; set; }
 }
 
-public class AuthorizeUserQueryValidator : AbstractValidator<AuthorizeUserQuery>
+public class AuthorizeUserCommandValidator : AbstractValidator<AuthorizeUserCommand>
 {
-    public AuthorizeUserQueryValidator()
+    public AuthorizeUserCommandValidator()
     {
         RuleFor(x => x.userId).GreaterThan(0);
         RuleFor(x => x.password).MinimumLength(6);
     }
 }
 
-public class AuthorizeUserQueryHandler : IRequestHandler<AuthorizeUserQuery, AuthorizeUserResponse>
+public class AuthorizeUserCommandHandler : IRequestHandler<AuthorizeUserCommand, AuthorizeUserResponse>
 {
     private readonly IAppDbContext _context;
     private readonly IJwtProvider _jwtProvider;
     private readonly IPasswordHasher<User> _passwordHasher;
 
-    public AuthorizeUserQueryHandler(
+    public AuthorizeUserCommandHandler(
         IAppDbContext context, 
         IJwtProvider jwtProvider, 
         IPasswordHasher<User> passwordHasher)
@@ -48,9 +49,9 @@ public class AuthorizeUserQueryHandler : IRequestHandler<AuthorizeUserQuery, Aut
         _passwordHasher = passwordHasher;
     }
 
-    public async Task<AuthorizeUserResponse> Handle(AuthorizeUserQuery request, CancellationToken cancellationToken)
+    public async Task<AuthorizeUserResponse> Handle(AuthorizeUserCommand request, CancellationToken cancellationToken)
     {
-        User? user = _context.Users.WithRoleById(request.userId);
+        User? user = _context.Users.Include(u => u.RefreshToken).WithRoleById(request.userId);
         if (user == null)
             throw new Common.Exceptions.ValidationException(
                 nameof(request.userId),
@@ -61,7 +62,10 @@ public class AuthorizeUserQueryHandler : IRequestHandler<AuthorizeUserQuery, Aut
                 [new ErrorItem($"Password is incorrect", ValidationErrorCode.PasswordIncorrectValidator)] );
 
         string jwt = _jwtProvider.GenerateToken(user);
+        string refreshToken = _jwtProvider.GenerateRefreshToken(user);
 
-        return new AuthorizeUserResponse { Token = jwt };
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return new AuthorizeUserResponse { Token = jwt, RefreshToken = refreshToken };
     }
 }

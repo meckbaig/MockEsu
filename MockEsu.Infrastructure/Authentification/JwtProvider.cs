@@ -2,21 +2,25 @@
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using MockEsu.Application.Common.Interfaces;
-using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace MockEsu.Infrastructure.Authentification;
 
 internal sealed class JwtProvider : IJwtProvider
 {
-    private static readonly TimeSpan TokenLifeTime = TimeSpan.FromHours(1);
+    private static readonly TimeSpan TokenLifeTime = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan RefreshTokenLifeTime = TimeSpan.FromDays(3);
     private readonly JwtOptions _options;
 
     public JwtProvider(IOptions<JwtOptions> options)
     {
         _options = options.Value;
     }
+
+    public TimeSpan GetRefreshTokenLifeTime() => RefreshTokenLifeTime;
 
     public string GenerateToken(User user)
     {
@@ -26,7 +30,7 @@ internal sealed class JwtProvider : IJwtProvider
         {
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Name, user.Name),
-            //new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(CustomClaim.UserId, user.Id.ToString()),
             new(ClaimTypes.Role, user.Role.Name),
         };
         foreach (var permission in user.Role.Permissions)
@@ -46,6 +50,39 @@ internal sealed class JwtProvider : IJwtProvider
         };
         var token = tokenHandler.CreateToken(tokenDesctiptor);
         var jwt = tokenHandler.ReadJsonWebToken(token);
+
         return jwt.UnsafeToString();
     }
+
+    public int GetUserIdFromClaimsPrincipal(ClaimsPrincipal principal)
+    {
+        string? idString = principal.Claims.FirstOrDefault(c => c.Type == CustomClaim.UserId)?.Value;
+        if (idString != null && int.TryParse(idString, out int id))
+            return id;
+        throw new ArgumentException("JWT key does not contain user id");
+    }
+
+    public string GenerateRefreshToken(User user)
+    {
+        var randomNumber = new byte[64];
+
+        using (var generator = RandomNumberGenerator.Create())
+        {
+            generator.GetBytes(randomNumber);
+        }
+
+        string refreshToken = Convert.ToBase64String(randomNumber);
+
+        if (user.RefreshToken != null)
+            user.RefreshToken.Update(refreshToken, DateTimeOffset.UtcNow.Add(RefreshTokenLifeTime));
+        else
+            user.RefreshToken = new RefreshToken(refreshToken, DateTimeOffset.UtcNow.Add(RefreshTokenLifeTime));
+
+        return refreshToken;
+    }
+}
+
+public static class CustomClaim
+{
+    public const string UserId = "userId";
 }

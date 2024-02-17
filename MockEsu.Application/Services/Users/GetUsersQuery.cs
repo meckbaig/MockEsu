@@ -9,7 +9,7 @@ using MockEsu.Application.Common.BaseRequests.ListQuery;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Users;
 using MockEsu.Application.Extensions.ListFilters;
-using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 
 namespace MockEsu.Application.Services.Users;
 

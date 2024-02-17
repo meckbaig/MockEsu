@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using MockEsu.Application.Services.Authorization;
 using MockEsu.Infrastructure.Authentification;
 using MockEsu.Infratructure.Authentification;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MockEsu.Web.Controllers.V1;
 
@@ -22,12 +24,22 @@ public class AuthorizationController : ControllerBase
 
     [HttpGet]
     [Route("Authorize")]
-    public async Task<ActionResult<AuthorizeUserResponse>> Authorize([FromQuery] AuthorizeUserQuery query)
+    public async Task<ActionResult<AuthorizeUserResponse>> Authorize([FromQuery] AuthorizeUserCommand query)
     {
         var result = await _mediator.Send(query);
         return result.ToJsonResponse();
     }
-    
+
+    [HttpPost]
+    [Authorize]
+    [Route("RefreshToken")]
+    public async Task<ActionResult<RefreshTokenResponse>> RefreshToken(string refreshToken)
+    {
+        var command = new RefreshTokenCommand { refreshToken = refreshToken, principal = User };
+        var result = await _mediator.Send(command);
+        return result.ToJsonResponse();
+    }
+
     [HttpGet]
     [HasPermission(Permission.ReadMember)]
     [Route("GetEndpoints")]

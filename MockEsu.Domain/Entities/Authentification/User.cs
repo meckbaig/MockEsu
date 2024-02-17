@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MockEsu.Domain.Entities;
+namespace MockEsu.Domain.Entities.Authentification;
 
 public class User : BaseEntity, INonDelitableEntity
 {
@@ -30,4 +30,5 @@ public class User : BaseEntity, INonDelitableEntity
     public bool Deleted { get; set; }
 
     public Role Role { get; set; }
+    public RefreshToken RefreshToken { get; set; }
 }

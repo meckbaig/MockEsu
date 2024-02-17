@@ -2,7 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using MockEsu.Application.Common.Dtos;
-using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 using System;
 using System.Collections.Generic;
 using System.Linq;
