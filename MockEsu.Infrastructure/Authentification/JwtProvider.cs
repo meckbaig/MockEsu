@@ -10,8 +10,6 @@ namespace MockEsu.Infrastructure.Authentification;
 
 internal sealed class JwtProvider : IJwtProvider
 {
-    ///TODO: store securily
-    private const string TokenSecret = "MockEsuBackend123456565644665456";
     private static readonly TimeSpan TokenLifeTime = TimeSpan.FromHours(1);
     private readonly JwtOptions _options;
 
@@ -27,11 +25,14 @@ internal sealed class JwtProvider : IJwtProvider
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(JwtRegisteredClaimNames.Sub, user.Name),
-            new("userId", user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Name, user.Name),
+            //new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(ClaimTypes.Role, user.Role.Name),
-            new("permission", string.Join(',', user.Role.Permissions))
         };
+        foreach (var permission in user.Role.Permissions)
+        {
+            claims.Add(new("permissions", permission));
+        }
 
         var tokenDesctiptor = new SecurityTokenDescriptor
         {

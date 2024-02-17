@@ -24,4 +24,10 @@ public static class QueryExtensions
             .Include(k => k.Address).ThenInclude(a => a.Street)
             .Include(k => k.Address).ThenInclude(a => a.Region);
     }
+
+    public static User WithRoleById(this IQueryable<User> users, int id)
+    {
+        return users.Include(u => u.Role)
+            .FirstOrDefault(k => k.Id == id);
+    }
 }

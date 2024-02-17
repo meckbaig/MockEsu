@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel;
 using Microsoft.AspNetCore.Authorization;
 using MockEsu.Application.Services.Authorization;
+using MockEsu.Infrastructure.Authentification;
+using MockEsu.Infratructure.Authentification;
 
 namespace MockEsu.Web.Controllers.V1;
 
@@ -19,17 +21,18 @@ public class AuthorizationController : ControllerBase
     }
 
     [HttpGet]
-    [Route("List")]
-    [ApiVersion("1.1")]
-    [ApiVersion("1.2")]
-    public async Task<ActionResult<AuthorizeUserResponse>> GetList([FromQuery] AuthorizeUserQuery query)
+    [Route("Authorize")]
+    public async Task<ActionResult<AuthorizeUserResponse>> Authorize([FromQuery] AuthorizeUserQuery query)
     {
         var result = await _mediator.Send(query);
         return result.ToJsonResponse();
     }
     
     [HttpGet]
+    [HasPermission(Permission.ReadMember)]
     [Route("GetEndpoints")]
+    //[ApiVersion("1.1")]
+    //[ApiVersion("1.2")]
     public Task<List<EndpointInfo>> GetEndpoints()
     {
         var endpoints = new List<EndpointInfo>();
