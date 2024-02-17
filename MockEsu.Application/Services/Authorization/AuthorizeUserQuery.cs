@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Interfaces;
+using MockEsu.Application.Extensions.DataBaseProvider;
 using MockEsu.Domain.Entities;
 using System.Security.Authentication;
+using MockEsu.Application.Common.Exceptions;
 
 namespace MockEsu.Application.Services.Authorization;
 
@@ -48,13 +50,15 @@ public class AuthorizeUserQueryHandler : IRequestHandler<AuthorizeUserQuery, Aut
 
     public async Task<AuthorizeUserResponse> Handle(AuthorizeUserQuery request, CancellationToken cancellationToken)
     {
-        User? user = _context.Users
-            .Include(u => u.Role)
-            .FirstOrDefault(k => k.Id == request.userId);
-        if (user is null)
-            throw new AuthenticationException($"Unable to find user with id {request.userId}");
+        User? user = _context.Users.WithRoleById(request.userId);
+        if (user == null)
+            throw new Common.Exceptions.ValidationException(
+                nameof(request.userId),
+                [new ErrorItem($"Unable to find user with id {request.userId}", ValidationErrorCode.EntityIdValidator)]);
         if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.password) == PasswordVerificationResult.Failed)
-            throw new AuthenticationException($"Password is incorrect");
+            throw new Common.Exceptions.ValidationException(
+                nameof(request.password), 
+                [new ErrorItem($"Password is incorrect", ValidationErrorCode.PasswordIncorrectValidator)] );
 
         string jwt = _jwtProvider.GenerateToken(user);
 
