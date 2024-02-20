@@ -11,7 +11,7 @@ namespace MockEsu.Infrastructure.Authentification;
 
 internal sealed class JwtProvider : IJwtProvider
 {
-    private static readonly TimeSpan TokenLifeTime = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan TokenLifeTime = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan RefreshTokenLifeTime = TimeSpan.FromDays(3);
     private readonly JwtOptions _options;
 
@@ -35,7 +35,7 @@ internal sealed class JwtProvider : IJwtProvider
         };
         foreach (var permission in user.Role.Permissions)
         {
-            claims.Add(new("permissions", permission));
+            claims.Add(new("permissions", permission.Name));
         }
 
         var tokenDesctiptor = new SecurityTokenDescriptor
@@ -62,7 +62,7 @@ internal sealed class JwtProvider : IJwtProvider
         throw new ArgumentException("JWT key does not contain user id");
     }
 
-    public string GenerateRefreshToken(User user)
+    public string GenerateRefreshToken(User user, string? token = null)
     {
         var randomNumber = new byte[64];
 
@@ -73,10 +73,17 @@ internal sealed class JwtProvider : IJwtProvider
 
         string refreshToken = Convert.ToBase64String(randomNumber);
 
-        if (user.RefreshToken != null)
-            user.RefreshToken.Update(refreshToken, DateTimeOffset.UtcNow.Add(RefreshTokenLifeTime));
+        if (token != null)
+        {
+            user.RefreshTokens
+                .FirstOrDefault(t => t.Token.Equals(token))
+                .Update(refreshToken, DateTimeOffset.UtcNow.Add(RefreshTokenLifeTime));
+        }
         else
-            user.RefreshToken = new RefreshToken(refreshToken, DateTimeOffset.UtcNow.Add(RefreshTokenLifeTime));
+        {
+            user.RefreshTokens
+                .Add(new(refreshToken, DateTimeOffset.UtcNow.Add(RefreshTokenLifeTime)));
+        }
 
         return refreshToken;
     }

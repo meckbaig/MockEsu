@@ -1,10 +1,7 @@
-﻿using System.ComponentModel;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using MockEsu.Application.Services.Authorization;
-using MockEsu.Infrastructure.Authentification;
+using MockEsu.Domain.Enums;
 using MockEsu.Infratructure.Authentification;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MockEsu.Web.Controllers.V1;
 

@@ -51,6 +51,12 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Role> Roles
         => Set<Role>();
 
+    public DbSet<PermissionInRole> PermissionsInRoles
+        => Set<PermissionInRole>();
+
+    public DbSet<Permission> Permissions
+        => Set<Permission>();
+
     public DbSet<Tariff> Tariffs
         => Set<Tariff>();
 
@@ -68,7 +74,6 @@ public class AppDbContext : DbContext, IAppDbContext
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         builder.SetDeletedFilters();
 
-
         //builder.UseCustomFunctions();
 
         //builder.Entity<OrganizationInRegion>().HasKey(or => new { or.OrganizationId, or.RegionId });
@@ -84,6 +89,10 @@ public class AppDbContext : DbContext, IAppDbContext
             .HasMany(o => o.Regions)
             .WithMany(r => r.Organizations)
             .UsingEntity<OrganizationInRegion>();
+        builder.Entity<Role>()
+            .HasMany(o => o.Permissions)
+            .WithMany(r => r.Roles)
+            .UsingEntity<PermissionInRole>();
 
         base.OnModelCreating(builder);
     }

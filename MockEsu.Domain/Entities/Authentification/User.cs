@@ -30,5 +30,5 @@ public class User : BaseEntity, INonDelitableEntity
     public bool Deleted { get; set; }
 
     public Role Role { get; set; }
-    public RefreshToken RefreshToken { get; set; }
+    public List<RefreshToken> RefreshTokens { get; set; }
 }

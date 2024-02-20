@@ -22,6 +22,8 @@ public class RefreshToken : BaseEntity
     [ForeignKey(nameof(User))]
     public int UserId { get; set; }
 
+    public bool Invalidated { get; set; } = false;
+
     public User User { get; set; }
 
     public RefreshToken()

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.JsonPatch.Internal;
+﻿using AutoMapper.Internal;
+using Microsoft.AspNetCore.JsonPatch.Internal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Query;
@@ -6,6 +7,7 @@ using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.DataBaseProvider;
 using MockEsu.Application.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
+using MockEsu.Domain.Enums;
 using Newtonsoft.Json.Serialization;
 using System.Collections;
 using System.Linq.Expressions;
@@ -41,7 +43,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         for (int i = 1; i < segments.Length; i++)
         {
             if ((int.TryParse(segments[i], out int _) || segments[i] == "-")
-                && typeof(IList).IsAssignableFrom(segmentTypes.Last()))
+                && segmentTypes.Last().IsCollection())
             {
                 segmentTypes.Add(segmentTypes.Last().GetGenericArguments().Single());
             }
@@ -131,7 +133,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         List<Type> segmentTypes = [typeof(TEntity)];
         for (int i = 1; i < segments.Length; i++)
         {
-            if (int.TryParse(segments[i], out int _) && typeof(IList).IsAssignableFrom(segmentTypes.Last()))
+            if (int.TryParse(segments[i], out int _) && segmentTypes.Last().IsCollection())
             {
                 segmentTypes.Add(segmentTypes.Last().GetGenericArguments().Single());
             }
@@ -345,11 +347,15 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             TEntityToAdd entity = (TEntityToAdd)value;
             TParent parent = new TParent { Id = parentId };
             var listProperty = typeof(TParent).GetProperty(entitiesInParentPropertyName);
-            IList<TEntityToAdd> list = (IList<TEntityToAdd>)listProperty.GetValue(parent);
+            ICollection<TEntityToAdd> list = (ICollection<TEntityToAdd>)listProperty.GetValue(parent);
             (context as DbContext).ChangeTracker.Clear();
             context.Entry(parent).State = EntityState.Unchanged;
             context.Entry(entity).State = EntityState.Unchanged;
-            AddEntityAndItsChildrenToContext(entity, context);
+            /// TODO: имплементировать разные способы......
+            if (GetRelation(listProperty) != Relation.ManyToMany)
+            {
+                AddEntityAndItsChildrenToContext(entity, context);
+            }
             list.Add(entity);
             context.SaveChanges();
             errorMessage = null;
@@ -363,6 +369,13 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                 entitiesInParentPropertyName.ToCamelCase());
             return false;
         }
+    }
+
+    private static Relation GetRelation(PropertyInfo property)
+    {
+        var relationAttribute = (DatabaseRelationAttribute)property
+            .GetCustomAttribute(typeof(DatabaseRelationAttribute));
+        return relationAttribute?.Relation ?? Relation.None;
     }
 
     /// <summary>
@@ -475,7 +488,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                 continue;
             }
 
-            else if (i + 1 < segments.Length && typeof(IList).IsAssignableFrom(propertyType)
+            else if (i + 1 < segments.Length && propertyType.IsCollection()
                 && TryGetQueryFromProperty(dbSet, query, segments[i], out var newQuery))
             {
                 Type entityType = newQuery.ElementType;
@@ -489,7 +502,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                     out errorMessage);
             }
 
-            if (propertyType != null && !typeof(IList).IsAssignableFrom(propertyType))
+            if (propertyType != null && !propertyType.IsCollection())
             {
                 if (!TryConvertValue(
                     value,
@@ -512,6 +525,11 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                 query.ExecuteUpdate(expression);
             }
 
+            else if (i == segments.Length - 1)
+            {
+                // Реализовать логику многих ко многим
+            }
+
             else
             {
                 errorMessage = "Could not define expression while executing 'replace' method";
@@ -521,6 +539,8 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         errorMessage = null;
         return true;
     }
+
+
 
     /// <summary>
     /// Gets lambda of property itself.
@@ -637,7 +657,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                 }
             }
             else if (property.PropertyType.IsGenericType &&
-                     typeof(IList).IsAssignableFrom(property.PropertyType))
+                     property.PropertyType.IsCollection())
             {
                 var childEntities = (IEnumerable)property.GetValue(entity);
                 if (childEntities != null)
@@ -663,16 +683,16 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         out string errorMessage)
     {
         var conversionResult = ConversionResultProvider.ConvertTo(originalValue, listTypeArgument);
-        if (!conversionResult.CanBeConverted)
+        if (conversionResult.CanBeConverted)
         {
-            convertedValue = null;
-            errorMessage = AdapterError.FormatInvalidValueForProperty(originalValue);
-            return false;
+            convertedValue = conversionResult.ConvertedInstance;
+            errorMessage = null;
+            return true;
         }
-
-        convertedValue = conversionResult.ConvertedInstance;
-        errorMessage = null;
-        return true;
+        else if ()
+        convertedValue = null;
+        errorMessage = AdapterError.FormatInvalidValueForProperty(originalValue);
+        return false;
     }
 
     #endregion
