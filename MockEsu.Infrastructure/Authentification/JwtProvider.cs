@@ -77,13 +77,11 @@ internal sealed class JwtProvider : IJwtProvider
         {
             user.RefreshTokens
                 .FirstOrDefault(t => t.Token.Equals(token))
-                .Update(refreshToken, DateTimeOffset.UtcNow.Add(RefreshTokenLifeTime));
+                .Invalidated = true;
         }
-        else
-        {
-            user.RefreshTokens
-                .Add(new(refreshToken, DateTimeOffset.UtcNow.Add(RefreshTokenLifeTime)));
-        }
+        user.RefreshTokens
+            .Add(new(refreshToken, DateTimeOffset.UtcNow.Add(RefreshTokenLifeTime)));
+
 
         return refreshToken;
     }

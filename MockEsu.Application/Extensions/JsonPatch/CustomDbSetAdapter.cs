@@ -437,7 +437,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             TEntityToDelete entity = new TEntityToDelete { Id = entityId };
             TParent parent = new TParent { Id = parentId };
             var listProperty = typeof(TParent).GetProperty(entitiesInParentFieldName);
-            IList<TEntityToDelete> list = (IList<TEntityToDelete>)listProperty.GetValue(parent);
+            ICollection<TEntityToDelete> list = (ICollection<TEntityToDelete>)listProperty.GetValue(parent);
             list.Add(entity);
             (context as DbContext).ChangeTracker.Clear();
             context.Entry(parent).State = EntityState.Unchanged;

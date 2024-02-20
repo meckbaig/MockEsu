@@ -28,7 +28,7 @@ public static class QueryExtensions
 
     public static User WithRoleById(this IQueryable<User> users, int id)
     {
-        return users.Include(u => u.Role)
+        return users.Include(u => u.Role).ThenInclude(r => r.Permissions)
             .FirstOrDefault(k => k.Id == id);
     }
 }

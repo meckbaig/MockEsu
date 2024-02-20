@@ -51,7 +51,7 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
         await ValidateUserAndToken(user, userId, request);
 
         string jwt = _jwtProvider.GenerateToken(user);
-        string refreshToken = _jwtProvider.GenerateRefreshToken(user);
+        string refreshToken = _jwtProvider.GenerateRefreshToken(user, request.refreshToken);
 
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -69,7 +69,7 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
         RefreshToken? token = user.RefreshTokens.FirstOrDefault();
         if (token == null || token.Invalidated)
         {
-            if (token.Invalidated)
+            if (token?.Invalidated ?? false)
                 await TryInvalidateAllUserRefreshTokensAsync(userId);
 
             throw new Common.Exceptions.ValidationException(
