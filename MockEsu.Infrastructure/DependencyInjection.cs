@@ -34,6 +34,12 @@ public static class DependencyInjection
 
         //services.AddScoped<AppDbContextInitialiser>();
 
+        using (var scope = services.BuildServiceProvider())
+        {
+            var context = scope.GetRequiredService(typeof(IAppDbContext)) as IAppDbContext;
+            context.ConfigurePermissions();
+        }
+
         services.AddSingleton(TimeProvider.System);
         return services;
     }

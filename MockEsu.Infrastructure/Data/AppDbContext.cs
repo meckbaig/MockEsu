@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Logging;
 using MockEsu.Application.Common.Interfaces;
@@ -8,6 +9,7 @@ using MockEsu.Domain.Entities;
 using MockEsu.Domain.Entities.Authentification;
 using MockEsu.Domain.Entities.Traiffs;
 using MockEsu.Infrastructure.Interceptors;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace MockEsu.Infrastructure.Data;
@@ -107,6 +109,53 @@ public class AppDbContext : DbContext, IAppDbContext
 
 internal static class AppDbContextCustomFunctions
 {
+    internal static void ConfigurePermissions(this IAppDbContext appDbContext)
+    {
+        HashSet<Permission> localPermissions = Enum.GetValues<Domain.Enums.Permission>()
+            .Select(p => new Permission
+            {
+                Id = (int)p,
+                Name = p.ToString()
+            })
+            .ToHashSet();
+
+        HashSet<Permission> dbPermissions = appDbContext.Permissions.ToHashSet();
+
+        foreach (var localPermission in localPermissions)
+        {
+            Permission? dbPermission = dbPermissions.FirstOrDefault(p => p.Id == localPermission.Id);
+            if (dbPermission == null)
+            {
+                appDbContext.Permissions.Add(localPermission);
+            }
+            else
+            {
+                dbPermission.Name = localPermission.Name;
+            }
+        }
+
+        HashSet<Permission> removePermissions = dbPermissions.Except(localPermissions, new PermissionsComparer()).ToHashSet();
+        foreach (var removePermission in removePermissions)
+        {
+            appDbContext.Permissions.Remove(removePermission);
+        }
+
+        appDbContext.SaveChanges();
+    }
+
+    private class PermissionsComparer : IEqualityComparer<Permission>
+    {
+        public bool Equals(Permission? x, Permission? y)
+        {
+            return x.Id == y.Id;
+        }
+
+        public int GetHashCode([DisallowNull] Permission obj)
+        {
+            return obj.Id;
+        }
+    }
+
     internal static void SetDeletedFilters(this ModelBuilder builder)
     {
         var types = typeof(IAppDbContext)
