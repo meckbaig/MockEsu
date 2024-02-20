@@ -3,7 +3,7 @@ using FluentValidation;
 using MediatR;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Interfaces;
-using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 
 namespace MockEsu.Application.Services.Users;
 

@@ -2,6 +2,7 @@
 using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
+using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Domain.Common;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Dynamic.Core;
@@ -60,7 +61,7 @@ public static class EntityFrameworkFiltersExtension
     public static string? GetExpressionEndpoint<TSource, TDestintaion>
         (string destinationPropertyName, IConfigurationProvider provider)
     {
-        return BaseDto.GetSource<TSource, TDestintaion>
+        return DtoExtension.GetSource<TSource, TDestintaion>
             (destinationPropertyName, provider, throwException: false);
     }
 
@@ -90,19 +91,18 @@ public static class EntityFrameworkFiltersExtension
     }
 
     /// <summary>
-    /// Gets filter attribute
+    /// Gets filter attribute from property.
     /// </summary>
-    /// <typeparam name="TSource">Source of DTO type</typeparam>
-    /// <typeparam name="TDestintaion">DTO type</typeparam>
-    /// <param name="filterEx">Filter expression to get the key</param>
-    /// <returns>Returns FilterableAttribute model if success, null if error</returns>
-    public static FilterableAttribute GetFilterAttribute<TSource, TDestintaion>
-        (FilterExpression filterEx)
-        where TSource : BaseEntity
+    /// <typeparam name="TSource">Source of DTO type.</typeparam>
+    /// <typeparam name="TDestintaion">DTO type.</typeparam>
+    /// <param name="propertyName">Property name to get attribute from.</param>
+    /// <returns>Returns FilterableAttribute model if success, null if error.</returns>
+    public static FilterableAttribute GetFilterAttribute<TDestintaion>
+        (string propertyName)
         where TDestintaion : BaseDto
     {
         var prop = typeof(TDestintaion).GetProperties()
-                .FirstOrDefault(p => p.Name == filterEx.Key)!;
+                .FirstOrDefault(p => p.Name == propertyName)!;
         var attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
             .FirstOrDefault(a => a.GetType() == typeof(FilterableAttribute))!;
         return attribute;
@@ -116,10 +116,9 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="compareMethod">Method of comparison</param>
     /// <param name="filterEx">Filter expression</param>
     /// <returns>Filter expression if success, null if error</returns>
-    public static Expression? GetLinqExpression<TSource, TDestintaion>
+    public static Expression? GetLinqExpression<TSource>
         (CompareMethod compareMethod, FilterExpression filterEx)
         where TSource : BaseEntity
-        where TDestintaion : BaseDto
     {
         var param = Expression.Parameter(typeof(TSource), "x");
 
@@ -172,7 +171,8 @@ public static class EntityFrameworkFiltersExtension
             return Expression.Not(expression);
     }
 
-    private static Expression GetSingleEqualExpression(object value, MemberExpression propExpression)
+    /// TODO: changed to BinaryExpression, check if still works
+    private static BinaryExpression GetSingleEqualExpression(object value, MemberExpression propExpression)
     {
         if (value.ToString()!.Contains(".."))
         {
@@ -195,7 +195,7 @@ public static class EntityFrameworkFiltersExtension
                 case 1:
                     return binaryExpressions[0];
                 default:
-                    throw new Exception($"Can not translate expression {valueString}");
+                    throw new Exception($"Could not translate expression {valueString}");
             }
         }
         else

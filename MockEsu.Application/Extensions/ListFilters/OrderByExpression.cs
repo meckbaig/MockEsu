@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MockEsu.Application.Common.Dtos;
+using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Application.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
@@ -21,13 +22,13 @@ public record OrderByExpression : IEntityFrameworkExpression<OrderByExpressionTy
         if (!filter.Contains(' '))
         {
             f.Key = filter.ToPascalCase();
-            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
+            f.EndPoint = DtoExtension.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.ExpressionType = OrderByExpressionType.Ascending;
         }
         else if (filter[(filter.IndexOf(' ') + 1)..] == "desc")
         {
             f.Key = filter[..filter.IndexOf(' ')].ToPascalCase();
-            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
+            f.EndPoint = DtoExtension.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.ExpressionType = OrderByExpressionType.Descending;
         }
         else

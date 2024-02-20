@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 using MockEsu.Domain.Entities.Traiffs;
 using System;
 using System.Collections.Generic;
@@ -23,5 +24,11 @@ public static class QueryExtensions
             .Include(k => k.Address).ThenInclude(a => a.City)
             .Include(k => k.Address).ThenInclude(a => a.Street)
             .Include(k => k.Address).ThenInclude(a => a.Region);
+    }
+
+    public static User WithRoleById(this IQueryable<User> users, int id)
+    {
+        return users.Include(u => u.Role).ThenInclude(r => r.Permissions)
+            .FirstOrDefault(k => k.Id == id);
     }
 }

@@ -8,7 +8,7 @@ using MockEsu.Application.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
 using System.Text.Json;
 
-namespace MockEsu.Application.Common.BaseRequests.JournalQuery;
+namespace MockEsu.Application.Common.BaseRequests.ListQuery;
 
 public abstract class BaseListQueryValidator<TQuery, TResponseList, TDestintaion, TSource> : AbstractValidator<TQuery>
     where TQuery : BaseListQuery<TResponseList>
@@ -103,10 +103,9 @@ public static class BaseJournalQueryFilterValidatorExtension
         if (filterEx == null || filterEx.ExpressionType == FilterExpressionType.Undefined)
             return true;
         attribute = EntityFrameworkFiltersExtension
-            .GetFilterAttribute<TSource, TDestintaion>(filterEx);
+            .GetFilterAttribute<TDestintaion>(filterEx.Key);
         if (attribute == null)
             return false;
-        //query.AddFilterExpression(filterEx, attribute);
         return true;
     }
 
@@ -121,10 +120,13 @@ public static class BaseJournalQueryFilterValidatorExtension
         if (filterEx == null ||
             filterEx.ExpressionType == FilterExpressionType.Undefined ||
             attribute == null)
+        {
             return true;
+        }
         try
         {
-            var expression = EntityFrameworkFiltersExtension.GetLinqExpression<TSource, TDestintaion>(attribute.CompareMethod, filterEx);
+            var expression = EntityFrameworkFiltersExtension
+                .GetLinqExpression<TSource>(attribute.CompareMethod, filterEx);
             if (expression == null)
                 return false;
             query.AddFilterExpression(expression);

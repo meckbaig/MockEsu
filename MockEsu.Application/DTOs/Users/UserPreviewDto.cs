@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using MockEsu.Application.Common.Dtos;
-using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 
 namespace MockEsu.Application.DTOs.Users;
 

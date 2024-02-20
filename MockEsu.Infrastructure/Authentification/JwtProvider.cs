@@ -2,23 +2,25 @@
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using MockEsu.Application.Common.Interfaces;
-using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace MockEsu.Infrastructure.Authentification;
 
 internal sealed class JwtProvider : IJwtProvider
 {
-    ///TODO: store securily
-    private const string TokenSecret = "MockEsuBackend123456565644665456";
-    private static readonly TimeSpan TokenLifeTime = TimeSpan.FromHours(1);
+    private static readonly TimeSpan TokenLifeTime = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan RefreshTokenLifeTime = TimeSpan.FromDays(3);
     private readonly JwtOptions _options;
 
     public JwtProvider(IOptions<JwtOptions> options)
     {
         _options = options.Value;
     }
+
+    public TimeSpan GetRefreshTokenLifeTime() => RefreshTokenLifeTime;
 
     public string GenerateToken(User user)
     {
@@ -27,11 +29,14 @@ internal sealed class JwtProvider : IJwtProvider
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(JwtRegisteredClaimNames.Sub, user.Name),
-            new("userId", user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Name, user.Name),
+            new(CustomClaim.UserId, user.Id.ToString()),
             new(ClaimTypes.Role, user.Role.Name),
-            new("permission", string.Join(',', user.Role.Permissions))
         };
+        foreach (var permission in user.Role.Permissions)
+        {
+            claims.Add(new("permissions", permission.Name));
+        }
 
         var tokenDesctiptor = new SecurityTokenDescriptor
         {
@@ -45,6 +50,44 @@ internal sealed class JwtProvider : IJwtProvider
         };
         var token = tokenHandler.CreateToken(tokenDesctiptor);
         var jwt = tokenHandler.ReadJsonWebToken(token);
+
         return jwt.UnsafeToString();
     }
+
+    public int GetUserIdFromClaimsPrincipal(ClaimsPrincipal principal)
+    {
+        string? idString = principal.Claims.FirstOrDefault(c => c.Type == CustomClaim.UserId)?.Value;
+        if (idString != null && int.TryParse(idString, out int id))
+            return id;
+        throw new ArgumentException("JWT key does not contain user id");
+    }
+
+    public string GenerateRefreshToken(User user, string? token = null)
+    {
+        var randomNumber = new byte[64];
+
+        using (var generator = RandomNumberGenerator.Create())
+        {
+            generator.GetBytes(randomNumber);
+        }
+
+        string refreshToken = Convert.ToBase64String(randomNumber);
+
+        if (token != null)
+        {
+            user.RefreshTokens
+                .FirstOrDefault(t => t.Token.Equals(token))
+                .Invalidated = true;
+        }
+        user.RefreshTokens
+            .Add(new(refreshToken, DateTimeOffset.UtcNow.Add(RefreshTokenLifeTime)));
+
+
+        return refreshToken;
+    }
+}
+
+public static class CustomClaim
+{
+    public const string UserId = "userId";
 }

@@ -5,7 +5,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using MockEsu.Application.Common.BaseRequests;
-using MockEsu.Application.Common.BaseRequests.JournalQuery;
+using MockEsu.Application.Common.BaseRequests.ListQuery;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Application.DTOs.Tariffs;
@@ -47,12 +47,11 @@ public class GetTariffsQueryHandler : IRequestHandler<GetTariffsQuery, GetTariff
 
     public async Task<GetTariffsResponse> Handle(GetTariffsQuery request, CancellationToken cancellationToken)
     {
-        var list = _context.Tariffs.Include(t => t.Prices)
+        var list = _context.Tariffs.WithPrices()
             .AddFilters<Tariff, TariffEditDto>(request.GetFilterExpressions())
             .AddOrderBy<Tariff, TariffEditDto>(request.GetOrderExpressions())
             .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)
-            .ProjectTo<TariffEditDto>(_mapper.ConfigurationProvider)
-            //.Select(t => _mapper.Map<TariffditDto>(t))
+            .Select(t => _mapper.Map<TariffEditDto>(t))
             .ToList();
         return new GetTariffsResponse { Items = list };
     }

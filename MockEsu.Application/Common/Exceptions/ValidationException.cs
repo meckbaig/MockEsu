@@ -34,12 +34,17 @@ public class ValidationException : Exception
             .ToDictionary(
                 failureGroup => failureGroup.Key,
                 failureGroup => failureGroup.ToArray());
-            
+
     }
 
     public ValidationException(IDictionary<string, ErrorItem[]> failures) : this()
     {
         Errors = failures;
+    }
+
+    public ValidationException(string key, ErrorItem[] failures) : this()
+    {
+        Errors = new Dictionary<string, ErrorItem[]> { { key, failures } };
     }
 
     public new IDictionary<string, ErrorItem[]> Errors { get; }
@@ -70,5 +75,10 @@ public enum ValidationErrorCode
     ExpressionIsUndefinedValidator,
     PropertyIsNotFilterableValidator,
     CanNotCreateExpressionValidator,
-    DataTypeValidator
+    DataTypeValidator,
+    PasswordIncorrectValidator,
+
+    EntityIdValidator,
+    RefreshTokenNotValid,
+    RefreshTokenHasExpired
 }

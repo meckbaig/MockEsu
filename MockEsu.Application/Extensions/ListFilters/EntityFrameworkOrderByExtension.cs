@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
+using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Domain.Common;
 using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
@@ -78,7 +79,7 @@ public static class EntityFrameworkOrderByExtension
     public static string GetExpressionEndpoint<TSource, TDestintaion>
         (string destinationPropertyName, IConfigurationProvider provider)
     {
-        return BaseDto.GetSource<TSource, TDestintaion>
+        return DtoExtension.GetSource<TSource, TDestintaion>
             (destinationPropertyName, provider, throwException: false);
     }
 

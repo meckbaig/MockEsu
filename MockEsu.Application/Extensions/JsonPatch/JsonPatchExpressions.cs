@@ -118,17 +118,20 @@ internal static class JsonPatchExpressions
             try
             {
                 newOperation.path =
-                    BaseDto.GetSourceJsonPatch<TDto>(
+                    DtoExtension.GetSourceJsonPatch<TDto>(
                         jsonPatchPath.AsSingleProperty,
                         provider,
                         out Type propertyType);
                 newOperation.path = jsonPatchPath.ToFullPropertyPath(newOperation.path);
 
-                newOperation.value =
-                    BaseDto.GetSourceValueJsonPatch(
-                        operation.value,
-                        propertyType,
-                        provider);
+                if (newOperation.OperationType != OperationType.Remove)
+                {
+                    newOperation.value =
+                        DtoExtension.GetSourceValueJsonPatch(
+                            operation.value,
+                            propertyType,
+                            provider);
+                }
             }
             catch (Exception ex)
             {

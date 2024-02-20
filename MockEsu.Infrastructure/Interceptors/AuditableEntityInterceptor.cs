@@ -39,6 +39,10 @@ namespace MockEsu.Infrastructure.Interceptors
         {
             if (context == null) return;
 
+#if DEBUG
+            var entries = context.ChangeTracker.Entries<BaseEntity>();
+#endif
+
             foreach (var entry in context.ChangeTracker.Entries<BaseEntity>())
             {
                 if (entry.State == EntityState.Added)

@@ -46,7 +46,7 @@ internal static class DataBaseProviderExtensions
         return isDbSet;
     }
 
-    private static IQueryable CreateDbSet(this IAppDbContext context, Type elementType)
+    internal static IQueryable CreateDbSet(this IAppDbContext context, Type elementType)
     {
         MethodInfo setMethod = typeof(IAppDbContext)
             .GetMethod(nameof(IAppDbContext.Set))

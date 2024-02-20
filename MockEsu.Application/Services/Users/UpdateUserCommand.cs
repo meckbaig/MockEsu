@@ -8,7 +8,7 @@ using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Users;
 using MockEsu.Application.Extensions.JsonPatch;
-using MockEsu.Domain.Entities;
+using MockEsu.Domain.Entities.Authentification;
 
 namespace MockEsu.Application.Services.Users;
 

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MockEsu.Application.Common.Dtos;
+using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Application.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
@@ -55,14 +56,14 @@ public record FilterExpression : IEntityFrameworkExpression<FilterExpressionType
         if (filter.Contains("!:"))
         {
             f.Key = filter[..filter.IndexOf("!:")].ToPascalCase();
-            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
+            f.EndPoint = DtoExtension.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.Value = filter[(filter.IndexOf("!:") + 2)..];
             f.ExpressionType = FilterExpressionType.Exclude;
         }
         else if (filter.Contains(':'))
         {
             f.Key = filter[..filter.IndexOf(':')].ToPascalCase();
-            f.EndPoint = BaseDto.GetSource<TSource, TDestintaion>(f.Key, provider);
+            f.EndPoint = DtoExtension.GetSource<TSource, TDestintaion>(f.Key, provider);
             f.Value = filter[(filter.IndexOf(':') + 1)..];
             f.ExpressionType = FilterExpressionType.Include;
         }
