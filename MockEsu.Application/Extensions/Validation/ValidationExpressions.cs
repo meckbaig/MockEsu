@@ -1,6 +1,8 @@
 ﻿using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using MockEsu.Application.Common.Interfaces;
+using MockEsu.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +30,14 @@ internal static class ValidationExpressions
             .WithErrorCode("NotExistingRoleValidator");
     }
 
+    public static IRuleBuilderOptions<T, int> MustBeExistingPermission
+        <T>(this IRuleBuilder<T, int> ruleBuilder)
+    {
+        return ruleBuilder.Must((q, p) => BeExistingPermission(p))
+            .WithMessage((q, p) => $"Permission with id '{p}' does not exists")
+            .WithErrorCode("NotExistingRoleValidator");
+    }
+
     private static bool BeExistingRole(string role, IAppDbContext context)
     {
         return context.Roles.FirstOrDefault(r => r.Name.ToLower() == role.ToLower()) != null;
@@ -38,6 +48,16 @@ internal static class ValidationExpressions
         if (roleId == null)
             return true;
         return context.Roles.FirstOrDefault(r => r.Id == roleId) != null;
+    }
+
+    private static bool BeExistingPermission(string permissionName)
+    {
+        return Enum.TryParse<Permission>(permissionName, out var _);
+    }
+
+    private static bool BeExistingPermission(int permissionId)
+    {
+        return Enum.IsDefined(typeof(Permission), permissionId);
     }
 
     //private static bool BeValidEmail(string email)

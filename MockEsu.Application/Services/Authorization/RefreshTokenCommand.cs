@@ -44,25 +44,11 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
     public async Task<RefreshTokenResponse> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
         int userId = _jwtProvider.GetUserIdFromClaimsPrincipal(request.principal);
-        User user = _context.Users.Include(u => u.RefreshToken).WithRoleById(userId);
-        if (user == null)
-        {
-            throw new Common.Exceptions.ValidationException(
-                "JWT token",
-                [new ErrorItem($"Unable to find user with id {userId}.", ValidationErrorCode.EntityIdValidator)]);
-        }
-        if (!user.RefreshToken.Token.Equals(request.refreshToken))
-        {
-            throw new Common.Exceptions.ValidationException(
-                nameof(request.refreshToken),
-                [new ErrorItem($"Refresh token is not valid.", ValidationErrorCode.RefreshTokenNotValid)]);
-        }
-        if (user.RefreshToken.ExpirationDate < DateTimeOffset.UtcNow)
-        {
-            throw new Common.Exceptions.ValidationException(
-                nameof(request.refreshToken),
-                [new ErrorItem($"Refresh token has expired.", ValidationErrorCode.RefreshTokenHasExpired)]);
-        }
+        User user = _context.Users
+            .Include(u => u.RefreshTokens.Where(t => t.Token.Equals(request.refreshToken)))
+            .WithRoleById(userId);
+
+        await ValidateUserAndToken(user, userId, request);
 
         string jwt = _jwtProvider.GenerateToken(user);
         string refreshToken = _jwtProvider.GenerateRefreshToken(user);
@@ -70,5 +56,46 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
         await _context.SaveChangesAsync(cancellationToken);
 
         return new RefreshTokenResponse { Token = jwt, RefreshToken = refreshToken };
+    }
+
+    private async Task ValidateUserAndToken(User user, int userId, RefreshTokenCommand request)
+    {
+        if (user == null)
+        {
+            throw new Common.Exceptions.ValidationException(
+                "JWT token",
+                [new ErrorItem($"Unable to find user with id {userId}.", ValidationErrorCode.EntityIdValidator)]);
+        }
+        RefreshToken? token = user.RefreshTokens.FirstOrDefault();
+        if (token == null || token.Invalidated)
+        {
+            if (token.Invalidated)
+                await TryInvalidateAllUserRefreshTokensAsync(userId);
+
+            throw new Common.Exceptions.ValidationException(
+                nameof(request.refreshToken),
+                [new ErrorItem($"Refresh token is not valid.", ValidationErrorCode.RefreshTokenNotValid)]);
+        }
+        if (token.ExpirationDate < DateTimeOffset.UtcNow)
+        {
+            throw new Common.Exceptions.ValidationException(
+                nameof(request.refreshToken),
+                [new ErrorItem($"Refresh token has expired.", ValidationErrorCode.RefreshTokenHasExpired)]);
+        }
+    }
+
+    private async Task<bool> TryInvalidateAllUserRefreshTokensAsync(int userId)
+    {
+        try
+        {
+            await _context.RefreshTokens
+                .Where(t => t.UserId == userId)
+                .ExecuteUpdateAsync(x => x.SetProperty(t => t.Invalidated, true));
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 }

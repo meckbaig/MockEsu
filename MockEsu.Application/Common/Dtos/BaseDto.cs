@@ -1,12 +1,13 @@
 ﻿using AutoMapper;
 using AutoMapper.Internal;
-using MockEsu.Application.Common.Exceptions;
+using MockEsu.Application.DTOs.Roles;
 using MockEsu.Application.Extensions.StringExtensions;
+using MockEsu.Domain.Entities.Authentification;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Collections;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Security.AccessControl;
 using System.Text.RegularExpressions;
 
 namespace MockEsu.Application.Common.Dtos;
@@ -81,7 +82,12 @@ public abstract record BaseDto
                 sourceValue = GetSourceValueFromJsonObject(dtoType, provider, serialized);
                 return true;
             }
-            errorMessage = "Value is not an object.";
+            else if (InvokeCanConvert(value, dtoType))
+            {
+                sourceValue = value;
+                return true;
+            }
+            errorMessage = "Value is not valid.";
             return false;
         }
         if (dtoType.IsArray || dtoType.IsListType())
@@ -98,6 +104,15 @@ public abstract record BaseDto
         return true;
     }
 
+    public static bool InvokeCanConvert(object value, Type targetType)
+    {
+        Type sourceType = value.GetType();
+        return targetType.GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Any(mi => (mi.Name == "op_Implicit" || mi.Name == "op_Explicit")
+            && mi.ReturnType == targetType
+                && mi.GetParameters()[0].ParameterType == sourceType);
+    }
+
     /// <summary>
     /// Gets source array from DTO mapping.
     /// </summary>
@@ -107,6 +122,9 @@ public abstract record BaseDto
     /// <returns>Source array value.</returns>
     private static object GetSourceValueFromJsonArray(Type dtoArrayType, IConfigurationProvider provider, string serialized)
     {
+        if (!IsCustomObject(dtoArrayType.GetElementType()))
+            return serialized;
+
         List<object> sourceObjects = new();
         List<Dictionary<string, object>> dtoDictionaries
             = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(serialized);
@@ -116,6 +134,21 @@ public abstract record BaseDto
             sourceObjects.Add(GetSourceValueFromJsonObject(dtoType, provider, JsonConvert.SerializeObject(dtoDict)));
         }
         return sourceObjects;
+    }
+
+    private static bool IsCustomObject(Type propertyType)
+    {
+        if (propertyType.IsPrimitive)
+            return false;
+        if (propertyType == typeof(string) ||
+            propertyType == typeof(DateTime) ||
+            propertyType == typeof(decimal) ||
+            propertyType == typeof(TimeOnly))
+            return false;
+        if (propertyType.IsEnum)
+            return false;
+
+        return true;
     }
 
     /// <summary>
@@ -215,7 +248,7 @@ public abstract record BaseDto
                     errorMessage ??= $"Something went wrong while getting json patch source property path for '{dtoPath}'";
                     return false;
                 }
-                if (typeof(IList).IsAssignableFrom(propertyType))
+                if (propertyType.IsCollection())
                     nextSegmentMustBeElementOfCollection = true;
                 sourcePathSegments.Add(sourceSegment);
             }
@@ -337,6 +370,15 @@ public abstract record BaseDto
         out string errorMessage,
         bool throwException = true)
     {
+        if (typeof(IEditDto).IsAssignableFrom(typeof(TDto)))
+            return TryGetEditSource<TSource, TDto>(
+                dtoProperty,
+                provider,
+                out sourceProperty,
+                out dtoPropertyType,
+                out errorMessage,
+                throwException);
+
         errorMessage = null;
         var internalApi = provider.Internal();
         var map = internalApi.FindTypeMapFor<TSource, TDto>();
@@ -366,6 +408,42 @@ public abstract record BaseDto
         sourceProperty = GetPropertyMapSource(propertyMap.CustomMapExpression.Body);
         return true;
     }
+
+    private static bool TryGetEditSource<TSource, TDto>(string dtoProperty, IConfigurationProvider provider, out string sourceProperty, out Type dtoPropertyType, out string errorMessage, bool throwException)
+    {
+        errorMessage = null;
+        var internalApi = provider.Internal();
+        var map = internalApi.FindTypeMapFor<TDto, TSource>();
+        var propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.SourceMember.Name == dtoProperty);
+
+        if (propertyMap == null)
+        {
+            errorMessage = $"Property '{dtoProperty.ToCamelCase()}' does not exist";
+            if (!throwException)
+            {
+                sourceProperty = null;
+                dtoPropertyType = null;
+                return false;
+            }
+            else
+            {
+                throw new ArgumentException(errorMessage);
+            }
+        }
+
+        dtoPropertyType = propertyMap?.SourceType;
+        if (propertyMap?.DestinationMember?.Name != null)
+        {
+            sourceProperty = propertyMap?.DestinationMember?.Name;
+            return true;
+        }
+        sourceProperty = null;
+        errorMessage = "Not supported get source action";
+        return false;
+    }
+
+
+
 
     /// <summary>
     /// Get map source name from AutoMapper custom lambda function

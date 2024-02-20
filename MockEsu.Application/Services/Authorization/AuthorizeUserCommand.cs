@@ -51,15 +51,8 @@ public class AuthorizeUserCommandHandler : IRequestHandler<AuthorizeUserCommand,
 
     public async Task<AuthorizeUserResponse> Handle(AuthorizeUserCommand request, CancellationToken cancellationToken)
     {
-        User? user = _context.Users.Include(u => u.RefreshToken).WithRoleById(request.userId);
-        if (user == null)
-            throw new Common.Exceptions.ValidationException(
-                nameof(request.userId),
-                [new ErrorItem($"Unable to find user with id {request.userId}", ValidationErrorCode.EntityIdValidator)]);
-        if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.password) == PasswordVerificationResult.Failed)
-            throw new Common.Exceptions.ValidationException(
-                nameof(request.password), 
-                [new ErrorItem($"Password is incorrect", ValidationErrorCode.PasswordIncorrectValidator)] );
+        User? user = _context.Users.Include(u => u.RefreshTokens).WithRoleById(request.userId);
+        ValidateAuthorization(request, user);
 
         string jwt = _jwtProvider.GenerateToken(user);
         string refreshToken = _jwtProvider.GenerateRefreshToken(user);
@@ -67,5 +60,17 @@ public class AuthorizeUserCommandHandler : IRequestHandler<AuthorizeUserCommand,
         await _context.SaveChangesAsync(cancellationToken);
 
         return new AuthorizeUserResponse { Token = jwt, RefreshToken = refreshToken };
+    }
+
+    private void ValidateAuthorization(AuthorizeUserCommand request, User user)
+    {
+        if (user == null)
+            throw new Common.Exceptions.ValidationException(
+                nameof(request.userId),
+                [new ErrorItem($"Unable to find user with id {request.userId}", ValidationErrorCode.EntityIdValidator)]);
+        if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.password) == PasswordVerificationResult.Failed)
+            throw new Common.Exceptions.ValidationException(
+                nameof(request.password),
+                [new ErrorItem($"Password is incorrect", ValidationErrorCode.PasswordIncorrectValidator)]);
     }
 }

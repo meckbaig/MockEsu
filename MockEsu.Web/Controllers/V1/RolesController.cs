@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.Mvc;
+using MockEsu.Application.DTOs.Roles;
 using MockEsu.Application.Services.Roles;
 using MockEsu.Application.Services.Users;
 
@@ -16,9 +18,10 @@ public class RolesController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpPost]
-    public async Task<ActionResult<GetUserByIdResponse>> Create([FromBody] CreateRoleCommand command)
+    [HttpPatch]
+    public async Task<ActionResult<JsonPatchRolesResponse>> Patch([FromBody] JsonPatchDocument<RoleEditDto> patch)
     {
+        JsonPatchRolesCommand command = new() { Patch = patch };
         var result = await _mediator.Send(command);
         return result.ToJsonResponse();
     }
