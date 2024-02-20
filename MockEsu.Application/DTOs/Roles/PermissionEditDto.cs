@@ -17,8 +17,8 @@ public record PermissionEditDto : BaseDto, IEditDto
 
     public static implicit operator PermissionEditDto(int permId)
         => new() { Id = permId };
-    public static implicit operator PermissionEditDto(Int64 permId)
-        => new() { Id = Convert.ToInt32(permId) };
+    //public static implicit operator PermissionEditDto(Int64 permId)
+    //    => new() { Id = Convert.ToInt32(permId) };
 
     public static Type GetOriginType()
     {

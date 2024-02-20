@@ -61,7 +61,7 @@ public static class BaseJsonPatchValidatorExtension
     {
         var jsonPatchPath = new JsonPatchPath(operation.path);
 
-        bool result = BaseDto.TryGetSourceJsonPatch<TDto>(
+        bool result = DtoExtension.TryGetSourceJsonPatch<TDto>(
             jsonPatchPath.AsSingleProperty,
             mapper.ConfigurationProvider,
             out propertyType,
@@ -84,7 +84,7 @@ public static class BaseJsonPatchValidatorExtension
         if (propertyType == null || operation.OperationType == OperationType.Remove)
             return true;
 
-        bool result = BaseDto.TryGetSourceValueJsonPatch(
+        bool result = DtoExtension.TryGetSourceValueJsonPatch(
                 operation.value,
                 propertyType,
                 mapper.ConfigurationProvider,
@@ -225,7 +225,7 @@ public static class BaseJsonPatchValidatorExtension
     {
         string pathWithoutLastSegment = string.Join('/', operation.path.Split('/').SkipLast(1));
         var jsonPatchPath = new JsonPatchPath(pathWithoutLastSegment);
-        BaseDto.GetSourceJsonPatch<TDto>(
+        DtoExtension.GetSourceJsonPatch<TDto>(
             jsonPatchPath.AsSingleProperty,
                 mapper.ConfigurationProvider,
                 out Type propertyType);

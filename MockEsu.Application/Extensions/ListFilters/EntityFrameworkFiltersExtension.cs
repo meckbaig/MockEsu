@@ -2,6 +2,7 @@
 using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
+using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Domain.Common;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Dynamic.Core;
@@ -60,7 +61,7 @@ public static class EntityFrameworkFiltersExtension
     public static string? GetExpressionEndpoint<TSource, TDestintaion>
         (string destinationPropertyName, IConfigurationProvider provider)
     {
-        return BaseDto.GetSource<TSource, TDestintaion>
+        return DtoExtension.GetSource<TSource, TDestintaion>
             (destinationPropertyName, provider, throwException: false);
     }
 

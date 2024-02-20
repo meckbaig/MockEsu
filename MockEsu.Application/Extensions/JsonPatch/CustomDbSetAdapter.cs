@@ -71,7 +71,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         else
         {
             int entityNameIndex = segments.Length - 2;
-            string entityName = segments[entityNameIndex]; ;
+            string entityName = segments[entityNameIndex];
             Type parentType = segmentTypes[(int)parentIndex];
             return TryAddEntityToParent(
                 parentType,
@@ -682,15 +682,19 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         out object convertedValue,
         out string errorMessage)
     {
+        convertedValue = null;
+        errorMessage = null;
         var conversionResult = ConversionResultProvider.ConvertTo(originalValue, listTypeArgument);
         if (conversionResult.CanBeConverted)
         {
             convertedValue = conversionResult.ConvertedInstance;
-            errorMessage = null;
             return true;
         }
-        else if ()
-        convertedValue = null;
+        else if (DtoExtension.CanConvert(originalValue, listTypeArgument))
+        {
+            convertedValue = DtoExtension.ConvertToTargetType(originalValue, listTypeArgument);
+            return true;
+        }
         errorMessage = AdapterError.FormatInvalidValueForProperty(originalValue);
         return false;
     }

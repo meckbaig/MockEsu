@@ -118,7 +118,7 @@ internal static class JsonPatchExpressions
             try
             {
                 newOperation.path =
-                    BaseDto.GetSourceJsonPatch<TDto>(
+                    DtoExtension.GetSourceJsonPatch<TDto>(
                         jsonPatchPath.AsSingleProperty,
                         provider,
                         out Type propertyType);
@@ -127,7 +127,7 @@ internal static class JsonPatchExpressions
                 if (newOperation.OperationType != OperationType.Remove)
                 {
                     newOperation.value =
-                        BaseDto.GetSourceValueJsonPatch(
+                        DtoExtension.GetSourceValueJsonPatch(
                             operation.value,
                             propertyType,
                             provider);
