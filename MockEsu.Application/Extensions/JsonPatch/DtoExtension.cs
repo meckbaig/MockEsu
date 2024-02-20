@@ -89,6 +89,12 @@ internal static class DtoExtension
         return true;
     }
 
+    /// <summary>
+    /// Checks whether explicit/implicit conversion from a value to the specified type is possible.
+    /// </summary>
+    /// <param name="value">Value to convert.</param>
+    /// <param name="targetType">Type to convert to.</param>
+    /// <returns><see langword="true"/> if value can be convetred; otherwise, <see langword="false"/>.</returns>
     public static bool CanConvert(object value, Type targetType)
     {
         value = NormalizeValue(value);
@@ -104,6 +110,12 @@ internal static class DtoExtension
         return false;
     }
 
+    /// <summary>
+    /// Implicitly or explicitly converts a value to the specified type.
+    /// </summary>
+    /// <param name="value">Value to convert.</param>
+    /// <param name="targetType">Type to convert to.</param>
+    /// <returns>Converted value.</returns>
     public static object ConvertToTargetType(object value, Type targetType)
     {
         value = NormalizeValue(value);
@@ -117,6 +129,9 @@ internal static class DtoExtension
         return value;
     }
 
+    /// <summary>
+    /// Changes long to int if value is less than max int value.
+    /// </summary>
     private static object NormalizeValue(object value)
     {
         Type t = value.GetType();
@@ -126,6 +141,10 @@ internal static class DtoExtension
         return value;
     }
 
+    /// <summary>
+    /// Checks if property is entity, dto or other complex object.
+    /// </summary>
+    /// <returns><see langword="true"/> if property is a complex object; otherwise, <see langword="false"/>.</returns>
     private static bool IsCustomObject(Type propertyType)
     {
         if (propertyType.IsPrimitive)
@@ -422,7 +441,16 @@ internal static class DtoExtension
         return true;
     }
 
-    private static bool TryGetEditSource<TSource, TDto>(string dtoProperty, IConfigurationProvider provider, out string sourceProperty, out Type dtoPropertyType, out string errorMessage, bool throwException)
+    /// <summary>
+    /// Gets map source name from DTO property name but in a reverse.
+    /// </summary>
+    private static bool TryGetEditSource<TSource, TDto>(
+        string dtoProperty,
+        IConfigurationProvider provider,
+        out string sourceProperty,
+        out Type dtoPropertyType,
+        out string errorMessage,
+        bool throwException)
     {
         errorMessage = null;
         var internalApi = provider.Internal();

@@ -62,7 +62,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         IAppDbContext context = dbSet.GetService<IAppDbContext>();
         if (parentId == 0)
         {
-            return TryAddEntityToDb(
+            return InvokeTryAddEntityToDb(
                 entityType,
                 convertedValue,
                 context,
@@ -73,7 +73,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             int entityNameIndex = segments.Length - 2;
             string entityName = segments[entityNameIndex];
             Type parentType = segmentTypes[(int)parentIndex];
-            return TryAddEntityToParent(
+            return InvokeTryAddEntityToParent(
                 parentType,
                 entityType,
                 parentId,
@@ -147,7 +147,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         if (parentId == 0)
         {
             Type entityType = segmentTypes[(int)entityIndex];
-            return TryRemoveEntityFromDb(
+            return InvokeTryRemoveEntityFromDb(
                 entityType,
                 entityId,
                 context,
@@ -159,7 +159,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             string entityName = segments[entityNameIndex];
             Type parentType = segmentTypes[(int)parentIndex];
             Type entityType = segmentTypes[(int)entityIndex];
-            return TryRemoveEntityFromParent(
+            return InvokeTryRemoveEntityFromParent(
                 parentType,
                 entityType,
                 parentId,
@@ -185,7 +185,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
 
     #region ReflectionCalls
 
-    private bool TryAddEntityToDb(
+    private bool InvokeTryAddEntityToDb(
         Type entityType,
         object convertedValue,
         IAppDbContext context,
@@ -203,7 +203,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return (bool)result;
     }
 
-    private bool TryAddEntityToParent(
+    private bool InvokeTryAddEntityToParent(
         Type parentType,
         Type entityType,
         int parentId,
@@ -224,7 +224,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return (bool)result;
     }
 
-    private bool TryRemoveEntityFromDb(
+    private bool InvokeTryRemoveEntityFromDb(
         Type entityType,
         int entityId,
         IAppDbContext context,
@@ -242,7 +242,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return (bool)result;
     }
 
-    private bool TryRemoveEntityFromParent(
+    private bool InvokeTryRemoveEntityFromParent(
         Type parentType,
         Type entityType,
         int parentId,
@@ -263,7 +263,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return (bool)result;
     }
 
-    private bool TryReplaceWithNewQuery(
+    private bool InvokeTryReplaceWithNewQuery(
         object dbSet,
         IQueryable query,
         Type genericType,
@@ -492,7 +492,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                 && TryGetQueryFromProperty(dbSet, query, segments[i], out var newQuery))
             {
                 Type entityType = newQuery.ElementType;
-                return TryReplaceWithNewQuery(
+                return InvokeTryReplaceWithNewQuery(
                     newQuery,
                     newQuery,
                     entityType,
@@ -674,7 +674,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
     }
 
     /// <summary>
-    /// Convert method from AspNerCore.JsonPatch library.
+    /// Uses convert method from AspNerCore.JsonPatch library and/or implicit/explicit type casting.
     /// </summary>
     protected virtual bool TryConvertValue(
         object originalValue,

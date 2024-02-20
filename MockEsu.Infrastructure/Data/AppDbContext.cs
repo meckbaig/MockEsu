@@ -109,6 +109,10 @@ public class AppDbContext : DbContext, IAppDbContext
 
 internal static class AppDbContextCustomFunctions
 {
+    /// <summary>
+    /// Migrates all permissions into database.
+    /// </summary>
+    /// <param name="appDbContext">Data base context.</param>
     internal static void ConfigurePermissions(this IAppDbContext appDbContext)
     {
         HashSet<Permission> localPermissions = Enum.GetValues<Domain.Enums.Permission>()

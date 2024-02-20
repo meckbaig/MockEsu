@@ -12,6 +12,7 @@ namespace MockEsu.Application.Extensions.DataBaseProvider;
 
 public static class QueryExtensions
 {
+    /// <returns>Tariffs and their prices</returns>
     public static IQueryable<Tariff> WithPrices(this IQueryable<Tariff> tariffs)
     {
         return tariffs.Include(t => t.Prices.OrderBy(p => p.Id));
@@ -26,6 +27,7 @@ public static class QueryExtensions
             .Include(k => k.Address).ThenInclude(a => a.Region);
     }
 
+    /// <returns>User with role (including permiissions)</returns>
     public static User WithRoleById(this IQueryable<User> users, int id)
     {
         return users.Include(u => u.Role).ThenInclude(r => r.Permissions)
