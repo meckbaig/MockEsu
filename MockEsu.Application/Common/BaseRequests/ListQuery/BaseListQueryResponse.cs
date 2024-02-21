@@ -4,6 +4,6 @@ namespace MockEsu.Application.Common.BaseRequests.ListQuery
 {
     public abstract class BaseListQueryResponse<TResult> : BaseResponse where TResult : BaseDto
     {
-        public abstract IList<TResult> Items { get; set; }
+        public virtual IList<TResult> Items { get; set; }
     }
 }

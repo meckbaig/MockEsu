@@ -10,10 +10,10 @@ public abstract record BaseListQuery<TResponse> : BaseRequest<TResponse>
     where TResponse : BaseResponse
 {
     // ReSharper disable InconsistentNaming
-    public abstract int skip { get; set; }
-    public abstract int take { get; set; }
-    public abstract string[]? filters { get; set; }
-    public abstract string[]? orderBy { get; set; }
+    public virtual int skip { get; set; }
+    public virtual int take { get; set; }
+    public virtual string[]? filters { get; set; }
+    public virtual string[]? orderBy { get; set; }
     // ReSharper restore InconsistentNaming
 
     private readonly List<Expression> _filterExpressions = [];
