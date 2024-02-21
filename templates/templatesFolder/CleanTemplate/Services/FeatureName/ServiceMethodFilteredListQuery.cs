@@ -6,22 +6,20 @@ using ProjectName.Application.Common.Interfaces;
 
 namespace ProjectName.Application.Services.FeatureName;
 
-public record ServiceMethodQuery : BaseRequest<ServiceMethodResponse>
+public record ServiceMethodQuery : BaseListQuery<ServiceMethodResponse>
 {
 
 }
 
-public class ServiceMethodResponse : BaseResponse
+public class ServiceMethodResponse : BaseListQueryResponse<BaseDto>
 {
 	
 }
 
-public class ServiceMethodQueryValidator : AbstractValidator<ServiceMethodQuery>
+public class ServiceMethodQueryValidator : BaseListQueryValidator
+    <ServiceMethodQuery, ServiceMethodResponse, BaseDto, BaseEntity>
 {
-    public ServiceMethodQueryValidator()
-    {
-        
-    }
+    public ServiceMethodQueryValidator(IMapper mapper) : base(mapper) { }
 }
 
 public class ServiceMethodQueryHandler : IRequestHandler<ServiceMethodQuery, ServiceMethodResponse>

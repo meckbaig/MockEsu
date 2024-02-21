@@ -35,6 +35,14 @@
       "isRequired": true,
       "choices": [
         {
+          "choice": "query-wf",
+          "description": "Create a new query with database collection filters"
+        },
+        {
+          "choice": "jp-command",
+          "description": "Create a new json patch command"
+        },
+        {
           "choice": "command",
           "description": "Create a new command"
         },
@@ -44,6 +52,14 @@
         }
       ],
       "description": "The type of use case to create"
+    },
+    "createQueryWithFilters": {
+      "type": "computed",
+      "value": "(useCaseType == \"query-wf\")"
+    },
+    "createJsonPatchCommand": {
+      "type": "computed",
+      "value": "(useCaseType == \"jp-command\")"
     },
     "createCommand": {
       "type": "computed",
@@ -59,11 +75,35 @@
       "modifiers": [
         {
           "condition": "(createCommand)",
-          "exclude": [ "Services/FeatureName/ServiceMethodQuery.cs" ]
+          "exclude": [ 
+		    "Services/FeatureName/ServiceMethodQuery.cs",
+			"Services/FeatureName/ServiceMethodFilteredListQuery.cs",
+			"Services/FeatureName/JsonPatchServiceMethodCommand.cs"
+		  ]
         },
         {
           "condition": "(createQuery)",
-          "exclude": [ "Services/FeatureName/ServiceMethodCommand.cs" ]
+          "exclude": [ 
+		    "Services/FeatureName/ServiceMethodCommand.cs",
+			"Services/FeatureName/ServiceMethodFilteredListQuery.cs",
+			"Services/FeatureName/JsonPatchServiceMethodCommand.cs"
+		  ]
+        },
+        {
+          "condition": "(createQueryWithFilters)",
+          "exclude": [ 
+		    "Services/FeatureName/ServiceMethodCommand.cs",
+		    "Services/FeatureName/ServiceMethodQuery.cs",
+			"Services/FeatureName/JsonPatchServiceMethodCommand.cs"
+		  ]
+        },
+        {
+          "condition": "(createJsonPatchCommand)",
+          "exclude": [ 
+		    "Services/FeatureName/ServiceMethodCommand.cs",
+		    "Services/FeatureName/ServiceMethodQuery.cs",
+			"Services/FeatureName/ServiceMethodFilteredListQuery.cs"
+		  ]
         }
       ]
     }
