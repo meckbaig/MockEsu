@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace MockEsu.Application.Extensions.StringExtensions;
+namespace MockEsu.Application.Common.Extensions.StringExtensions;
 
 public static class StringExtensions
 {
@@ -24,5 +24,27 @@ public static class StringExtensions
     public static string ToCamelCase(this string value)
     {
         return JsonNamingPolicy.CamelCase.ConvertName(value);
+    }
+
+    internal static string ToPathFormat(this string property)
+    {
+        return string.Format("/{0}",
+            string.Join(
+                '/',
+                property
+                .Split('.')
+                .Select(x => x.ToCamelCase())));
+    }
+
+    internal static string ToPropetyFormat(this string path)
+    {
+        return string.Join(
+            '.',
+            path
+            .Replace("/", " ")
+            .Replace(".", " ")
+            .Trim()
+            .Split(' ')
+            .Select(x => x.ToPascalCase()));
     }
 }

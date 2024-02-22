@@ -2,7 +2,7 @@
 using AutoMapper.Internal;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.DTOs.Roles;
-using MockEsu.Application.Extensions.StringExtensions;
+using MockEsu.Application.Common.Extensions.StringExtensions;
 using MockEsu.Domain.Entities.Authentification;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -60,7 +60,7 @@ internal static class DtoExtension
 
         errorMessage = null;
         sourceValue = null;
-        if (typeof(BaseDto).IsAssignableFrom(dtoType))
+        if (typeof(IBaseDto).IsAssignableFrom(dtoType))
         {
             if (jsonValueType == JTokenType.Object)
             {
@@ -220,7 +220,7 @@ internal static class DtoExtension
         string dtoPath,
         IConfigurationProvider provider,
         out Type propertyType)
-        where TSource : BaseDto, IEditDto
+        where TSource : IBaseDto
     {
         if (!TryGetSourceJsonPatch<TSource>(
             dtoPath,
@@ -250,7 +250,7 @@ internal static class DtoExtension
         out Type propertyType,
         out string sourceJsonPatch,
         out string errorMessage)
-        where TSource : BaseDto, IEditDto
+        where TSource : IBaseDto
     {
         propertyType = typeof(TSource);
         errorMessage = null;

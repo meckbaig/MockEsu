@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Common.Interfaces;
-using MockEsu.Application.Extensions.StringExtensions;
+using MockEsu.Application.Common.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
 using Newtonsoft.Json.Serialization;
 
@@ -36,7 +36,7 @@ internal static class JsonPatchExpressions
     /// </summary>
     internal static TDestination? ApplyToSource<TDto, TDestination>
         (this JsonPatchDocument<TDto> patch, TDestination? destination, IMapper mapper)
-        where TDto : BaseDto
+        where TDto : class, IBaseDto
         where TDestination : BaseEntity
     {
         var dto = mapper.Map<TDto>(destination);
@@ -101,7 +101,7 @@ internal static class JsonPatchExpressions
     internal static JsonPatchDocument<DbSet<TDestination>> ConvertToSourceDbSet
         <TDto, TDestination>(this JsonPatchDocument<TDto> patch, IConfigurationProvider provider)
         where TDestination : BaseEntity
-        where TDto : BaseDto, IEditDto
+        where TDto : class, IBaseDto, IEditDto
     {
         var newOperations = new List<Operation<DbSet<TDestination>>>();
         foreach (var operation in patch.Operations)
@@ -159,31 +159,10 @@ internal static class JsonPatchExpressions
         DbSet<TDestination> dbSet,
         IConfigurationProvider provider)
         where TDestination : BaseEntity
-        where TDto : BaseDto, IEditDto
+        where TDto : class, IBaseDto, IEditDto
     {
         var convertedPatch = patch.ConvertToSourceDbSet<TDto, TDestination>(provider);
         convertedPatch.ApplyTransactionToSource(dbSet);
-    }
-
-    internal static string ToPathFormat(this string property)
-    {
-        return string.Format("/{0}",
-            string.Join(
-                '/',
-                property
-                .Split('.')
-                .Select(x => x.ToCamelCase())));
-    }
-
-    internal static string ToPropetyFormat(this string path)
-    {
-        return string.Join(
-            '.',
-            path
-            .Replace("/", " ")
-            .Trim()
-            .Split(' ')
-            .Select(x => x.ToPascalCase()));
     }
 
     private static int GetLength(this int value)

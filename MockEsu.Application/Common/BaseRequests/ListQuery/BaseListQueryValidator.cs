@@ -4,7 +4,7 @@ using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Extensions.ListFilters;
-using MockEsu.Application.Extensions.StringExtensions;
+using MockEsu.Application.Common.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
 using System.Text.Json;
 

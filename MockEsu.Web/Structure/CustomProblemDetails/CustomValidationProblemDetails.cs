@@ -1,7 +1,7 @@
 ﻿using FluentValidation.Results;
 using MockEsu.Application.Common.Exceptions;
 using System.Text.Json.Serialization;
-using MockEsu.Application.Extensions.StringExtensions;
+using MockEsu.Application.Common.Extensions.StringExtensions;
 
 namespace MockEsu.Web.Structure.CustomProblemDetails
 {

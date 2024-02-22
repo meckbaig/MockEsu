@@ -24,7 +24,7 @@ public static class EntityFrameworkOrderByExtension
     public static IOrderedQueryable<TSource> AddOrderBy<TSource, TDestintaion>
         (this IQueryable<TSource> source, List<OrderByExpression>? orderByExpressions)
         where TSource : BaseEntity
-        where TDestintaion : BaseDto
+        where TDestintaion : IBaseDto
     {
         if (orderByExpressions == null)
             return (IOrderedQueryable<TSource>)source;
@@ -39,7 +39,7 @@ public static class EntityFrameworkOrderByExtension
     private static IOrderedQueryable<TSource> AppendToQuery<TSource, TDestintaion>
         (this IOrderedQueryable<TSource> source, OrderByExpression orderByEx)
         where TSource : BaseEntity
-        where TDestintaion : BaseDto
+        where TDestintaion : IBaseDto
     {
         var param = Expression.Parameter(typeof(TSource), "x");
 
@@ -96,7 +96,7 @@ public static class EntityFrameworkOrderByExtension
         <TSource, TDestintaion>
         (string sortingExpressionString, IConfigurationProvider provider)
         where TSource : BaseEntity
-        where TDestintaion : BaseDto
+        where TDestintaion : IBaseDto
     {
         try
         {

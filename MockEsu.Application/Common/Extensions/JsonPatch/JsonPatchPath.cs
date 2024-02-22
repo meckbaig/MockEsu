@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.JsonPatch.Operations;
-using MockEsu.Application.Extensions.StringExtensions;
+using MockEsu.Application.Common.Extensions.StringExtensions;
 using StackExchange.Redis;
 using System;
 using System.Collections.Generic;

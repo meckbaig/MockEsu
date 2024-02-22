@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using AutoMapper.Internal;
 using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
@@ -27,7 +28,7 @@ public static class EntityFrameworkFiltersExtension
     public static IQueryable<TSource> AddFilters<TSource, TDestintaion>
         (this IQueryable<TSource> source, List<Expression>? filterExpressions)
         where TSource : BaseEntity
-        where TDestintaion : BaseDto
+        where TDestintaion : IBaseDto
     {
         if (filterExpressions == null)
             return source;
@@ -41,7 +42,7 @@ public static class EntityFrameworkFiltersExtension
     private static IQueryable<TSource> AppendToQuery<TSource, TDestintaion>
         (this IQueryable<TSource> source, Expression expression)
         where TSource : BaseEntity
-        where TDestintaion : BaseDto
+        where TDestintaion : IBaseDto
     {
         var param = Expression.Parameter(typeof(TSource), "x");
         Expression<Func<TSource, bool>> filterLambda
@@ -53,16 +54,41 @@ public static class EntityFrameworkFiltersExtension
     /// <summary>
     /// Gets full endpoint route string
     /// </summary>
-    /// <typeparam name="TSource">Source of DTO type</typeparam>
     /// <typeparam name="TDestintaion">DTO type</typeparam>
     /// <param name="destinationPropertyName">Source prioer</param>
     /// <param name="provider">Configuraion provider for performing maps</param>
     /// <returns>Returns endpoint if success, null if error</returns>
-    public static string? GetExpressionEndpoint<TSource, TDestintaion>
-        (string destinationPropertyName, IConfigurationProvider provider)
+    public static string? GetExpressionEndpoint<TDestintaion>
+        (string destinationPropertyName, IConfigurationProvider provider, out Type propertyType)
+        where TDestintaion : class, IBaseDto
     {
-        return DtoExtension.GetSource<TSource, TDestintaion>
-            (destinationPropertyName, provider, throwException: false);
+        propertyType = typeof(TDestintaion);
+        string[] destinationPropertySegments = destinationPropertyName.Split('.');
+        List<string> sourcePathSegments = new();
+
+        foreach (var segment in destinationPropertySegments)
+        {
+            if (!DtoExtension.InvokeTryGetSource(
+                    segment,
+                    provider,
+                    ref propertyType,
+                    out string sourceSegment,
+                    out string errorMessage,
+                    throwException: false))
+            {
+                errorMessage ??= $"Something went wrong while getting json patch source property path for '{destinationPropertyName}'";
+                throw new ArgumentException(errorMessage);
+            }
+            if (propertyType.IsCollection())
+            {
+                propertyType = propertyType.GetGenericArguments().Single();
+            }
+            sourcePathSegments.Add(sourceSegment);
+        }
+        //string sourcePropertyName = DtoExtension.GetSourceJsonPatch
+        //    <TDestintaion>(destinationPropertyName, provider, out Type propType);
+
+        return string.Join('.', sourcePathSegments);
     }
 
     /// <summary>
@@ -78,7 +104,7 @@ public static class EntityFrameworkFiltersExtension
         <TSource, TDestintaion>
         (string filter, IConfigurationProvider provider)
         where TSource : BaseEntity
-        where TDestintaion : BaseDto
+        where TDestintaion : class, IBaseDto
     {
         try
         {
@@ -91,28 +117,39 @@ public static class EntityFrameworkFiltersExtension
     }
 
     /// <summary>
-    /// Gets filter attribute from property.
+    /// Gets filter attribute from property path.
     /// </summary>
-    /// <typeparam name="TSource">Source of DTO type.</typeparam>
     /// <typeparam name="TDestintaion">DTO type.</typeparam>
-    /// <param name="propertyName">Property name to get attribute from.</param>
-    /// <returns>Returns FilterableAttribute model if success, null if error.</returns>
-    public static FilterableAttribute GetFilterAttribute<TDestintaion>
-        (string propertyName)
-        where TDestintaion : BaseDto
+    /// <param name="propertyPath">Property path to get attribute from.</param>
+    /// <returns>Returns FilterableAttribute models for full path if success, null if error.</returns>
+    public static List<FilterableAttribute>? GetFilterAttributes<TDestintaion>
+        (string propertyPath)
+        where TDestintaion : IBaseDto
     {
-        var prop = typeof(TDestintaion).GetProperties()
-                .FirstOrDefault(p => p.Name == propertyName)!;
-        var attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
-            .FirstOrDefault(a => a.GetType() == typeof(FilterableAttribute))!;
-        return attribute;
+        List<FilterableAttribute> attributes = [];
+        string[] propertySegments = propertyPath.Split('.');
+        Type nextSegmentType = typeof(TDestintaion);
+        for (int i = 0; i < propertySegments.Length; i++)
+        {
+            var prop = nextSegmentType.GetProperties().FirstOrDefault(p => p.Name == propertySegments[i])!;
+            var attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
+                .FirstOrDefault(a => a.GetType() == typeof(FilterableAttribute))!;
+            if (attribute == null)
+                return null;
+            if (attribute.CompareMethod == CompareMethod.Nested)
+                nextSegmentType = prop.PropertyType.GetGenericArguments().Single();
+            else
+                nextSegmentType = prop.PropertyType;
+
+            attributes.Add(attribute);
+        }
+        return attributes;
     }
 
     /// <summary>
     /// Gets filter expression for Where statement
     /// </summary>
     /// <typeparam name="TSource">Source of DTO type</typeparam>
-    /// <typeparam name="TDestintaion">DTO type</typeparam>
     /// <param name="compareMethod">Method of comparison</param>
     /// <param name="filterEx">Filter expression</param>
     /// <returns>Filter expression if success, null if error</returns>
@@ -139,9 +176,16 @@ public static class EntityFrameworkFiltersExtension
                 return EqualExpression(values, propExpression, filterEx.ExpressionType);
             case CompareMethod.ById:
                 return ByIdExpression(values, propExpression, filterEx.ExpressionType);
+            case CompareMethod.Nested:
+                return NestedExpression(values, propExpression, filterEx.ExpressionType);
             default:
                 return null;
         }
+    }
+
+    private static Expression? NestedExpression(object[] values, MemberExpression propExpression, FilterExpressionType expressionType)
+    {
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -218,18 +262,22 @@ public static class EntityFrameworkFiltersExtension
     private static Expression ByIdExpression
         (object[] values, MemberExpression propExpression, FilterExpressionType expressionType)
     {
-        propExpression = Expression.Property(
-            propExpression.Expression,
-            GetForeignKeyFromModel(propExpression.Expression.Type, propExpression.Member.Name));
+        string? key = GetForeignKeyFromModel(propExpression.Expression.Type, propExpression.Member.Name);
+
+        if (key != null)
+            propExpression = Expression.Property(propExpression.Expression, key);
+        else
+            throw new NotImplementedException("Not supported operation");
+
         return EqualExpression(values, propExpression, expressionType);
     }
 
-    private static string GetForeignKeyFromModel(Type type, string modelName)
+    private static string? GetForeignKeyFromModel(Type type, string modelName)
     {
-        PropertyInfo prop = type.GetProperties().FirstOrDefault(
-            p => ((ForeignKeyAttribute)p.GetCustomAttributes(true).FirstOrDefault(
-                a => a.GetType() == typeof(ForeignKeyAttribute)))?.Name == modelName)!;
-        return prop != null ? prop.Name : string.Empty;
+        PropertyInfo? property = type.GetProperties().FirstOrDefault(
+            p => ((ForeignKeyAttribute)p.GetCustomAttributes(true)
+            .FirstOrDefault(a => a.GetType() == typeof(ForeignKeyAttribute)))?.Name == modelName)!;
+        return property?.Name;
     }
 
     private static object ConvertFromString(this string value, Type type)

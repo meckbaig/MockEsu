@@ -5,7 +5,7 @@ using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Extensions.JsonPatch;
-using MockEsu.Application.Extensions.StringExtensions;
+using MockEsu.Application.Common.Extensions.StringExtensions;
 using System.Collections;
 using System.Linq.Dynamic.Core;
 using System.Reflection;
