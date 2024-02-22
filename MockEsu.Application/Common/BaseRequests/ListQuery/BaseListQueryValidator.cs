@@ -13,7 +13,7 @@ namespace MockEsu.Application.Common.BaseRequests.ListQuery;
 public abstract class BaseListQueryValidator<TQuery, TResponseList, TDestintaion, TSource> : AbstractValidator<TQuery>
     where TQuery : BaseListQuery<TResponseList>
     where TResponseList : BaseListQueryResponse<TDestintaion>
-    where TDestintaion : BaseDto
+    where TDestintaion : class, IBaseDto
     where TSource : BaseEntity
 {
     public BaseListQueryValidator(IMapper mapper)
@@ -34,7 +34,7 @@ public static class BaseJournalQueryFilterValidatorExtension
         (this IRuleBuilderOptions<TQuery, string> ruleBuilder, IMapper mapper)
         where TQuery : BaseListQuery<TResponseList>
         where TResponseList : BaseListQueryResponse<TDestintaion>
-        where TDestintaion : BaseDto
+        where TDestintaion : class, IBaseDto
         where TSource : BaseEntity
     {
         string key = string.Empty;
@@ -64,9 +64,8 @@ public static class BaseJournalQueryFilterValidatorExtension
         return ruleBuilder;
     }
 
-    private static bool PropertyExists<TSource, TDestintaion>(string filter, IConfigurationProvider provider, ref string key)
-        where TSource : BaseEntity
-        where TDestintaion : BaseDto
+    private static bool PropertyExists<TDestintaion>(string filter, IConfigurationProvider provider, ref string key)
+        where TDestintaion : class, IBaseDto
     {
         int expressionIndex;
         if (filter.Contains("!:"))
@@ -87,7 +86,7 @@ public static class BaseJournalQueryFilterValidatorExtension
     private static bool ExpressionIsValid<TSource, TDestintaion>
         (string filter, IConfigurationProvider provider, ref FilterExpression filterEx)
         where TSource : BaseEntity
-        where TDestintaion : BaseDto
+        where TDestintaion : class, IBaseDto
     {
         filterEx = EntityFrameworkFiltersExtension.GetFilterExpression<TSource, TDestintaion>(filter, provider);
         if (filterEx?.ExpressionType == FilterExpressionType.Undefined)
@@ -96,8 +95,8 @@ public static class BaseJournalQueryFilterValidatorExtension
     }
 
     private static bool PropertyIsFilterable<TDestintaion, TSource>
-        (FilterExpression filterEx, ref FilterableAttribute attribute)
-        where TDestintaion : BaseDto
+        (FilterExpression filterEx, ref List<FilterableAttribute> attributes)
+        where TDestintaion : IBaseDto
         where TSource : BaseEntity
     {
         if (filterEx == null || filterEx.ExpressionType == FilterExpressionType.Undefined)
@@ -113,7 +112,7 @@ public static class BaseJournalQueryFilterValidatorExtension
         (TQuery query, FilterExpression? filterEx, FilterableAttribute? attribute, ref string errorMessage)
         where TQuery : BaseListQuery<TResponseList>
         where TResponseList : BaseListQueryResponse<TDestintaion>
-        where TDestintaion : BaseDto
+        where TDestintaion : IBaseDto
         where TSource : BaseEntity
     {
 
@@ -147,7 +146,7 @@ public static class BaseJournalQuerySortValidatorExtension
         (this IRuleBuilderOptions<TQuery, string> ruleBuilder, IMapper mapper)
         where TQuery : BaseListQuery<TResponseList>
         where TResponseList : BaseListQueryResponse<TDestintaion>
-        where TDestintaion : BaseDto
+        where TDestintaion : IBaseDto
         where TSource : BaseEntity
     {
         string key = string.Empty;
@@ -183,7 +182,7 @@ public static class BaseJournalQuerySortValidatorExtension
         (TQuery query, string filter, IConfigurationProvider provider)
         where TQuery : BaseListQuery<TResponseList>
         where TResponseList : BaseListQueryResponse<TDestintaion>
-        where TDestintaion : BaseDto
+        where TDestintaion : IBaseDto
         where TSource : BaseEntity
     {
         OrderByExpression ex = EntityFrameworkOrderByExtension.GetOrderByExpression<TSource, TDestintaion>(filter, provider);

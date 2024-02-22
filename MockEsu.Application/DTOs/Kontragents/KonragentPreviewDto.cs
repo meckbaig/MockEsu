@@ -5,7 +5,7 @@ using MockEsu.Domain.Entities;
 
 namespace MockEsu.Application.DTOs.Kontragents;
 
-public record KonragentPreviewDto : BaseDto
+public record KonragentPreviewDto : IBaseDto
 {
     [Filterable(CompareMethod.Equals)]
     public int Id { get; set; }
@@ -27,6 +27,11 @@ public record KonragentPreviewDto : BaseDto
     public string? AddressString { get; set; }
 
     public string RegionString { get; set; }
+
+    public static Type GetOriginType()
+    {
+        return typeof(Kontragent);
+    }
 
     private class Mapping : Profile
     {

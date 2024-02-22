@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Application.Common.Dtos;
 
-public interface IEditDto
+public interface IEditDto : IBaseDto
 {
-    static abstract Type GetOriginType();
     static abstract Type GetValidatorType();
 }

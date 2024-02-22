@@ -9,10 +9,15 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Application.DTOs.Roles;
 
-public record RolePreviewDto : BaseDto
+public record RolePreviewDto : IBaseDto
 {
     public string Name { get; set; }
     public string[] PermissionsNames { get; set; }
+
+    public static Type GetOriginType()
+    {
+        return typeof(Role);
+    }
 
     private class Mapping : Profile
     {

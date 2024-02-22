@@ -16,7 +16,7 @@ using FluentValidation;
 
 namespace MockEsu.Application.DTOs.Tariffs;
 
-public record TariffPriceEditDto : BaseDto, IEntityWithId, IEditDto
+public record TariffPriceEditDto : IBaseDto, IEntityWithId, IEditDto
 {
     public int Id { get; init; }
     public string PriceName { get; set; }
