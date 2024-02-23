@@ -1,8 +1,7 @@
 ﻿using AutoMapper;
 using MockEsu.Application.Common.Dtos;
-using MockEsu.Application.Extensions.JsonPatch;
-using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Application.Common.Extensions.StringExtensions;
+using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Domain.Common;
 
 namespace MockEsu.Application.Extensions.ListFilters;

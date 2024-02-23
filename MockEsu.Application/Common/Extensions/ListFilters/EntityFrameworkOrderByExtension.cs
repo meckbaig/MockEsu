@@ -21,25 +21,23 @@ public static class EntityFrameworkOrderByExtension
     /// <param name="source">Queryable source</param>
     /// <param name="orderByExpressions">Array of sort expressions</param>
     /// <returns>An <typeparamref name="IOrderedQueryable"/> that contains sorting</returns>
-    public static IOrderedQueryable<TSource> AddOrderBy<TSource, TDestintaion>
+    public static IOrderedQueryable<TSource> AddOrderBy<TSource>
         (this IQueryable<TSource> source, List<OrderByExpression>? orderByExpressions)
         where TSource : BaseEntity
-        where TDestintaion : IBaseDto
     {
         if (orderByExpressions == null)
             return (IOrderedQueryable<TSource>)source;
         IOrderedQueryable<TSource> result = source.OrderBy(x => 0);
         for (int i = 0; i < orderByExpressions.Count; i++)
         {
-            result = result.AppendToQuery<TSource, TDestintaion>(orderByExpressions[i]);
+            result = result.AppendToQuery(orderByExpressions[i]);
         }
         return result;
     }
 
-    private static IOrderedQueryable<TSource> AppendToQuery<TSource, TDestintaion>
+    private static IOrderedQueryable<TSource> AppendToQuery<TSource>
         (this IOrderedQueryable<TSource> source, OrderByExpression orderByEx)
         where TSource : BaseEntity
-        where TDestintaion : IBaseDto
     {
         var param = Expression.Parameter(typeof(TSource), "x");
 

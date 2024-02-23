@@ -7,6 +7,7 @@ using MockEsu.Application.Common.Extensions.StringExtensions;
 using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Domain.Common;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -22,33 +23,20 @@ public static class EntityFrameworkFiltersExtension
     /// Adds 'Where' statements using input filters and mapping engine
     /// </summary>
     /// <typeparam name="TSource">Source of DTO type</typeparam>
-    /// <typeparam name="TDestintaion">DTO type</typeparam>
     /// <param name="source">Queryable source</param>
     /// <param name="filterExpressions">Array of filter expressions</param>
     /// <returns>An <typeparamref name="IQueryable"/> that contains filters</returns>
-    public static IQueryable<TSource> AddFilters<TSource, TDestintaion>
-        (this IQueryable<TSource> source, Dictionary<ParameterExpression, Expression>? filterExpressions)
+    public static IQueryable<TSource> AddFilters<TSource>
+        (this IQueryable<TSource> source, List<Expression>? filterExpressions)
         where TSource : BaseEntity
-        where TDestintaion : IBaseDto
     {
         if (filterExpressions == null)
             return source;
         foreach (var expression in filterExpressions)
         {
-            source = source.AppendToQuery<TSource, TDestintaion>(expression.Key, expression.Value);
+            source = source.Where((Expression<Func<TSource, bool>>)expression);
         }
         return source;
-    }
-
-    private static IQueryable<TSource> AppendToQuery<TSource, TDestintaion>
-        (this IQueryable<TSource> source, ParameterExpression param, Expression expression)
-        where TSource : BaseEntity
-        where TDestintaion : IBaseDto
-    {
-        Expression<Func<TSource, bool>> filterLambda
-            = Expression.Lambda<Func<TSource, bool>>(expression, param);
-
-        return source.Where(filterLambda);
     }
 
     /// <summary>
@@ -81,7 +69,6 @@ public static class EntityFrameworkFiltersExtension
     /// <summary>
     /// Gets filter expression
     /// </summary>
-    /// <typeparam name="TSource">Source of DTO type</typeparam>
     /// <typeparam name="TDestintaion">DTO type</typeparam>
     /// <param name="filter">Filter from client</param>
     /// <param name="provider">Configuraion provider for performing maps</param>
@@ -138,14 +125,15 @@ public static class EntityFrameworkFiltersExtension
     }
 
     /// <summary>
-    /// Gets filter expression for Where statement
+    /// Gets filter expression for Where statement.
     /// </summary>
-    /// <param name="filterEx">Filter expression</param>
-    /// <returns>Filter expression if success, null if error</returns>
+    /// <param name="filterEx">Filter expression.</param>
+    /// <param name="expression">Filter expression if success, null if error.</param>
+    /// <returns><see langword="true"/> if success, <see langword="false"/> if error.</returns>
     public static bool TryGetLinqExpression
-        (FilterExpression filterEx, out ParameterExpression param, out Expression expression)
+        (FilterExpression filterEx, out Expression expression)
     {
-        param = Expression.Parameter(filterEx.EntityType, filterEx.EntityType.Name.ToCamelCase());
+        var param = Expression.Parameter(filterEx.EntityType, filterEx.EntityType.Name.ToCamelCase());
 
         string[] endpointSegments = filterEx.EndPoint.Split('.');
         MemberExpression propExpression = Expression.Property(param, endpointSegments[0]);
@@ -167,22 +155,30 @@ public static class EntityFrameworkFiltersExtension
                 expression = ByIdExpression(values, propExpression, filterEx.ExpressionType);
                 break;
             case CompareMethod.Nested:
-                expression = NestedExpression(values, propExpression, filterEx);
+                expression = NestedExpression(propExpression, filterEx);
                 break;
             default:
                 expression = null;
                 break;
         }
+        if (expression != null)
+            expression = InvokeFilterLambda(param, expression, filterEx.EntityType);
         return expression != null;
     }
 
-    private static Expression? NestedExpression(object[] values, MemberExpression propExpression, FilterExpression filterEx)
+    /// <summary>
+    /// Gets Where statement with inner filter expression.
+    /// </summary>
+    /// <param name="values">Filter strings.</param>
+    /// <param name="propExpression">A field of property.</param>
+    /// <param name="filterEx">Filter expression.</param>
+    /// <returns>Lambda expression with Where() statement and inner expression.</returns>
+    /// <remarks>Output expression example: <code>x.EntitiesList.Where(e => e.Property == value).Count() != 0</code></remarks>
+    private static Expression NestedExpression(MemberExpression propExpression, FilterExpression filterEx)
     {
 
-        if (!TryGetLinqExpression(filterEx.InnerFilterExpression, out var param, out var innerExpression))
+        if (!TryGetLinqExpression(filterEx.InnerFilterExpression, out var filterLambda))
             return null;
-
-        var filterLambda = InvokeFilterLambda(param, innerExpression, filterEx.InnerFilterExpression.EntityType);
 
         MethodInfo whereMethod = typeof(Enumerable).GetMethods()
             .Where(m => m.Name == "Where")
@@ -213,6 +209,13 @@ public static class EntityFrameworkFiltersExtension
         return notEqualExpression;
     }
 
+    /// <summary>
+    /// Filter lambda call with spectified type.
+    /// </summary>
+    /// <param name="param">Parameter expression to create lambda.</param>
+    /// <param name="expression">Expression for lambda.</param>
+    /// <param name="sourceType">Source data type.</param>
+    /// <returns>Lambda expression</returns>
     private static Expression InvokeFilterLambda(ParameterExpression param, Expression expression, Type sourceType)
     {
         Type yourType = typeof(EntityFrameworkFiltersExtension);
@@ -224,6 +227,13 @@ public static class EntityFrameworkFiltersExtension
         return (Expression)genericMethod.Invoke(null, [param, expression]);
     }
 
+    /// <summary>
+    /// Filter lambda call.
+    /// </summary>
+    /// <typeparam name="TSource">Source data type.</typeparam>
+    /// <param name="param">Parameter expression to create lambda.</param>
+    /// <param name="expression">Expression for lambda.</param>
+    /// <returns>Lambda expression</returns>
     private static Expression<Func<TSource, bool>> GetFilterLambda<TSource>(ParameterExpression param, Expression expression)
     {
         return Expression.Lambda<Func<TSource, bool>>(expression, param);
@@ -256,7 +266,7 @@ public static class EntityFrameworkFiltersExtension
             return Expression.Not(expression);
     }
 
-    /// TODO: changed to BinaryExpression, check if still works
+
     private static BinaryExpression GetSingleEqualExpression(object value, MemberExpression propExpression)
     {
         if (value.ToString()!.Contains(".."))

@@ -21,7 +21,8 @@ public class FilterableAttribute : Attribute
 /// <remarks>
 /// <code>
 /// Equals - 100% equality
-/// ById - list of single indexes or spans
+/// ById - entity by id (foreign key)
+/// Nested - collection of entities
 /// </code>
 /// </remarks>
 public enum CompareMethod

@@ -16,17 +16,17 @@ public abstract record BaseListQuery<TResponse> : BaseRequest<TResponse>
     public virtual string[]? orderBy { get; set; }
     // ReSharper restore InconsistentNaming
 
-    private readonly Dictionary<ParameterExpression, Expression> _filterExpressions = [];
+    private readonly List<Expression> _filterExpressions = [];
     private readonly List<OrderByExpression> _orderExpressions = [];
     
-    public Dictionary<ParameterExpression, Expression> GetFilterExpressions() 
+    public List<Expression> GetFilterExpressions() 
         => _filterExpressions;
     
     public List<OrderByExpression> GetOrderExpressions() 
         => _orderExpressions;
 
-    public void AddFilterExpression(ParameterExpression param, Expression expression)
-        => _filterExpressions!.Add(param, expression);
+    public void AddFilterExpression(Expression expression)
+        => _filterExpressions!.Add(expression);
 
     public void AddOrderExpression(OrderByExpression expression)
         => _orderExpressions!.Add(expression);

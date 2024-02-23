@@ -45,8 +45,8 @@ public class GetPaymentContractsQueryHandler : IRequestHandler<GetPaymentContrac
         CancellationToken cancellationToken)
     {
         var result = _context.PaymentContracts
-            .AddFilters<PaymentContract, PaymentContractDto>(request.GetFilterExpressions())
-            .AddOrderBy<PaymentContract, PaymentContractDto>(request.GetOrderExpressions())
+            .AddFilters(request.GetFilterExpressions())
+            .AddOrderBy(request.GetOrderExpressions())
             .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)
             .ProjectTo<PaymentContractDto>(_mapper.ConfigurationProvider)
             .ToList();

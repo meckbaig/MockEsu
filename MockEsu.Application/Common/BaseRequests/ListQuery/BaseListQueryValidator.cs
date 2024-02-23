@@ -122,9 +122,9 @@ public static class BaseJournalQueryFilterValidatorExtension
         }
         try
         {
-            if (!EntityFrameworkFiltersExtension.TryGetLinqExpression(filterEx, out var parameter, out var expression))
+            if (!EntityFrameworkFiltersExtension.TryGetLinqExpression(filterEx, out var expression))
                 return false;
-            query.AddFilterExpression(parameter, expression);
+            query.AddFilterExpression(expression);
             return true;
         }
         catch (Exception ex)

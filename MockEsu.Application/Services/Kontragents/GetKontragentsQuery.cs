@@ -53,8 +53,8 @@ internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery,
     public async Task<GetKontragentsResponse> Handle(GetKontragentsQuery request, CancellationToken cancellationToken)
     {
         var query = _context.Kontragents.FullData()
-            .AddFilters<Kontragent, KonragentPreviewDto>(request.GetFilterExpressions())
-            .AddOrderBy<Kontragent, KonragentPreviewDto>(request.GetOrderExpressions())
+            .AddFilters(request.GetFilterExpressions())
+            .AddOrderBy(request.GetOrderExpressions())
             .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)
             .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider);
 

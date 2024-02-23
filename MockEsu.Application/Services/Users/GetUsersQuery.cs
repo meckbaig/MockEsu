@@ -49,8 +49,8 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, GetUsersRespo
     {
         var query = _context.Users
             .Include(u => u.Role)
-            .AddFilters<User, UserPreviewDto>(request.GetFilterExpressions())
-            .AddOrderBy<User, UserPreviewDto>(request.GetOrderExpressions())
+            .AddFilters(request.GetFilterExpressions())
+            .AddOrderBy(request.GetOrderExpressions())
             .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)
             .ProjectTo<UserPreviewDto>(_mapper.ConfigurationProvider);
 

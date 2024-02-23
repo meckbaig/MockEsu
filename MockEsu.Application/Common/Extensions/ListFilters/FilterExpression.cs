@@ -1,17 +1,7 @@
 ﻿using AutoMapper;
-using MockEsu.Application.Common.Dtos;
-using MockEsu.Application.Extensions.JsonPatch;
-using MockEsu.Application.Extensions.ListFilters;
-using MockEsu.Application.Common.Extensions.StringExtensions;
-using MockEsu.Domain.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using MockEsu.Application.Common.Attributes;
+using MockEsu.Application.Common.Dtos;
+using MockEsu.Application.Common.Extensions.StringExtensions;
 
 namespace MockEsu.Application.Extensions.ListFilters;
 
@@ -32,6 +22,9 @@ public record FilterExpression : IEntityFrameworkExpression<FilterExpressionType
     /// </summary>
     public string? EndPoint { get; set; }
 
+    /// <summary>
+    /// Type of entity to use expression to
+    /// </summary>
     public Type EntityType { get; set; }
 
     /// <summary>
@@ -49,46 +42,61 @@ public record FilterExpression : IEntityFrameworkExpression<FilterExpressionType
     /// </summary>
     public FilterExpression? InnerFilterExpression { get; set; }
 
+    /// <summary>
+    /// Entity compare method
+    /// </summary>
     public CompareMethod CompareMethod { get; set; }
 
     /// <summary>
-    /// Factory constructor
+    /// Factory constructor.
     /// </summary>
-    /// <typeparam name="TDestintaion"></typeparam>
-    /// <param name="filter"></param>
-    /// <param name="provider"></param>
-    /// <returns></returns>
+    /// <typeparam name="TDestintaion">DTO type.</typeparam>
+    /// <param name="filter">Filter string.</param>
+    /// <param name="provider">Configuraion provider for performing maps.</param>
+    /// <returns>New filter expression</returns>
     public static FilterExpression Initialize<TDestintaion>(string filter, IConfigurationProvider provider)
         where TDestintaion : class, IBaseDto
     {
-        var f = new FilterExpression { EntityType = TDestintaion.GetOriginType() };
+        FilterExpression filterExpression = new FilterExpression();
+        string separator;
         if (filter.Contains("!:"))
         {
-            string filterPath = filter[..filter.IndexOf("!:")];
-            string[] segments = filterPath.Split('.');
-            f.Key = segments[0].ToPascalCase();
-            f.EndPoint = EntityFrameworkFiltersExtension.GetExpressionEndpoint(f.Key, provider, typeof(TDestintaion), out Type propertyType);
-            f.Value = filter[(filter.IndexOf("!:") + 2)..];
-            f.ExpressionType = FilterExpressionType.Exclude;
-            if (segments.Length > 1)
-                f.InnerFilterExpression = InvokeInitialize($"{string.Join('.', segments[1..])}!:{f.Value}", provider, propertyType);
+            filterExpression.ExpressionType = FilterExpressionType.Exclude;
+            separator = "!:";
         }
         else if (filter.Contains(':'))
         {
-            string filterPath = filter[..filter.IndexOf(":")];
-            string[] segments = filterPath.Split('.');
-            f.Key = segments[0].ToPascalCase();
-            f.EndPoint = EntityFrameworkFiltersExtension.GetExpressionEndpoint(f.Key, provider, typeof(TDestintaion), out Type propertyType);
-            f.Value = filter[(filter.IndexOf(':') + 1)..];
-            f.ExpressionType = FilterExpressionType.Include;
-            if (segments.Length > 1)
-                f.InnerFilterExpression = InvokeInitialize($"{string.Join('.', segments[1..])}:{f.Value}", provider, propertyType);
+            filterExpression.ExpressionType = FilterExpressionType.Include;
+            separator = ":";
         }
         else
-            f.ExpressionType = FilterExpressionType.Undefined;
-        return f;
+        {
+            filterExpression.ExpressionType = FilterExpressionType.Undefined;
+            return filterExpression;
+        }
+        string filterPath = filter[..filter.IndexOf(separator)];
+        string[] segments = filterPath.Split('.');
+        filterExpression.Key = segments[0].ToPascalCase();
+        filterExpression.EndPoint = EntityFrameworkFiltersExtension.GetExpressionEndpoint(filterExpression.Key, provider, typeof(TDestintaion), out Type propertyType);
+        filterExpression.Value = filter[(filter.IndexOf(separator) + separator.Length)..];
+
+        if (segments.Length > 1)
+        {
+            filterExpression.InnerFilterExpression = InvokeInitialize(
+                string.Format("{0}{1}{2}",
+                    string.Join('.', segments[1..]),
+                    separator,
+                    filterExpression.Value),
+                provider,
+                propertyType);
+        }
+
+        return filterExpression;
     }
 
+    /// <summary>
+    /// Invokes Initialize method with spectified property type.
+    /// </summary>
     private static FilterExpression InvokeInitialize(string filter, IConfigurationProvider provider, Type propertyType)
     {
         var methodInfo = typeof(FilterExpression).GetMethod(nameof(Initialize));
