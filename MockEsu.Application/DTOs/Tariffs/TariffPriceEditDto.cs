@@ -13,13 +13,19 @@ using MockEsu.Application.Common.Dtos;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using Microsoft.AspNetCore.JsonPatch;
 using FluentValidation;
+using MockEsu.Application.Common.Attributes;
 
 namespace MockEsu.Application.DTOs.Tariffs;
 
 public record TariffPriceEditDto : IBaseDto, IEntityWithId, IEditDto
 {
+    [Filterable(CompareMethod.Equals)]
     public int Id { get; init; }
+
+    [Filterable(CompareMethod.Equals)]
     public string PriceName { get; set; }
+
+    [Filterable(CompareMethod.Equals)]
     public int Price { get; set; }
 
     public static Type GetOriginType()
@@ -55,3 +61,4 @@ public record TariffPriceEditDto : IBaseDto, IEntityWithId, IEditDto
         }
     }
 }
+

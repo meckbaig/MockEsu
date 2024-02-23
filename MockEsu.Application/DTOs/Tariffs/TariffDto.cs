@@ -11,40 +11,25 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Application.DTOs.Tariffs;
 
-public record TariffEditDto : IBaseDto, IEditDto
+public record TariffDto : IBaseDto
 {
     public string Name { get; set; }
 
     [Filterable(CompareMethod.Nested)]
-    public List<TariffPriceEditDto> PricePoints { get; set; }
+    public List<TariffPriceDto> PricePoints { get; set; }
 
     public static Type GetOriginType() => typeof(Tariff);
-
-    public static Type GetValidatorType() => typeof(Validator);
 
     private class Mapping : Profile
     {
         public Mapping()
         {
-            CreateMap<Tariff, TariffEditDto>()
+            CreateMap<Tariff, TariffDto>()
                 .ForMember(m => m.PricePoints, opt => opt.MapFrom(o => o.Prices));
-            CreateMap<TariffEditDto, Tariff>()
+            CreateMap<TariffDto, Tariff>()
                 .ForMember(m => m.Prices, opt => opt.MapFrom(o => o.PricePoints))
                 .ForMember(m => m.Created, opt => opt.Ignore())
                 .ForMember(m => m.LastModified, opt => opt.Ignore());
-        }
-    }
-
-    internal class Validator : AbstractValidator<TariffEditDto>
-    {
-        public Validator()
-        {
-            RuleFor(x => x.Name)
-                .NotEmpty()
-                .MinimumLength(2)
-                .MaximumLength(100);
-            RuleForEach(x => x.PricePoints)
-                .SetValidator(new TariffPriceEditDto.Validator());
         }
     }
 }
