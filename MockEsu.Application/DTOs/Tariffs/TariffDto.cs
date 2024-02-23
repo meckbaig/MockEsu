@@ -13,6 +13,7 @@ namespace MockEsu.Application.DTOs.Tariffs;
 
 public record TariffDto : IBaseDto
 {
+    [Filterable(CompareMethod.Equals)]
     public string Name { get; set; }
 
     [Filterable(CompareMethod.Nested)]

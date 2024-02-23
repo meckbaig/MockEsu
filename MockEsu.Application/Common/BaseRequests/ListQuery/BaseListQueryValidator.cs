@@ -1,12 +1,10 @@
 ﻿using AutoMapper;
 using FluentValidation;
-using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
-using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Application.Common.Extensions.StringExtensions;
+using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Common;
-using System.Text.Json;
 
 namespace MockEsu.Application.Common.BaseRequests.ListQuery;
 
@@ -39,25 +37,24 @@ public static class BaseJournalQueryFilterValidatorExtension
     {
         string key = string.Empty;
         ruleBuilder = ruleBuilder
-            .Must((query, filter) => PropertyExists<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref key))
+            .Must((query, filter) => PropertyExists<TDestintaion>(filter, mapper.ConfigurationProvider, ref key))
             .WithMessage(x => $"Property '{key.ToCamelCase()}' does not exist")
             .WithErrorCode(ValidationErrorCode.PropertyDoesNotExistValidator.ToString());
 
         FilterExpression filterEx = null;
         ruleBuilder = ruleBuilder
-            .Must((query, filter) => ExpressionIsValid<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref filterEx))
+            .Must((query, filter) => ExpressionIsValid<TDestintaion>(filter, mapper.ConfigurationProvider, ref filterEx))
             .WithMessage((query, filter) => $"{filter} - expression is undefined")
             .WithErrorCode(ValidationErrorCode.ExpressionIsUndefinedValidator.ToString());
 
-        FilterableAttribute attribute = null;
         ruleBuilder = ruleBuilder
-            .Must((query, filter) => PropertyIsFilterable<TDestintaion, TSource>(filterEx, ref attribute))
+            .Must((query, filter) => PropertyIsFilterable<TDestintaion, TSource>(filterEx))
             .WithMessage((query, filter) => $"Property {filterEx.Key.ToCamelCase()}' is not filterable")
             .WithErrorCode(ValidationErrorCode.PropertyIsNotFilterableValidator.ToString());
 
         string expressionErrorMessage = string.Empty;
         ruleBuilder = ruleBuilder
-            .Must((query, filter) => CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>(query, filterEx, attribute, ref expressionErrorMessage))
+            .Must((query, filter) => CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>(query, filterEx, ref expressionErrorMessage))
             .WithMessage(x => expressionErrorMessage)
             .WithErrorCode(ValidationErrorCode.CanNotCreateExpressionValidator.ToString());
 
@@ -74,42 +71,43 @@ public static class BaseJournalQueryFilterValidatorExtension
             expressionIndex = filter.IndexOf(":");
         else
             return true;
-        key = filter[..expressionIndex].ToPascalCase();
-
-        string? endPoint = EntityFrameworkFiltersExtension
-            .GetExpressionEndpoint<TSource, TDestintaion>(key, provider);
-        if (endPoint == null)
-            return false;
+        string[] keySegments = filter[..expressionIndex].ToPropetyFormat().Split('.');
+        Type type = typeof(TDestintaion);
+        foreach (var segment in keySegments)
+        {
+            key = segment;
+            string? endPoint = EntityFrameworkFiltersExtension
+                .GetExpressionEndpoint(key, provider, type, out Type nextType);
+            if (endPoint == null)
+                return false;
+            type = nextType;
+        }
         return true;
     }
 
-    private static bool ExpressionIsValid<TSource, TDestintaion>
+    private static bool ExpressionIsValid<TDestintaion>
         (string filter, IConfigurationProvider provider, ref FilterExpression filterEx)
-        where TSource : BaseEntity
         where TDestintaion : class, IBaseDto
     {
-        filterEx = EntityFrameworkFiltersExtension.GetFilterExpression<TSource, TDestintaion>(filter, provider);
+        filterEx = EntityFrameworkFiltersExtension.GetFilterExpression<TDestintaion>(filter, provider);
         if (filterEx?.ExpressionType == FilterExpressionType.Undefined)
             return false;
         return true;
     }
 
     private static bool PropertyIsFilterable<TDestintaion, TSource>
-        (FilterExpression filterEx, ref List<FilterableAttribute> attributes)
+        (FilterExpression filterEx)
         where TDestintaion : IBaseDto
         where TSource : BaseEntity
     {
         if (filterEx == null || filterEx.ExpressionType == FilterExpressionType.Undefined)
             return true;
-        attribute = EntityFrameworkFiltersExtension
-            .GetFilterAttribute<TDestintaion>(filterEx.Key);
-        if (attribute == null)
-            return false;
-        return true;
+        return EntityFrameworkFiltersExtension
+            .TryGetFilterAttributes<TDestintaion>(filterEx);
     }
 
     private static bool CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>
-        (TQuery query, FilterExpression? filterEx, FilterableAttribute? attribute, ref string errorMessage)
+        (TQuery query, FilterExpression? filterEx, ref string errorMessage)
         where TQuery : BaseListQuery<TResponseList>
         where TResponseList : BaseListQueryResponse<TDestintaion>
         where TDestintaion : IBaseDto
@@ -118,17 +116,15 @@ public static class BaseJournalQueryFilterValidatorExtension
 
         if (filterEx == null ||
             filterEx.ExpressionType == FilterExpressionType.Undefined ||
-            attribute == null)
+            filterEx?.CompareMethod == null)
         {
             return true;
         }
         try
         {
-            var expression = EntityFrameworkFiltersExtension
-                .GetLinqExpression<TSource>(attribute.CompareMethod, filterEx);
-            if (expression == null)
+            if (!EntityFrameworkFiltersExtension.TryGetLinqExpression(filterEx, out var parameter, out var expression))
                 return false;
-            query.AddFilterExpression(expression);
+            query.AddFilterExpression(parameter, expression);
             return true;
         }
         catch (Exception ex)
@@ -188,7 +184,7 @@ public static class BaseJournalQuerySortValidatorExtension
         OrderByExpression ex = EntityFrameworkOrderByExtension.GetOrderByExpression<TSource, TDestintaion>(filter, provider);
         if (ex?.ExpressionType == OrderByExpressionType.Undefined)
             return false;
-        if (ex != null) 
+        if (ex != null)
             query.AddOrderExpression(ex);
         return true;
     }

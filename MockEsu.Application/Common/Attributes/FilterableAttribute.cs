@@ -27,5 +27,6 @@ public class FilterableAttribute : Attribute
 public enum CompareMethod
 {
     Equals,
-    ById
+    ById,
+    Nested
 }

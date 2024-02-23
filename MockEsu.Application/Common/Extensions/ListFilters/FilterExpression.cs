@@ -11,6 +11,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using MockEsu.Application.Common.Attributes;
 
 namespace MockEsu.Application.Extensions.ListFilters;
 
@@ -31,6 +32,8 @@ public record FilterExpression : IEntityFrameworkExpression<FilterExpressionType
     /// </summary>
     public string? EndPoint { get; set; }
 
+    public Type EntityType { get; set; }
+
     /// <summary>
     /// Type of expression
     /// </summary>
@@ -41,40 +44,57 @@ public record FilterExpression : IEntityFrameworkExpression<FilterExpressionType
     /// </summary>
     public string? Value { get; set; }
 
-    public FilterExpression? Nested { get; set; }
+    /// <summary>
+    /// Nested filter expression (if property is a collection)
+    /// </summary>
+    public FilterExpression? InnerFilterExpression { get; set; }
+
+    public CompareMethod CompareMethod { get; set; }
 
     /// <summary>
     /// Factory constructor
     /// </summary>
-    /// <typeparam name="TSource"></typeparam>
     /// <typeparam name="TDestintaion"></typeparam>
     /// <param name="filter"></param>
     /// <param name="provider"></param>
     /// <returns></returns>
-    public static FilterExpression Initialize<TSource, TDestintaion>(string filter, IConfigurationProvider provider)
-        where TSource : BaseEntity
+    public static FilterExpression Initialize<TDestintaion>(string filter, IConfigurationProvider provider)
         where TDestintaion : class, IBaseDto
     {
-        var f = new FilterExpression();
+        var f = new FilterExpression { EntityType = TDestintaion.GetOriginType() };
         if (filter.Contains("!:"))
         {
             string filterPath = filter[..filter.IndexOf("!:")];
-            f.Key = filterPath.Split('.')[0].ToPascalCase();
-            f.EndPoint = EntityFrameworkFiltersExtension.GetExpressionEndpoint<TDestintaion>(f.Key, provider, out Type propertyType);
+            string[] segments = filterPath.Split('.');
+            f.Key = segments[0].ToPascalCase();
+            f.EndPoint = EntityFrameworkFiltersExtension.GetExpressionEndpoint(f.Key, provider, typeof(TDestintaion), out Type propertyType);
             f.Value = filter[(filter.IndexOf("!:") + 2)..];
             f.ExpressionType = FilterExpressionType.Exclude;
+            if (segments.Length > 1)
+                f.InnerFilterExpression = InvokeInitialize($"{string.Join('.', segments[1..])}!:{f.Value}", provider, propertyType);
         }
         else if (filter.Contains(':'))
         {
-            f.Key = filter[..filter.IndexOf(':')].ToPropetyFormat();
-            f.EndPoint = EntityFrameworkFiltersExtension.GetExpressionEndpoint<TDestintaion>(f.Key, provider, out Type propertyType);
+            string filterPath = filter[..filter.IndexOf(":")];
+            string[] segments = filterPath.Split('.');
+            f.Key = segments[0].ToPascalCase();
+            f.EndPoint = EntityFrameworkFiltersExtension.GetExpressionEndpoint(f.Key, provider, typeof(TDestintaion), out Type propertyType);
             f.Value = filter[(filter.IndexOf(':') + 1)..];
             f.ExpressionType = FilterExpressionType.Include;
+            if (segments.Length > 1)
+                f.InnerFilterExpression = InvokeInitialize($"{string.Join('.', segments[1..])}:{f.Value}", provider, propertyType);
         }
         else
             f.ExpressionType = FilterExpressionType.Undefined;
-
         return f;
+    }
+
+    private static FilterExpression InvokeInitialize(string filter, IConfigurationProvider provider, Type propertyType)
+    {
+        var methodInfo = typeof(FilterExpression).GetMethod(nameof(Initialize));
+        var genericMethod = methodInfo.MakeGenericMethod(propertyType);
+        object[] parameters = [filter, provider];
+        return (FilterExpression)genericMethod.Invoke(null, parameters);
     }
 }
 

@@ -3,6 +3,7 @@ using AutoMapper.Internal;
 using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
+using MockEsu.Application.Common.Extensions.StringExtensions;
 using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Domain.Common;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -26,7 +27,7 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="filterExpressions">Array of filter expressions</param>
     /// <returns>An <typeparamref name="IQueryable"/> that contains filters</returns>
     public static IQueryable<TSource> AddFilters<TSource, TDestintaion>
-        (this IQueryable<TSource> source, List<Expression>? filterExpressions)
+        (this IQueryable<TSource> source, Dictionary<ParameterExpression, Expression>? filterExpressions)
         where TSource : BaseEntity
         where TDestintaion : IBaseDto
     {
@@ -34,61 +35,47 @@ public static class EntityFrameworkFiltersExtension
             return source;
         foreach (var expression in filterExpressions)
         {
-            source = source.AppendToQuery<TSource, TDestintaion>(expression);
+            source = source.AppendToQuery<TSource, TDestintaion>(expression.Key, expression.Value);
         }
         return source;
     }
 
     private static IQueryable<TSource> AppendToQuery<TSource, TDestintaion>
-        (this IQueryable<TSource> source, Expression expression)
+        (this IQueryable<TSource> source, ParameterExpression param, Expression expression)
         where TSource : BaseEntity
         where TDestintaion : IBaseDto
     {
-        var param = Expression.Parameter(typeof(TSource), "x");
         Expression<Func<TSource, bool>> filterLambda
             = Expression.Lambda<Func<TSource, bool>>(expression, param);
 
-        return source.Where(filterLambda.ToString());
+        return source.Where(filterLambda);
     }
 
     /// <summary>
-    /// Gets full endpoint route string
+    /// Gets full endpoint route string.
     /// </summary>
-    /// <typeparam name="TDestintaion">DTO type</typeparam>
-    /// <param name="destinationPropertyName">Source prioer</param>
-    /// <param name="provider">Configuraion provider for performing maps</param>
+    /// <param name="destinationPropertyName"></param>
+    /// <param name="provider">Configuraion provider for performing maps.</param>
+    /// <param name="destinationType">DTO type.</param>
+    /// <param name="propertyType">Next property type, if property is collection; else null.</param>
     /// <returns>Returns endpoint if success, null if error</returns>
-    public static string? GetExpressionEndpoint<TDestintaion>
-        (string destinationPropertyName, IConfigurationProvider provider, out Type propertyType)
-        where TDestintaion : class, IBaseDto
+    public static string? GetExpressionEndpoint
+        (string destinationPropertyName, IConfigurationProvider provider, Type destinationType, out Type propertyType)
     {
-        propertyType = typeof(TDestintaion);
-        string[] destinationPropertySegments = destinationPropertyName.Split('.');
-        List<string> sourcePathSegments = new();
-
-        foreach (var segment in destinationPropertySegments)
-        {
-            if (!DtoExtension.InvokeTryGetSource(
-                    segment,
+        propertyType = destinationType;
+        DtoExtension.InvokeTryGetSource(
+                    destinationPropertyName,
                     provider,
                     ref propertyType,
                     out string sourceSegment,
                     out string errorMessage,
-                    throwException: false))
-            {
-                errorMessage ??= $"Something went wrong while getting json patch source property path for '{destinationPropertyName}'";
-                throw new ArgumentException(errorMessage);
-            }
-            if (propertyType.IsCollection())
-            {
-                propertyType = propertyType.GetGenericArguments().Single();
-            }
-            sourcePathSegments.Add(sourceSegment);
-        }
-        //string sourcePropertyName = DtoExtension.GetSourceJsonPatch
-        //    <TDestintaion>(destinationPropertyName, provider, out Type propType);
+                    throwException: false);
+        if (propertyType.IsCollection())
+            propertyType = propertyType.GetGenericArguments().Single();
+        else
+            propertyType = null;
 
-        return string.Join('.', sourcePathSegments);
+        return sourceSegment;
     }
 
     /// <summary>
@@ -101,14 +88,13 @@ public static class EntityFrameworkFiltersExtension
     /// <returns>Returns FilterExpression model if success, undefined FilterExpression
     /// if can not parse expression, null if error</returns>
     public static FilterExpression? GetFilterExpression
-        <TSource, TDestintaion>
+        <TDestintaion>
         (string filter, IConfigurationProvider provider)
-        where TSource : BaseEntity
         where TDestintaion : class, IBaseDto
     {
         try
         {
-            return FilterExpression.Initialize<TSource, TDestintaion>(filter, provider);
+            return FilterExpression.Initialize<TDestintaion>(filter, provider);
         }
         catch (ValidationException)
         {
@@ -122,42 +108,44 @@ public static class EntityFrameworkFiltersExtension
     /// <typeparam name="TDestintaion">DTO type.</typeparam>
     /// <param name="propertyPath">Property path to get attribute from.</param>
     /// <returns>Returns FilterableAttribute models for full path if success, null if error.</returns>
-    public static List<FilterableAttribute>? GetFilterAttributes<TDestintaion>
-        (string propertyPath)
+    public static bool TryGetFilterAttributes<TDestintaion>
+        (FilterExpression filterEx)
         where TDestintaion : IBaseDto
     {
-        List<FilterableAttribute> attributes = [];
-        string[] propertySegments = propertyPath.Split('.');
+        var tmpFilterEx = filterEx;
         Type nextSegmentType = typeof(TDestintaion);
-        for (int i = 0; i < propertySegments.Length; i++)
+        do
         {
-            var prop = nextSegmentType.GetProperties().FirstOrDefault(p => p.Name == propertySegments[i])!;
+            var prop = nextSegmentType.GetProperties().FirstOrDefault(p => p.Name == tmpFilterEx.Key)!;
+
             var attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
                 .FirstOrDefault(a => a.GetType() == typeof(FilterableAttribute))!;
             if (attribute == null)
-                return null;
-            if (attribute.CompareMethod == CompareMethod.Nested)
+                return false;
+
+            tmpFilterEx.CompareMethod = attribute.CompareMethod;
+
+            if (tmpFilterEx.CompareMethod == CompareMethod.Nested)
                 nextSegmentType = prop.PropertyType.GetGenericArguments().Single();
             else
                 nextSegmentType = prop.PropertyType;
 
-            attributes.Add(attribute);
-        }
-        return attributes;
+            tmpFilterEx = tmpFilterEx.InnerFilterExpression;
+
+        } while (tmpFilterEx != null);
+
+        return true;
     }
 
     /// <summary>
     /// Gets filter expression for Where statement
     /// </summary>
-    /// <typeparam name="TSource">Source of DTO type</typeparam>
-    /// <param name="compareMethod">Method of comparison</param>
     /// <param name="filterEx">Filter expression</param>
     /// <returns>Filter expression if success, null if error</returns>
-    public static Expression? GetLinqExpression<TSource>
-        (CompareMethod compareMethod, FilterExpression filterEx)
-        where TSource : BaseEntity
+    public static bool TryGetLinqExpression
+        (FilterExpression filterEx, out ParameterExpression param, out Expression expression)
     {
-        var param = Expression.Parameter(typeof(TSource), "x");
+        param = Expression.Parameter(filterEx.EntityType, filterEx.EntityType.Name.ToCamelCase());
 
         string[] endpointSegments = filterEx.EndPoint.Split('.');
         MemberExpression propExpression = Expression.Property(param, endpointSegments[0]);
@@ -170,22 +158,75 @@ public static class EntityFrameworkFiltersExtension
         }
 
         object[] values = filterEx.Value.Split(',');
-        switch (compareMethod)
+        switch (filterEx.CompareMethod)
         {
             case CompareMethod.Equals:
-                return EqualExpression(values, propExpression, filterEx.ExpressionType);
+                expression = EqualExpression(values, propExpression, filterEx.ExpressionType);
+                break;
             case CompareMethod.ById:
-                return ByIdExpression(values, propExpression, filterEx.ExpressionType);
+                expression = ByIdExpression(values, propExpression, filterEx.ExpressionType);
+                break;
             case CompareMethod.Nested:
-                return NestedExpression(values, propExpression, filterEx.ExpressionType);
+                expression = NestedExpression(values, propExpression, filterEx);
+                break;
             default:
-                return null;
+                expression = null;
+                break;
         }
+        return expression != null;
     }
 
-    private static Expression? NestedExpression(object[] values, MemberExpression propExpression, FilterExpressionType expressionType)
+    private static Expression? NestedExpression(object[] values, MemberExpression propExpression, FilterExpression filterEx)
     {
-        throw new NotImplementedException();
+
+        if (!TryGetLinqExpression(filterEx.InnerFilterExpression, out var param, out var innerExpression))
+            return null;
+
+        var filterLambda = InvokeFilterLambda(param, innerExpression, filterEx.InnerFilterExpression.EntityType);
+
+        MethodInfo whereMethod = typeof(Enumerable).GetMethods()
+            .Where(m => m.Name == "Where")
+            .First(m => m.GetParameters().Length == 2)
+            .MakeGenericMethod(filterEx.InnerFilterExpression.EntityType);
+
+        // Создайте выражение Where
+        var whereCallExpression = Expression.Call(
+            whereMethod,
+            propExpression,
+            filterLambda);
+
+        // Получите метод Count для IEnumerable<TariffPrice>
+        MethodInfo countMethod = typeof(Enumerable).GetMethods()
+            .Where(m => m.Name == "Count" && m.GetParameters().Length == 1)
+            .Single()
+            .MakeGenericMethod(filterEx.InnerFilterExpression.EntityType);
+
+        // Создайте выражение Count
+        var countCallExpression = Expression.Call(
+            countMethod,
+            whereCallExpression);
+
+        // Создайте выражение для сравнения с нулем
+        var zeroExpression = Expression.Constant(0);
+        var notEqualExpression = Expression.NotEqual(countCallExpression, zeroExpression);
+
+        return notEqualExpression;
+    }
+
+    private static Expression InvokeFilterLambda(ParameterExpression param, Expression expression, Type sourceType)
+    {
+        Type yourType = typeof(EntityFrameworkFiltersExtension);
+
+        MethodInfo methodInfo = yourType.GetMethod(nameof(GetFilterLambda), BindingFlags.NonPublic | BindingFlags.Static);
+
+        MethodInfo genericMethod = methodInfo.MakeGenericMethod(sourceType);
+
+        return (Expression)genericMethod.Invoke(null, [param, expression]);
+    }
+
+    private static Expression<Func<TSource, bool>> GetFilterLambda<TSource>(ParameterExpression param, Expression expression)
+    {
+        return Expression.Lambda<Func<TSource, bool>>(expression, param);
     }
 
     /// <summary>

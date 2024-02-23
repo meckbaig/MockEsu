@@ -338,10 +338,10 @@ internal static class DtoExtension
     /// <returns>DTO source type.</returns>
     private static Type GetDtoOriginType(Type dtoType)
     {
-        if (!typeof(IEditDto).IsAssignableFrom(dtoType))
-            throw new ArgumentException($"{dtoType.Name} does not implement the interface {nameof(IEditDto)}");
+        if (!typeof(IBaseDto).IsAssignableFrom(dtoType))
+            throw new ArgumentException($"{dtoType.Name} does not implement the interface {nameof(IBaseDto)}");
 
-        MethodInfo method = dtoType.GetMethod(nameof(IEditDto.GetOriginType), BindingFlags.Static | BindingFlags.Public);
+        MethodInfo method = dtoType.GetMethod(nameof(IBaseDto.GetOriginType), BindingFlags.Static | BindingFlags.Public);
         var result = method.Invoke(null, null);
         return (Type)result;
     }
