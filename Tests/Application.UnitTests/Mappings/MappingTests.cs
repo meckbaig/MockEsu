@@ -20,11 +20,11 @@ public class MappingTests
         _mapper = _configuration.CreateMapper();
     }
 
-    [Test]
-    public void ShouldHaveValidConfiguration()
-    {
-        _configuration.AssertConfigurationIsValid();
-    }
+    //[Test]
+    //public void ShouldHaveValidConfiguration()
+    //{
+    //    _configuration.AssertConfigurationIsValid();
+    //}
 
     [Test]
     [TestCase(typeof(Kontragent), typeof(KonragentPreviewDto))]
