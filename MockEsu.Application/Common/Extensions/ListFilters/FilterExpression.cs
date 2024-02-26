@@ -2,6 +2,7 @@
 using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Extensions.StringExtensions;
+using MockEsu.Application.Extensions.JsonPatch;
 
 namespace MockEsu.Application.Extensions.ListFilters;
 
@@ -79,6 +80,7 @@ public record FilterExpression : IEntityFrameworkExpression<FilterExpressionType
         filterExpression.Key = segments[0].ToPascalCase();
         filterExpression.EndPoint = EntityFrameworkFiltersExtension.GetExpressionEndpoint(filterExpression.Key, provider, typeof(TDestintaion), out Type propertyType);
         filterExpression.Value = filter[(filter.IndexOf(separator) + separator.Length)..];
+        filterExpression.EntityType = DtoExtension.GetDtoOriginType(typeof(TDestintaion));
 
         if (segments.Length > 1)
         {

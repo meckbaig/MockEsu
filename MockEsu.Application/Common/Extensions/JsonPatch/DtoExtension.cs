@@ -336,7 +336,7 @@ internal static class DtoExtension
     /// </summary>
     /// <param name="dtoType">DTO type.</param>
     /// <returns>DTO source type.</returns>
-    private static Type GetDtoOriginType(Type dtoType)
+    public static Type GetDtoOriginType(Type dtoType)
     {
         if (!typeof(IBaseDto).IsAssignableFrom(dtoType))
             throw new ArgumentException($"{dtoType.Name} does not implement the interface {nameof(IBaseDto)}");
@@ -346,7 +346,7 @@ internal static class DtoExtension
         return (Type)result;
     }
 
-    private static Type GetDtoValidatorType(Type dtoType)
+    public static Type GetDtoValidatorType(Type dtoType)
     {
         if (!typeof(IEditDto).IsAssignableFrom(dtoType))
             throw new ArgumentException($"{dtoType.Name} does not implement the interface {nameof(IEditDto)}");
