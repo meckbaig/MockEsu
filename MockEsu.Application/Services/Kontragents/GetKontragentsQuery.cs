@@ -33,7 +33,7 @@ public class GetKontragentsQueryValidator : BaseListQueryValidator
 {
     public GetKontragentsQueryValidator(IMapper mapper) : base(mapper)
     {
-        //RuleFor(x => x.qwerty).MinimumLength(10);
+
     }
 }
 

@@ -16,8 +16,9 @@ public interface IJwtProvider
     /// </summary>
     /// <param name="user">User for new token validation.</param>
     /// <param name="tokenLifeTime">Custom token lifetime.</param>
+    /// <param name="customPermissions">Custom permissions for token.</param>
     /// <returns>Json web token.</returns>
-    string GenerateToken(User user, TimeSpan? tokenLifeTime = null);
+    string GenerateToken(User user, TimeSpan? tokenLifeTime = null, HashSet<Permission>? customPermissions = null);
 
     /// <summary>
     /// Generates refresh token.

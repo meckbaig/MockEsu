@@ -20,9 +20,17 @@ internal sealed class JwtProvider : IJwtProvider
         _options = options.Value;
     }
 
+    public JwtProvider(JwtOptions options)
+    {
+        _options = options;
+    }
+
     public TimeSpan GetRefreshTokenLifeTime() => RefreshTokenLifeTime;
 
-    public string GenerateToken(User user, TimeSpan? tokenLifeTime = null)
+    public string GenerateToken(
+        User user, 
+        TimeSpan? tokenLifeTime = null, 
+        HashSet<Permission>? customPermissions = null)
     {
         var tokenHandler = new JsonWebTokenHandler();
 
@@ -33,7 +41,7 @@ internal sealed class JwtProvider : IJwtProvider
             new(CustomClaim.UserId, user.Id.ToString()),
             new(ClaimTypes.Role, user.Role.Name),
         };
-        foreach (var permission in user.Role.Permissions)
+        foreach (var permission in customPermissions ?? user.Role.Permissions)
         {
             claims.Add(new("permissions", permission.Name));
         }
