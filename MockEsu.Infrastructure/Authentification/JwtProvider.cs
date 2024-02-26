@@ -22,7 +22,7 @@ internal sealed class JwtProvider : IJwtProvider
 
     public TimeSpan GetRefreshTokenLifeTime() => RefreshTokenLifeTime;
 
-    public string GenerateToken(User user)
+    public string GenerateToken(User user, TimeSpan? tokenLifeTime = null)
     {
         var tokenHandler = new JsonWebTokenHandler();
 
@@ -41,7 +41,7 @@ internal sealed class JwtProvider : IJwtProvider
         var tokenDesctiptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.Add(TokenLifeTime),
+            Expires = DateTime.UtcNow.Add(tokenLifeTime ?? TokenLifeTime),
             Issuer = _options.Issuer,
             Audience = _options.Audience,
             SigningCredentials = new SigningCredentials(
