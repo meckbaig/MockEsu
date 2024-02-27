@@ -4,6 +4,7 @@ using AutoMapper;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Domain.Entities;
+using NUnit.Framework;
 
 namespace Application.UnitTests.Mappings;
 
@@ -26,6 +27,7 @@ public class MappingTests
     //    _configuration.AssertConfigurationIsValid();
     //}
 
+    /// TODO: Add here more DTOs
     [Test]
     [TestCase(typeof(Kontragent), typeof(KonragentPreviewDto))]
     public void ShouldSupportMappingFromSourceToDestination(Type source, Type destination)

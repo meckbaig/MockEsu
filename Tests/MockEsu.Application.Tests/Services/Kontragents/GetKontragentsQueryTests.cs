@@ -67,8 +67,8 @@ public class GetKontragentsQueryTests //: KontragentsApiFactory
 
         foreach (var prop in typeof(KonragentPreviewDto).GetProperties())
         {
-            object v1 = prop.GetValue(previewDto);
-            object v2 = prop.GetValue(result.Items[0]);
+            object v1 = prop.GetValue(result.Items[0]);
+            object v2 = prop.GetValue(previewDto);
             Assert.Equal(v1, v2);
         }
     }
