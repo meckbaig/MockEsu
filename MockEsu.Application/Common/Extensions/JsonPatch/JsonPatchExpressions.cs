@@ -101,7 +101,7 @@ internal static class JsonPatchExpressions
     internal static JsonPatchDocument<DbSet<TDestination>> ConvertToSourceDbSet
         <TDto, TDestination>(this JsonPatchDocument<TDto> patch, IConfigurationProvider provider)
         where TDestination : BaseEntity
-        where TDto : class, IBaseDto, IEditDto
+        where TDto : class, IEditDto
     {
         var newOperations = new List<Operation<DbSet<TDestination>>>();
         foreach (var operation in patch.Operations)
@@ -159,7 +159,7 @@ internal static class JsonPatchExpressions
         DbSet<TDestination> dbSet,
         IConfigurationProvider provider)
         where TDestination : BaseEntity
-        where TDto : class, IBaseDto, IEditDto
+        where TDto : class, IEditDto
     {
         var convertedPatch = patch.ConvertToSourceDbSet<TDto, TDestination>(provider);
         convertedPatch.ApplyTransactionToSource(dbSet);

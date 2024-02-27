@@ -62,13 +62,5 @@ public record KonragentPreviewDto : IBaseDto
             return
                 $"г. {address.City.Name}, ул. {address.Street.Name}, д. {address.HouseName}, под. {address.PorchNumber}, кв. {address.Apartment}";
         }
-
-        //public class CustomResolver : IMemberValueResolver<Kontragent, KonragentPreviewDto, Address?, string?>
-        //{
-        //    public string Resolve(Kontragent source, KonragentPreviewDto destination, Address? sourceMember, string? destMember, ResolutionContext context)
-        //    {
-        //        return $"г. {sourceMember.City.Name}, ул. {sourceMember.Street.Name}, д. {sourceMember.HouseName}, под. {sourceMember.PorchNumber}, кв. {sourceMember.Apartment}";
-        //    }
-        //}
     }
 }

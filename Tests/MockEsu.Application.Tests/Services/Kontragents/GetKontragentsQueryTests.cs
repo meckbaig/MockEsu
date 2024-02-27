@@ -16,18 +16,18 @@ namespace MockEsu.Application.Tests.Services.Kontragents;
 
 public class GetKontragentsQueryTests //: KontragentsApiFactory
 {
-    IAppDbContext _inMemoryContext;
-    IMapper _mapper;
-    IDistributedCache _cache;
+    //IAppDbContext _inMemoryContext;
+    private readonly IMapper _mapper;
+    private readonly IDistributedCache _cache;
 
     public GetKontragentsQueryTests()
     {
         //_container.StartAsync().Wait();
-        var dbContextOptions = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(//_container.GetConnectionString())
-                "Server=localhost;Port=5433;Database=MockEsu;User ID=postgres;Password=testtest;")
-            .Options;
-        _inMemoryContext = new AppDbContext(dbContextOptions, Substitute.For<ILogger<TransactionLoggingInterceptor>>());
+        //var dbContextOptions = new DbContextOptionsBuilder<AppDbContext>()
+        //    .UseNpgsql(//_container.GetConnectionString())
+        //        "Server=localhost;Port=5433;Database=MockEsu;User ID=postgres;Password=testtest;")
+        //    .Options;
+        //_inMemoryContext = new AppDbContext(dbContextOptions, Substitute.For<ILogger<TransactionLoggingInterceptor>>());
 
         var config = new MapperConfiguration(c =>
             c.AddMaps(Assembly.GetAssembly(typeof(IAppDbContext))));
@@ -39,31 +39,6 @@ public class GetKontragentsQueryTests //: KontragentsApiFactory
     public async Task GetKontragentsQuery_ReturnSingle_WhenTake1_DtoCheck()
     {
         // Arrange
-        var kontragents = new List<Kontragent>()
-        {
-            new()
-            {
-                Id = 5,
-                Address = new()
-                {
-                    City = new() { Name = "Алматы" },
-                    Street = new() { Name = "Аль-фараби" },
-                    HouseName = "101",
-                    PorchNumber = 1,
-                    Apartment = "4",
-                    Region = new() { Name = "Бостандыкский район" }
-                },
-                PhoneNumber = "",
-                KontragentAgreement = new()
-                {
-                    Balance = -620.00M,
-                    DocumentNumber = "0041807",
-                    PersonalAccount = "5379687",
-                    ContractDate = DateOnly.FromDayNumber(733923)
-                },
-                Name = "АБДЕЛЬМАНОВА"
-            }
-        };
         KonragentPreviewDto previewDto = new()
         {
             AddressString = "г. Алматы, ул. Аль-фараби, д. 101, под. 1, кв. 4",
@@ -77,10 +52,8 @@ public class GetKontragentsQueryTests //: KontragentsApiFactory
             RegionString = "Бостандыкский район"
         };
 
-        Mock<DbSet<Kontragent>> dbSetMock = CreateDbSetMock(kontragents.AsQueryable());
 
-        Mock<IAppDbContext> contextMock = new();
-        contextMock.Setup(x => x.Kontragents).Returns(dbSetMock.Object);
+        Mock<IAppDbContext> contextMock = new Mock<IAppDbContext>().GetKontragentsRepository();
 
         var handler = new GetKontragentsQueryHandler(contextMock.Object, _mapper, _cache);
         var query = new GetKontragentsQuery();
@@ -100,13 +73,5 @@ public class GetKontragentsQueryTests //: KontragentsApiFactory
         }
     }
 
-    private static Mock<DbSet<T>> CreateDbSetMock<T>(IQueryable<T> queryable) where T : class
-    {
-        var dbSetMock = new Mock<DbSet<T>>();
-        dbSetMock.As<IQueryable<T>>().Setup(m => m.Provider).Returns(queryable.Provider);
-        dbSetMock.As<IQueryable<T>>().Setup(m => m.Expression).Returns(queryable.Expression);
-        dbSetMock.As<IQueryable<T>>().Setup(m => m.ElementType).Returns(queryable.ElementType);
-        dbSetMock.As<IQueryable<T>>().Setup(m => m.GetEnumerator()).Returns(queryable.GetEnumerator());
-        return dbSetMock;
-    }
+
 }

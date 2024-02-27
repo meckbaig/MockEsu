@@ -17,7 +17,7 @@ using MockEsu.Application.Common.Attributes;
 
 namespace MockEsu.Application.DTOs.Tariffs;
 
-public record TariffPriceEditDto : IBaseDto, IEntityWithId, IEditDto
+public record TariffPriceEditDto : IEditDto, IEntityWithId
 {
     [Filterable(CompareMethod.Equals)]
     public int Id { get; init; }

@@ -15,7 +15,7 @@ namespace MockEsu.Application.Common.BaseRequests.JsonPatchCommand;
 public abstract class BaseJsonPatchValidator<TCommand, TResponse, TDto> : AbstractValidator<TCommand>
     where TCommand : BaseJsonPatchCommand<TResponse, TDto>
     where TResponse : BaseResponse
-    where TDto : class, IBaseDto, IEditDto, new()
+    where TDto : class, IEditDto, new()
 {
     public BaseJsonPatchValidator(IMapper mapper)
     {
@@ -32,7 +32,7 @@ public static class BaseJsonPatchValidatorExtension
             IMapper mapper)
             where TCommand : BaseJsonPatchCommand<TResponse, TDto>
             where TResponse : BaseResponse
-            where TDto : class, IBaseDto, IEditDto, new()
+            where TDto : class, IEditDto, new()
     {
         string canParsePathErrorMessage = null!;
         Type propertyType = null!;
@@ -57,7 +57,7 @@ public static class BaseJsonPatchValidatorExtension
         IMapper mapper,
         out Type propertyType,
         out string errorMessage)
-        where TDto : class, IBaseDto, IEditDto, new()
+        where TDto : class, IEditDto, new()
     {
         var jsonPatchPath = new JsonPatchPath(operation.path);
 
@@ -78,7 +78,7 @@ public static class BaseJsonPatchValidatorExtension
         IMapper mapper,
         Type propertyType,
         out string errorMessage)
-        where TDto : class, IBaseDto, IEditDto, new()
+        where TDto : class, IEditDto, new()
     {
         errorMessage = null;
         if (propertyType == null || operation.OperationType == OperationType.Remove)
@@ -101,7 +101,7 @@ public static class BaseJsonPatchValidatorExtension
         ValidationContext<TCommand> context,
         Type propertyType,
         string parseValueError)
-        where TDto : class, IBaseDto, IEditDto, new()
+        where TDto : class, IEditDto, new()
     {
         if (propertyType == null || parseValueError != null)
             return;
@@ -125,7 +125,7 @@ public static class BaseJsonPatchValidatorExtension
         Operation<TDto> operation,
         ValidationContext<TCommand> context,
         Type dtoType)
-        where TDto : class, IBaseDto, IEditDto, new()
+        where TDto : class, IEditDto, new()
     {
         if (!typeof(IEditDto).IsAssignableFrom(dtoType))
             throw new FormatException("Something went wrong while getting type of DTO for 'add' operation");
@@ -169,7 +169,7 @@ public static class BaseJsonPatchValidatorExtension
         Operation<TDto> operation,
         IMapper mapper,
         ValidationContext<TCommand> context)
-        where TDto : class, IBaseDto, IEditDto, new()
+        where TDto : class, IEditDto, new()
     {
         Type dtoType = GetLastDtoType(operation, mapper);
         if (!typeof(IEditDto).IsAssignableFrom(dtoType))
@@ -221,7 +221,7 @@ public static class BaseJsonPatchValidatorExtension
     }
 
     private static Type GetLastDtoType<TDto>(Operation<TDto> operation, IMapper mapper)
-        where TDto : class, IBaseDto, IEditDto, new()
+        where TDto : class, IEditDto, new()
     {
         string pathWithoutLastSegment = string.Join('/', operation.path.Split('/').SkipLast(1));
         var jsonPatchPath = new JsonPatchPath(pathWithoutLastSegment);

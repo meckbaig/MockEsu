@@ -5,7 +5,7 @@ namespace MockEsu.Web.Structure.OptionsSetup;
 
 public class JwtOptionsSetup : IConfigureOptions<JwtOptions>
 {
-    private const string SectionName = "Jwt";
+    public const string SectionName = "Jwt";
     private readonly IConfiguration _configuration;
 
     public JwtOptionsSetup(IConfiguration configuration)

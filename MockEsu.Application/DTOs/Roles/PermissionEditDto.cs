@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Application.DTOs.Roles;
 
-public record PermissionEditDto : IBaseDto, IEditDto
+public record PermissionEditDto : IEditDto
 {
     public int Id { get; set; }
 

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Domain.Entities.Authentification;
 using MockEsu.Infrastructure.Authentification;
+using MockEsu.Web.Structure.OptionsSetup;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,7 +32,7 @@ internal static class TestAuth
         var configuration = builder.Build();
 
         var jwtOptions = new JwtOptions();
-        configuration.GetSection("Jwt").Bind(jwtOptions);
+        configuration.GetSection(JwtOptionsSetup.SectionName).Bind(jwtOptions);
 
         User user = new()
         {

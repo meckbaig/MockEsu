@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Application.DTOs.Users;
 
-public record UserEditDto : IBaseDto, IEditDto
+public record UserEditDto : IEditDto
 {
     public string Name { get; set; }
     public string Email { get; set; }

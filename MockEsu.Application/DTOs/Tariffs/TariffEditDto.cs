@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Application.DTOs.Tariffs;
 
-public record TariffEditDto : IBaseDto, IEditDto
+public record TariffEditDto : IEditDto
 {
     public string Name { get; set; }
 

@@ -7,7 +7,7 @@ using MockEsu.Domain.Entities.Authentification;
 
 namespace MockEsu.Application.DTOs.Roles;
 
-public record RoleEditDto : IBaseDto, IEditDto
+public record RoleEditDto : IEditDto
 {
     public string Name { get; set; }
     public HashSet<PermissionEditDto> Permissions { get; set; }
