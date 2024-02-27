@@ -20,7 +20,7 @@ public class ListFiltersValidationTests
     }
 
     [Fact]
-    public async Task ValidateSkipValue_ReturnsOk_WhenTakeAndSkipDefault()
+    public async Task ValidateFilters_ReturnsOk_WhenDefault()
     {
         // Arrange
         var query = new TestKontragentsQuery();
@@ -55,7 +55,7 @@ public class ListFiltersValidationTests
     }
 
     [Fact]
-    public async Task ValidateSkipValue_ReturnsError_WhenTakeIsBelow0()
+    public async Task ValidateTakeValue_ReturnsError_WhenTakeIsBelow0()
     {
         // Arrange
         var query = new TestKontragentsQuery { take = -1 };
@@ -73,10 +73,30 @@ public class ListFiltersValidationTests
     }
 
     [Fact]
-    public async Task ValidateSkipValue_ReturnsListOf10StartingFromId10_WhenSkip10Take10()
+    public async Task ValidateSkipTakeValue_ReturnsListOf10StartingFromId10_WhenSkip10Take10()
     {
         // Arrange
         var query = new TestKontragentsQuery { skip = 10, take = 10 };
+
+        var validator = new TestKontragentsQueryValidator(_mapper);
+        var handler = new TestKontragentsQueryHandler(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(query);
+        var result = await handler.Handle(query, default);
+
+        // Assert
+        Assert.True(validationResult.IsValid);
+        Assert.NotNull(result);
+        Assert.Equal(10, result.Items.Count);
+        Assert.Equal(10, result.Items[0].Id);
+    }
+
+    [Fact]
+    public async Task ValidateDtoValue_ReturnsListOfSingleStartingWithId10_WhenSkip10Take1()
+    {
+        // Arrange
+        var query = new TestKontragentsQuery { skip = 10, take = 1 };
 
         var validator = new TestKontragentsQueryValidator(_mapper);
         var handler = new TestKontragentsQueryHandler(_mapper);
@@ -114,8 +134,6 @@ public class ListFiltersValidationTests
         // Assert
         Assert.True(validationResult.IsValid);
         Assert.NotNull(result);
-        Assert.Equal(10, result.Items.Count);
-        Assert.Equal(10, result.Items[0].Id);
         foreach (var prop in typeof(TestEntityDto).GetProperties())
         {
             object v1 = prop.GetValue(result.Items[0]);
