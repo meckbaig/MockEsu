@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using MockEsu.Application.Services.Kontragents;
+﻿using MockEsu.Application.Services.Kontragents;
+using MockEsu.Domain.Enums;
+using MockEsu.Infratructure.Authentification;
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace MockEsu.Web.Controllers.V1;
@@ -25,6 +25,7 @@ public class KontragentsController : ControllerBase
     }
 
     [HttpGet]
+    [HasPermission(Permission.ReadMember)]
     [Route("Get")]
     public async Task<ActionResult<GetKontragentsResponse>> GetList([FromQuery] GetKontragentsQuery query)
     {

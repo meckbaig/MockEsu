@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -28,8 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MockEsu.Application\MockEsu.Application.csproj" />
-    <ProjectReference Include="..\MockEsu.Web\MockEsu.Web.csproj" />
+    <ProjectReference Include="..\..\MockEsu.Application\MockEsu.Application.csproj" />
+    <ProjectReference Include="..\..\MockEsu.Infrastructure\MockEsu.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

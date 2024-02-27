@@ -29,5 +29,10 @@
     <ProjectReference Include="..\MockEsu.Application\MockEsu.Application.csproj" />
     <ProjectReference Include="..\MockEsu.Infrastructure\MockEsu.Infrastructure.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+	<InternalsVisibleTo Include="MockEsu.Application.IntegrationTests" />
+	<InternalsVisibleTo Include="MockEsu.Application.Tests" />
+  </ItemGroup>
 
 </Project>

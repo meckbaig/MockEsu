@@ -105,4 +105,4 @@ app.UseCors(builder => builder
 app.Run();
 
 
-public partial class Program { }
+//public partial class Program { }
