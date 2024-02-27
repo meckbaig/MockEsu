@@ -1,13 +1,8 @@
 using AutoMapper;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Logging;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Application.Services.Kontragents;
-using MockEsu.Domain.Entities;
-using MockEsu.Infrastructure.Data;
-using MockEsu.Infrastructure.Interceptors;
 using Moq;
 using NSubstitute;
 using System.Reflection;

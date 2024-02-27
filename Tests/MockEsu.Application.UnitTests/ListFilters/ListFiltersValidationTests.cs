@@ -1,13 +1,5 @@
 ﻿using AutoMapper;
-using MediatR;
-using Microsoft.Extensions.Caching.Distributed;
-using MockEsu.Application.Common.BaseRequests.ListQuery;
-using MockEsu.Application.Common.Dtos;
-using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
-using MockEsu.Domain.Common;
-using MockEsu.Domain.Entities;
-using System.Reflection;
 using Xunit;
 using static MockEsu.Application.UnitTests.ListFilters.ListFiltersValidationTestsClass;
 
@@ -20,8 +12,28 @@ public class ListFiltersValidationTests
     public ListFiltersValidationTests()
     {
         var config = new MapperConfiguration(c =>
-            c.AddMaps(Assembly.GetAssembly(typeof(IAppDbContext))));
+        {
+            c.AddProfile<TestEntityDto.Mapping>();
+            c.AddProfile<TestNestedEntityDto.Mapping>();
+        });
         _mapper = config.CreateMapper();
+    }
+
+    [Fact]
+    public async Task ValidateSkipValue_ReturnsOk_WhenTakeAndSkipDefault()
+    {
+        // Arrange
+        var query = new TestKontragentsQuery();
+
+        var validator = new TestKontragentsQueryValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(query);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+        Assert.Equal(0, validationResult.Errors.Count);
     }
 
     [Fact]
@@ -61,21 +73,54 @@ public class ListFiltersValidationTests
     }
 
     [Fact]
-    public async Task ValidateSkipValue_ReturnsOk_WhenTakeAndSkipDefault()
+    public async Task ValidateSkipValue_ReturnsListOf10StartingFromId10_WhenSkip10Take10()
     {
         // Arrange
-        var query = new TestKontragentsQuery();
+        var query = new TestKontragentsQuery { skip = 10, take = 10 };
 
         var validator = new TestKontragentsQueryValidator(_mapper);
+        var handler = new TestKontragentsQueryHandler(_mapper);
+
+        var referenceDto = new TestEntityDto
+        {
+            Id = 10,
+            EntityName = "Name10",
+            OriginalDescription = "Description10",
+            ReverseDescription = "01noitpircseD",
+            SomeInnerEntity = new() { NestedName = "NestedName110", Number = 165 },
+            DateString = "11 января 2024 г.",
+            SomeCount = 100,
+            NestedThings = new List<TestNestedEntityDto>
+            {
+                new() {
+                    NestedName = $"NestedName10",
+                    Number = 15
+                },
+                new() {
+                    NestedName = $"NestedName11",
+                    Number = 16
+                },
+                new() {
+                    NestedName = $"NestedName12",
+                    Number = 18
+                }
+            }
+        };
 
         // Act
         var validationResult = validator.Validate(query);
+        var result = await handler.Handle(query, default);
 
         // Assert
-        Assert.NotNull(validationResult);
         Assert.True(validationResult.IsValid);
-        Assert.Equal(0, validationResult.Errors.Count);
+        Assert.NotNull(result);
+        Assert.Equal(10, result.Items.Count);
+        Assert.Equal(10, result.Items[0].Id);
+        foreach (var prop in typeof(TestEntityDto).GetProperties())
+        {
+            object v1 = prop.GetValue(result.Items[0]);
+            object v2 = prop.GetValue(referenceDto);
+            Assert.Equal(v1, v2);
+        }
     }
-
-
 }

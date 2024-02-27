@@ -1,15 +1,14 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
+using MockEsu.Application.Common.Attributes;
 using MockEsu.Application.Common.BaseRequests.ListQuery;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Interfaces;
+using MockEsu.Application.DTOs.Kontragents;
+using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MockEsu.Application.UnitTests.ListFilters;
 
@@ -36,22 +35,25 @@ public static class ListFiltersValidationTestsClass
 
     public class TestKontragentsQueryHandler : IRequestHandler<TestKontragentsQuery, TestKontragentsResponse>
     {
-        private readonly IAppDbContext _context;
         private readonly IMapper _mapper;
-        private readonly IDistributedCache _cache;
 
-        public TestKontragentsQueryHandler(IAppDbContext context, IMapper mapper, IDistributedCache cache)
+        public TestKontragentsQueryHandler(IMapper mapper)
         {
-            _context = context;
             _mapper = mapper;
-            _cache = cache;
         }
 
         public async Task<TestKontragentsResponse> Handle(
             TestKontragentsQuery request,
             CancellationToken cancellationToken)
         {
-            return default;
+            int total = request.skip + (request.take != 0 ? request.take : 10);
+            var result = SeedTestEntities(total)
+                .AddFilters(request.GetFilterExpressions())
+                .AddOrderBy(request.GetOrderExpressions())
+                .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)
+                .ProjectTo<TestEntityDto>(_mapper.ConfigurationProvider)
+                .ToList();
+            return new TestKontragentsResponse { Items = result };
         }
     }
 
@@ -66,6 +68,8 @@ public static class ListFiltersValidationTestsClass
         public int SomeCount { get; set; }
 
         public HashSet<TestNestedEntity> TestNestedEntities { get; set; }
+
+        public TestNestedEntity InnerEntity { get; set; }
     }
 
     public class TestNestedEntity : BaseEntity
@@ -77,6 +81,9 @@ public static class ListFiltersValidationTestsClass
 
     public record TestEntityDto : IBaseDto
     {
+        [Filterable(CompareMethod.Equals)]
+        public int Id { get; set; }
+
         public string EntityName { get; set; }
 
         public string OriginalDescription { get; set; }
@@ -85,26 +92,32 @@ public static class ListFiltersValidationTestsClass
 
         public string DateString { get; set; }
 
-        public string SomeCountString { get; set; }
+        [Filterable(CompareMethod.Equals)]
+        public int SomeCount { get; set; }
 
+        [Filterable(CompareMethod.Nested)]
         public List<TestNestedEntityDto> NestedThings { get; set; }
+
+        [Filterable(CompareMethod.ById)]
+        public TestNestedEntityDto SomeInnerEntity { get; set; }
 
         public static Type GetOriginType()
         {
             return typeof(TestEntity);
         }
 
-        private class Mapping : Profile
+        public class Mapping : Profile
         {
             public Mapping()
             {
                 CreateMap<TestEntity, TestEntityDto>()
                     .ForMember(m => m.EntityName, opt => opt.MapFrom(o => o.Name))
                     .ForMember(m => m.OriginalDescription, opt => opt.MapFrom(o => o.Description))
-                    .ForMember(m => m.ReverseDescription, opt => opt.MapFrom(o => o.Description.ToCharArray().Reverse()))
+                    .ForMember(m => m.ReverseDescription, opt => opt.MapFrom(o => string.Concat(o.Description.ToCharArray().Reverse())))
                     .ForMember(m => m.DateString, opt => opt.MapFrom(o => o.Date.ToLongDateString()))
-                    .ForMember(m => m.SomeCountString, opt => opt.MapFrom(o => o.SomeCount))
-                    .ForMember(m => m.NestedThings, opt => opt.MapFrom(o => o.TestNestedEntities));
+                    .ForMember(m => m.SomeCount, opt => opt.MapFrom(o => o.SomeCount))
+                    .ForMember(m => m.NestedThings, opt => opt.MapFrom(o => o.TestNestedEntities))
+                    .ForMember(m => m.SomeInnerEntity, opt => opt.MapFrom(o => o.InnerEntity));
             }
         }
     }
@@ -120,29 +133,30 @@ public static class ListFiltersValidationTestsClass
             return typeof(TestNestedEntity);
         }
 
-        private class Mapping : Profile
+        public class Mapping : Profile
         {
             public Mapping()
             {
                 CreateMap<TestNestedEntity, TestNestedEntityDto>()
                     .ForMember(m => m.NestedName, opt => opt.MapFrom(o => o.Name))
-                    .ForMember(m => m.Number, opt => opt.MapFrom(o => o.Number));
+                    .ForMember(m => m.Number, opt => opt.MapFrom(o => (int)Math.Round(o.Number)));
             }
         }
     }
 
-    public static List<TestEntity> SeedTestEntities(int count = 10)
+    public static IQueryable<TestEntity> SeedTestEntities(int count = 10)
     {
         List<TestEntity> entities = new List<TestEntity>();
 
-        for (int i = 0; i < count; i++)
+        int itemsCount = count != 0 ? count : 10;
+        for (int i = 0; i < itemsCount; i++)
         {
             var entity = new TestEntity
             {
                 Id = i,
                 Name = $"Name{i}",
                 Description = $"Description{i}",
-                Date = DateOnly.FromDateTime(new DateTime(2024, 1, 0).AddDays(i)),
+                Date = DateOnly.FromDateTime(new DateTime(2024, 1, 1).AddDays(i)),
                 SomeCount = i * 10,
                 TestNestedEntities = new HashSet<TestNestedEntity>
                 {
@@ -161,12 +175,18 @@ public static class ListFiltersValidationTestsClass
                         Name = $"NestedName{i+2}",
                         Number = (i+2) * 1.5
                     }
+                },
+                InnerEntity = new()
+                {
+                    Id = 100+i,
+                    Name = $"NestedName{100+i}",
+                    Number = (100+i) * 1.5
                 }
             };
 
             entities.Add(entity);
         }
 
-        return entities;
+        return entities.AsQueryable();
     }
 }
