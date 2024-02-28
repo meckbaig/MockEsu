@@ -328,6 +328,15 @@ public static class EntityFrameworkFiltersExtension
         PropertyInfo? property = type.GetProperties().FirstOrDefault(
             p => ((ForeignKeyAttribute)p.GetCustomAttributes(true)
             .FirstOrDefault(a => a.GetType() == typeof(ForeignKeyAttribute)))?.Name == modelName)!;
+        if (property == null)
+        {
+            string idPropertyName = type.GetProperties()
+                .FirstOrDefault(p => p.Name == modelName)
+                .GetCustomAttribute<ForeignKeyAttribute>()
+                .Name;
+            property = type.GetProperties()
+                .FirstOrDefault(p => p.Name == idPropertyName);
+        }
         return property?.Name;
     }
 
