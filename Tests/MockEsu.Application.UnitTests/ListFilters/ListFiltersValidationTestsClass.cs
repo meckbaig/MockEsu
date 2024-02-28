@@ -9,6 +9,7 @@ using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Common;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MockEsu.Application.UnitTests.ListFilters;
 
@@ -69,7 +70,10 @@ public static class ListFiltersValidationTestsClass
 
         public HashSet<TestNestedEntity> TestNestedEntities { get; set; }
 
+        [ForeignKey(nameof(InnerEntityId))]
         public TestNestedEntity InnerEntity { get; set; }
+
+        public int InnerEntityId { get; set; }
     }
 
     public class TestNestedEntity : BaseEntity
@@ -124,8 +128,11 @@ public static class ListFiltersValidationTestsClass
 
     public record TestNestedEntityDto : IBaseDto
     {
+        public int Id { get; set; }
+
         public string NestedName { get; set; }
 
+        [Filterable(CompareMethod.Equals)]
         public int Number { get; set; }
 
         public static Type GetOriginType()
@@ -138,6 +145,7 @@ public static class ListFiltersValidationTestsClass
             public Mapping()
             {
                 CreateMap<TestNestedEntity, TestNestedEntityDto>()
+                    .ForMember(m => m.Id, opt => opt.MapFrom(o => o.Id))
                     .ForMember(m => m.NestedName, opt => opt.MapFrom(o => o.Name))
                     .ForMember(m => m.Number, opt => opt.MapFrom(o => (int)Math.Round(o.Number)));
             }
@@ -181,7 +189,8 @@ public static class ListFiltersValidationTestsClass
                     Id = 100+i,
                     Name = $"NestedName{100+i}",
                     Number = (100+i) * 1.5
-                }
+                },
+                InnerEntityId = 100 + i
             };
 
             entities.Add(entity);

@@ -54,7 +54,8 @@ public static class BaseJournalQueryFilterValidatorExtension
 
         string expressionErrorMessage = string.Empty;
         ruleBuilder = ruleBuilder
-            .Must((query, filter) => CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>(query, filterEx, ref expressionErrorMessage))
+            .Must((query, filter) => CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>
+                                                        (query, filterEx, ref expressionErrorMessage))
             .WithMessage(x => expressionErrorMessage)
             .WithErrorCode(ValidationErrorCode.CanNotCreateExpressionValidator.ToString());
 
@@ -100,7 +101,9 @@ public static class BaseJournalQueryFilterValidatorExtension
         where TDestintaion : IBaseDto
         where TSource : BaseEntity
     {
-        if (filterEx == null || filterEx.ExpressionType == FilterExpressionType.Undefined)
+        if (filterEx == null || 
+            filterEx.EndPoint == null || 
+            filterEx.ExpressionType == FilterExpressionType.Undefined)
             return true;
         return EntityFrameworkFiltersExtension
             .TryGetFilterAttributes<TDestintaion>(filterEx);
@@ -146,27 +149,37 @@ public static class BaseJournalQuerySortValidatorExtension
         where TSource : BaseEntity
     {
         string key = string.Empty;
+        string? endPoint = null;
         ruleBuilder = ruleBuilder
-            .Must((query, filter) => PropertyExists<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref key))
+            .Must((query, filter) => PropertyExists<TSource, TDestintaion>(filter, mapper.ConfigurationProvider, ref key, out endPoint))
             .WithMessage(x => $"Property '{key.ToCamelCase()}' does not exist")
             .WithErrorCode(ValidationErrorCode.PropertyDoesNotExistValidator.ToString());
 
         ruleBuilder = ruleBuilder
-            .Must((query, filter) => ExpressionIsValid<TQuery, TResponseList, TDestintaion, TSource>
-            (query, filter, mapper.ConfigurationProvider))
+            .Must((query, filter) => 
+            {
+                if (endPoint == null)
+                    return false;
+                return ExpressionIsValid<TQuery, TResponseList, TDestintaion, TSource>
+                    (query, filter, mapper.ConfigurationProvider);
+            })
             .WithMessage((query, filter) => $"{filter} - expression is undefined")
             .WithErrorCode(ValidationErrorCode.ExpressionIsUndefinedValidator.ToString());
 
         return ruleBuilder;
     }
 
-    private static bool PropertyExists<TSource, TDestintaion>(string filter, IConfigurationProvider provider, ref string key)
+    private static bool PropertyExists<TSource, TDestintaion>(
+        string filter,
+        IConfigurationProvider provider,
+        ref string key,
+        out string? endPoint)
     {
         if (filter.Contains(' '))
             key = filter[..filter.IndexOf(' ')].ToPascalCase();
         else
             key = filter.ToPascalCase();
-        string endPoint = EntityFrameworkOrderByExtension
+        endPoint = EntityFrameworkOrderByExtension
             .GetExpressionEndpoint<TSource, TDestintaion>(key, provider);
         if (endPoint == null)
             return false;

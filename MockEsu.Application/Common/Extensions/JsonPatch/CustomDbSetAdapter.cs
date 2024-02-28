@@ -351,7 +351,6 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             (context as DbContext).ChangeTracker.Clear();
             context.Entry(parent).State = EntityState.Unchanged;
             context.Entry(entity).State = EntityState.Unchanged;
-            /// TODO: имплементировать разные способы......
             if (GetRelation(listProperty) != Relation.ManyToMany)
             {
                 AddEntityAndItsChildrenToContext(entity, context);

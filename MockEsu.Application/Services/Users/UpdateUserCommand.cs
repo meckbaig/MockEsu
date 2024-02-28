@@ -52,6 +52,7 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Updat
 
     public async Task<UpdateUserResponse> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
     {
+        ///TODO: move to validator
         User? user = _context.Users.Include(u => u.Role)
             .FirstOrDefault(u => u.Id == request.Id);
         if (user == null)
@@ -64,7 +65,7 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Updat
         {
             Item = _mapper.Map<UserPreviewDto>(user)
         };
-        ////TODO: move to validator
+        
         //User? user = _context.Users.Include(u => u.Role)
         //    .FirstOrDefault(u => u.Id == request.Item.Id);
         //if (user == null)

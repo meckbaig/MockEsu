@@ -325,7 +325,7 @@ internal static class DtoExtension
         }
         else
         {
-            sourceProperty = string.Empty;
+            sourceProperty = null;
         }
         errorMessage = (string)parameters[4];
         return boolResult;

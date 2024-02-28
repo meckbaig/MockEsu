@@ -15,6 +15,7 @@ public class FilterableAttribute : Attribute
     }
 }
 
+///TODO: добавить ByInnerId (если Id только в внешней модели, в таком случае надо делать Join
 /// <summary>
 /// 
 /// </summary>
