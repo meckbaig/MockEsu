@@ -46,7 +46,7 @@ public record FilterExpression : IEntityFrameworkExpression<FilterExpressionType
     /// <summary>
     /// Entity compare method
     /// </summary>
-    public CompareMethod CompareMethod { get; set; }
+    public CompareMethod CompareMethod { get; set; } = CompareMethod.Undefined;
 
     /// <summary>
     /// Factory constructor.

@@ -5,6 +5,7 @@ using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Common.Extensions.StringExtensions;
 using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Common;
+using System.Linq.Expressions;
 
 namespace MockEsu.Application.Common.BaseRequests.ListQuery;
 
@@ -48,14 +49,14 @@ public static class BaseJournalQueryFilterValidatorExtension
             .WithErrorCode(ValidationErrorCode.ExpressionIsUndefinedValidator.ToString());
 
         ruleBuilder = ruleBuilder
-            .Must((query, filter) => PropertyIsFilterable<TDestintaion, TSource>(filterEx))
-            .WithMessage((query, filter) => $"Property {filterEx.Key.ToCamelCase()}' is not filterable")
+            .Must((query, filter) => PropertyIsFilterable<TDestintaion, TSource>(filterEx, out key))
+            .WithMessage((query, filter) => $"Property '{key.ToCamelCase()}' is not filterable")
             .WithErrorCode(ValidationErrorCode.PropertyIsNotFilterableValidator.ToString());
 
         string expressionErrorMessage = string.Empty;
         ruleBuilder = ruleBuilder
             .Must((query, filter) => CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>
-                                                        (query, filterEx, ref expressionErrorMessage))
+                    (query, filterEx, ref expressionErrorMessage))
             .WithMessage(x => expressionErrorMessage)
             .WithErrorCode(ValidationErrorCode.CanNotCreateExpressionValidator.ToString());
 
@@ -97,16 +98,17 @@ public static class BaseJournalQueryFilterValidatorExtension
     }
 
     private static bool PropertyIsFilterable<TDestintaion, TSource>
-        (FilterExpression filterEx)
+        (FilterExpression filterEx, out string key)
         where TDestintaion : IBaseDto
         where TSource : BaseEntity
     {
+        key = null;
         if (filterEx == null || 
             filterEx.EndPoint == null || 
             filterEx.ExpressionType == FilterExpressionType.Undefined)
             return true;
         return EntityFrameworkFiltersExtension
-            .TryGetFilterAttributes<TDestintaion>(filterEx);
+            .TryGetFilterAttributes<TDestintaion>(filterEx, out key);
     }
 
     private static bool CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>
@@ -119,7 +121,7 @@ public static class BaseJournalQueryFilterValidatorExtension
 
         if (filterEx == null ||
             filterEx.ExpressionType == FilterExpressionType.Undefined ||
-            filterEx?.CompareMethod == null)
+            filterEx.CompareMethod == Attributes.CompareMethod.Undefined)
         {
             return true;
         }
@@ -224,10 +226,10 @@ public static class BaseJournalQuerySortValidatorExtension
         try
         {
             if (!EntityFrameworkOrderByExtension.TryGetLinqExpression<TSource>(orderByEx, out Expression expression))
-            return false;
+                return false;
             query.AddOrderExpression(expression);
-        return true;
-    }
+            return true;
+        }
         catch (Exception ex)
         {
             errorMessage = ex.Message;

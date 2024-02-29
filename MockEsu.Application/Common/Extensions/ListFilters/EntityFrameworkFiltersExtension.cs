@@ -8,7 +8,6 @@ using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Domain.Common;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
-using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -96,13 +95,14 @@ public static class EntityFrameworkFiltersExtension
     /// <param name="propertyPath">Property path to get attribute from.</param>
     /// <returns>Returns FilterableAttribute models for full path if success, null if error.</returns>
     public static bool TryGetFilterAttributes<TDestintaion>
-        (FilterExpression filterEx)
+        (FilterExpression filterEx, out string key)
         where TDestintaion : IBaseDto
     {
         var tmpFilterEx = filterEx;
         Type nextSegmentType = typeof(TDestintaion);
         do
         {
+            key = tmpFilterEx.Key;
             var prop = nextSegmentType.GetProperties().FirstOrDefault(p => p.Name == tmpFilterEx.Key)!;
 
             var attribute = (FilterableAttribute)prop.GetCustomAttributes(true)
