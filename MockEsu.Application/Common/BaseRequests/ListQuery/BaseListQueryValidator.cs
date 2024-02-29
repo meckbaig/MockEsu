@@ -155,16 +155,24 @@ public static class BaseJournalQuerySortValidatorExtension
             .WithMessage(x => $"Property '{key.ToCamelCase()}' does not exist")
             .WithErrorCode(ValidationErrorCode.PropertyDoesNotExistValidator.ToString());
 
+        OrderByExpression orderByEx = null;
         ruleBuilder = ruleBuilder
             .Must((query, filter) => 
             {
                 if (endPoint == null)
                     return false;
                 return ExpressionIsValid<TQuery, TResponseList, TDestintaion, TSource>
-                    (query, filter, mapper.ConfigurationProvider);
+                    (filter, mapper.ConfigurationProvider, out orderByEx);
             })
             .WithMessage((query, filter) => $"{filter} - expression is undefined")
             .WithErrorCode(ValidationErrorCode.ExpressionIsUndefinedValidator.ToString());
+
+        string expressionErrorMessage = string.Empty;
+        ruleBuilder = ruleBuilder
+            .Must((query, filter) => CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>
+                    (query, orderByEx, ref expressionErrorMessage))
+            .WithMessage(x => expressionErrorMessage)
+            .WithErrorCode(ValidationErrorCode.CanNotCreateExpressionValidator.ToString());
 
         return ruleBuilder;
     }
@@ -188,17 +196,42 @@ public static class BaseJournalQuerySortValidatorExtension
 
     private static bool ExpressionIsValid
         <TQuery, TResponseList, TDestintaion, TSource>
-        (TQuery query, string filter, IConfigurationProvider provider)
+        (string filter, IConfigurationProvider provider, out OrderByExpression orderByEx)
         where TQuery : BaseListQuery<TResponseList>
         where TResponseList : BaseListQueryResponse<TDestintaion>
         where TDestintaion : IBaseDto
         where TSource : BaseEntity
     {
-        OrderByExpression ex = EntityFrameworkOrderByExtension.GetOrderByExpression<TSource, TDestintaion>(filter, provider);
-        if (ex?.ExpressionType == OrderByExpressionType.Undefined)
+        orderByEx = EntityFrameworkOrderByExtension.GetOrderByExpression<TSource, TDestintaion>(filter, provider);
+        if (orderByEx?.ExpressionType == OrderByExpressionType.Undefined)
             return false;
-        if (ex != null)
-            query.AddOrderExpression(ex);
         return true;
+    }
+
+    private static bool CanCreateExpression<TQuery, TResponseList, TDestintaion, TSource>
+        (TQuery query, OrderByExpression? orderByEx, ref string errorMessage)
+        where TQuery : BaseListQuery<TResponseList>
+        where TResponseList : BaseListQueryResponse<TDestintaion>
+        where TDestintaion : IBaseDto
+        where TSource : BaseEntity
+    {
+
+        if (orderByEx == null ||
+            orderByEx.ExpressionType == OrderByExpressionType.Undefined)
+        {
+            return true;
+        }
+        try
+        {
+            if (!EntityFrameworkOrderByExtension.TryGetLinqExpression<TSource>(orderByEx, out Expression expression))
+            return false;
+            query.AddOrderExpression(expression);
+        return true;
+    }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            return false;
+        }
     }
 }

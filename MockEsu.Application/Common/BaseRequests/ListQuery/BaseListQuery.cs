@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices.JavaScript;
 using MockEsu.Application.Extensions.ListFilters;
@@ -17,17 +16,17 @@ public abstract record BaseListQuery<TResponse> : BaseRequest<TResponse>
     // ReSharper restore InconsistentNaming
 
     private readonly List<Expression> _filterExpressions = [];
-    private readonly List<OrderByExpression> _orderExpressions = [];
+    private readonly List<Expression> _orderExpressions = [];
     
     public List<Expression> GetFilterExpressions() 
         => _filterExpressions;
     
-    public List<OrderByExpression> GetOrderExpressions() 
+    public List<Expression> GetOrderExpressions() 
         => _orderExpressions;
 
     public void AddFilterExpression(Expression expression)
         => _filterExpressions!.Add(expression);
 
-    public void AddOrderExpression(OrderByExpression expression)
+    public void AddOrderExpression(Expression expression)
         => _orderExpressions!.Add(expression);
 }

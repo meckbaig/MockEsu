@@ -3,13 +3,12 @@ using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Domain.Common;
-using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 
 namespace MockEsu.Application.Extensions.ListFilters;
 
 /// <summary>
-/// Custom EF Core extencion class for dynamic sorting
+/// Custom EF Core extension class for dynamic sorting
 /// </summary>
 public static class EntityFrameworkOrderByExtension
 {
@@ -22,21 +21,54 @@ public static class EntityFrameworkOrderByExtension
     /// <param name="orderByExpressions">Array of sort expressions</param>
     /// <returns>An <typeparamref name="IOrderedQueryable"/> that contains sorting</returns>
     public static IOrderedQueryable<TSource> AddOrderBy<TSource>
-        (this IQueryable<TSource> source, List<OrderByExpression>? orderByExpressions)
+        (this IQueryable<TSource> source, List<Expression>? orderByDelegates)
         where TSource : BaseEntity
     {
-        if (orderByExpressions == null)
-            return (IOrderedQueryable<TSource>)source;
         IOrderedQueryable<TSource> result = source.OrderBy(x => 0);
-        for (int i = 0; i < orderByExpressions.Count; i++)
+        if (orderByDelegates != null)
         {
-            result = result.AppendToQuery(orderByExpressions[i]);
+            foreach (var orderByDelegate in orderByDelegates)
+            {
+                var func = (Expression<Func<IOrderedQueryable<TSource>, IOrderedQueryable<TSource>>>)orderByDelegate;
+                result = func.Compile()(result);
+            }
         }
         return result;
     }
 
-    private static IOrderedQueryable<TSource> AppendToQuery<TSource>
-        (this IOrderedQueryable<TSource> source, OrderByExpression orderByEx)
+    //private static IOrderedQueryable<TSource> AppendToQuery<TSource>
+    //    (this IOrderedQueryable<TSource> source, OrderByExpression orderByEx)
+    //    where TSource : BaseEntity
+    //{
+    //    var param = Expression.Parameter(typeof(TSource), "x");
+
+    //    string[] endpoint = orderByEx.EndPoint.Split('.');
+    //    MemberExpression propExpression = Expression.Property(param, endpoint[0]);
+    //    if (endpoint.Length != 1)
+    //    {
+    //        for (int i = 1; i < endpoint.Length; i++)
+    //        {
+    //            propExpression = Expression.Property(propExpression, endpoint[i]);
+    //        }
+    //    }
+
+    //    var func = typeof(Func<,>);
+    //    var genericFunc = func.MakeGenericType(typeof(TSource), propExpression.Type);
+    //    var lambda = Expression.Lambda(genericFunc, propExpression, param);
+
+    //    switch (orderByEx.ExpressionType)
+    //    {
+    //        case OrderByExpressionType.Ascending:
+    //            return source.ThenBy($"{lambda}");
+    //        case OrderByExpressionType.Descending:
+    //            return source.ThenBy($"{lambda} desc");
+    //        default:
+    //            return source;
+    //    }
+    //}
+    public static bool TryGetLinqExpression<TSource>(
+        OrderByExpression orderByEx,
+        out Func<IOrderedQueryable<TSource>, IOrderedQueryable<TSource>> orderByDelegate)
         where TSource : BaseEntity
     {
         var param = Expression.Parameter(typeof(TSource), "x");
@@ -55,16 +87,86 @@ public static class EntityFrameworkOrderByExtension
         var genericFunc = func.MakeGenericType(typeof(TSource), propExpression.Type);
         var lambda = Expression.Lambda(genericFunc, propExpression, param);
 
+        Expression<Func<TSource, object>> keySelector = Expression.Lambda<Func<TSource, object>>(lambda, param);
+
+
+
+        ///TODO: переписать без костыля и удалить либу
         switch (orderByEx.ExpressionType)
         {
             case OrderByExpressionType.Ascending:
-                return source.ThenBy($"{lambda}");
+                orderByDelegate = (IOrderedQueryable<TSource> source) => source.ThenBy(keySelector);
+                break;
             case OrderByExpressionType.Descending:
-                return source.ThenBy($"{lambda} desc");
+                orderByDelegate = (IOrderedQueryable<TSource> source) => source.ThenByDescending(keySelector);
+                break;
             default:
-                return source;
+                orderByDelegate = (IOrderedQueryable<TSource> source) => source;
+                return false;
         }
+
+        return true;
     }
+
+    public static bool TryGetLinqExpression<TSource>(
+        OrderByExpression orderByEx,
+        out Expression? expression)
+        where TSource : BaseEntity
+    {
+        var param = Expression.Parameter(typeof(TSource), "x");
+
+        string[] endpoint = orderByEx.EndPoint.Split('.');
+        MemberExpression propExpression = Expression.Property(param, endpoint[0]);
+        if (endpoint.Length != 1)
+        {
+            for (int i = 1; i < endpoint.Length; i++)
+            {
+                propExpression = Expression.Property(propExpression, endpoint[i]);
+            }
+        }
+
+        var func = typeof(Func<,>);
+        var genericFunc = func.MakeGenericType(typeof(TSource), propExpression.Type);
+        var lambda = Expression.Lambda(genericFunc, propExpression, param);
+
+        Expression<Func<TSource, object>> keySelector = Expression.Lambda<Func<TSource, object>>(lambda, param);
+
+        Func<IOrderedQueryable<TSource>, IOrderedQueryable<TSource>> orderByDelegate;
+
+        string? expressionName;
+        switch (orderByEx.ExpressionType)
+        {
+            case OrderByExpressionType.Ascending:
+                expressionName = nameof(Queryable.ThenBy);
+                break;
+            case OrderByExpressionType.Descending:
+                expressionName = nameof(Queryable.ThenByDescending);
+                break;
+            default:
+                expressionName = null;
+                break;
+        }
+
+        if (expressionName == null)
+        {
+            expression = null;
+            return false;
+        }
+
+        var sourceParam = Expression.Parameter(typeof(IOrderedQueryable<TSource>), "source");
+        var thing = Expression.Call(
+                typeof(Queryable),
+                expressionName,
+                [typeof(TSource), propExpression.Type],
+                sourceParam,
+                Expression.Quote(lambda));
+
+        expression = Expression.Lambda<Func<IOrderedQueryable<TSource>, IOrderedQueryable<TSource>>>(thing, sourceParam);
+        return true;
+    }
+
+
+
 
     /// <summary>
     /// Gets full endpoint route string

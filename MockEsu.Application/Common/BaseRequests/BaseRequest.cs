@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Linq.Dynamic.Core;
 using MediatR;
 
 namespace MockEsu.Application.Common.BaseRequests;
@@ -18,8 +17,8 @@ public record BaseRequest<TResponse> : IRequest<TResponse> where TResponse : Bas
                 var value = prop.GetValue(this, null);
                 if (value != null)
                 {
-                    if (value is IEnumerable enumerable)
-                        props.Add(prop.Name, string.Join(',', enumerable.ToDynamicList()));
+                    if (value is ICollection collection)
+                        props.Add(prop.Name, string.Join(',', collection));
                     else
                         props.Add(prop.Name, value.ToString()!);
                         

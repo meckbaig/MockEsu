@@ -28,6 +28,7 @@ public class FilterableAttribute : Attribute
 /// </remarks>
 public enum CompareMethod
 {
+    Undefined = -1,
     Equals,
     ById,
     Nested

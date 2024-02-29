@@ -7,7 +7,6 @@ using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Extensions.JsonPatch;
 using MockEsu.Application.Common.Extensions.StringExtensions;
 using System.Collections;
-using System.Linq.Dynamic.Core;
 using System.Reflection;
 
 namespace MockEsu.Application.Common.BaseRequests.JsonPatchCommand;
