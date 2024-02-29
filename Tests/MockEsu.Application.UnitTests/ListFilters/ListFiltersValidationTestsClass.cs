@@ -128,6 +128,7 @@ public static class ListFiltersValidationTestsClass
 
     public record TestNestedEntityDto : IBaseDto
     {
+        [Filterable(CompareMethod.Equals)]
         public int Id { get; set; }
 
         public string NestedName { get; set; }
@@ -164,8 +165,8 @@ public static class ListFiltersValidationTestsClass
                 Id = i,
                 Name = $"Name{i}",
                 Description = $"Description{i}",
-                Date = DateOnly.FromDateTime(new DateTime(2024, 1, 1).AddDays(i)),
-                SomeCount = i * 10,
+                Date = DateOnly.FromDateTime(new DateTime(2024, 1, 1).AddDays(-i)),
+                SomeCount = 100 - i * 10,
                 TestNestedEntities = new HashSet<TestNestedEntity>
                 {
                     new() {

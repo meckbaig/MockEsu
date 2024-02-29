@@ -84,7 +84,9 @@ public class ListFiltersValidationTests
 
         // Act
         var validationResult = validator.Validate(query);
-        var result = await handler.Handle(query, default);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
 
         // Assert
         Assert.True(validationResult.IsValid);
@@ -109,8 +111,8 @@ public class ListFiltersValidationTests
             OriginalDescription = "Description10",
             ReverseDescription = "01noitpircseD",
             SomeInnerEntity = new() { Id = 110, NestedName = "NestedName110", Number = 165 },
-            DateString = "11 января 2024 г.",
-            SomeCount = 100,
+            DateString = "22 декабря 2023 г.",
+            SomeCount = 0,
             NestedThings = new List<TestNestedEntityDto>
             {
                 new() {
@@ -133,15 +135,17 @@ public class ListFiltersValidationTests
 
         // Act
         var validationResult = validator.Validate(query);
-        var result = await handler.Handle(query, default);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
 
         // Assert
         Assert.True(validationResult.IsValid);
         Assert.NotNull(result);
         foreach (var prop in typeof(TestEntityDto).GetProperties())
         {
-            object v1 = prop.GetValue(result.Items[0]);
-            object v2 = prop.GetValue(referenceDto);
+            object v1 = prop.GetValue(referenceDto);
+            object v2 = prop.GetValue(result.Items[0]);
             Assert.Equal(v1, v2);
         }
     }
@@ -266,7 +270,25 @@ public class ListFiltersValidationTests
             validationResult.Errors[0].ErrorCode);
     }
 
-    ///TODO: написать сюда тесты с применением фильтров и прочего
+    [Fact]
+    public async Task TestOrderBy_ReturnsError_WhenOrderByDateStringWhichIsNotSimpleMapping()
+    {
+        // Arrange
+        var query = new TestKontragentsQuery { orderBy = ["dateString"] };
+
+        var validator = new TestKontragentsQueryValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(query);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.True(validationResult.Errors.Count > 0);
+        Assert.Equal(
+            ValidationErrorCode.CanNotCreateExpressionValidator.ToString(),
+            validationResult.Errors[0].ErrorCode);
+    }
 
     [Fact]
     public async Task TestFilters_ReturnsListOf1WithCorrespondingId_WhenFilterBySingleId()
@@ -279,7 +301,9 @@ public class ListFiltersValidationTests
 
         // Act
         var validationResult = validator.Validate(query);
-        var result = await handler.Handle(query, default);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(validationResult);
@@ -299,7 +323,9 @@ public class ListFiltersValidationTests
 
         // Act
         var validationResult = validator.Validate(query);
-        var result = await handler.Handle(query, default);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(validationResult);
@@ -319,7 +345,9 @@ public class ListFiltersValidationTests
 
         // Act
         var validationResult = validator.Validate(query);
-        var result = await handler.Handle(query, default);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(validationResult);
@@ -339,7 +367,9 @@ public class ListFiltersValidationTests
 
         // Act
         var validationResult = validator.Validate(query);
-        var result = await handler.Handle(query, default);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(validationResult);
@@ -359,7 +389,9 @@ public class ListFiltersValidationTests
 
         // Act
         var validationResult = validator.Validate(query);
-        var result = await handler.Handle(query, default);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(validationResult);
@@ -379,12 +411,103 @@ public class ListFiltersValidationTests
 
         // Act
         var validationResult = validator.Validate(query);
-        var result = await handler.Handle(query, default);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(validationResult);
         Assert.True(validationResult.IsValid);
         Assert.NotNull(result?.Items);
         Assert.Equal(107, result.Items?[0]?.SomeInnerEntity?.Id);
+    }
+
+    [Fact]
+    public async Task TestFilters_ReturnsList_WhenFilterByRangeOfEntitiesById()
+    {
+        // Arrange
+        var query = new TestKontragentsQuery { filters = ["someInnerEntity:105..107"] };
+
+        var validator = new TestKontragentsQueryValidator(_mapper);
+        var handler = new TestKontragentsQueryHandler(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(query);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+        Assert.NotNull(result?.Items);
+        Assert.False(result.Items.Any(x => x.SomeInnerEntity?.Id < 105 || x.SomeInnerEntity?.Id > 107));
+    }
+
+    [Fact]
+    public async Task TestFilters_ReturnsListWithAtLeastOneNestedPropertyWithId5_WhenFilterByNestedPeopertyWithId5()
+    {
+        // Arrange
+        var query = new TestKontragentsQuery { filters = ["nestedThings.id:5"] };
+
+        var validator = new TestKontragentsQueryValidator(_mapper);
+        var handler = new TestKontragentsQueryHandler(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(query);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+        Assert.NotNull(result?.Items);
+        // i, i+1, i+2 => 5, 4+1, 3+1
+        Assert.Equal(3, result.Items.Count());
+    }
+
+    [Fact]
+    public async Task TestOrderBy_ReturnsListOrderedByIdDesc_WhenOrderByIdDesc()
+    {
+        // Arrange
+        var query = new TestKontragentsQuery { orderBy = ["id desc"] };
+
+        var validator = new TestKontragentsQueryValidator(_mapper);
+        var handler = new TestKontragentsQueryHandler(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(query);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+        Assert.NotNull(result?.Items);
+        Assert.Equal(result.Items.OrderByDescending(x => x.Id), result.Items);
+    }
+
+    [Fact]
+    public async Task TestOrderBy_ReturnsListOrderedByCount_WhenOrderByCount()
+    {
+        // Arrange
+        var query = new TestKontragentsQuery { orderBy = ["someCount"] };
+
+        var validator = new TestKontragentsQueryValidator(_mapper);
+        var handler = new TestKontragentsQueryHandler(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(query);
+        TestKontragentsResponse result = null;
+        if (validationResult.IsValid)
+            result = await handler.Handle(query, default);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+        Assert.NotNull(result?.Items);
+        Assert.Equal(result.Items.OrderBy(x => x.SomeCount), result.Items);
     }
 }
