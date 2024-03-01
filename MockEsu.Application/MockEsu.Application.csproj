@@ -34,5 +34,11 @@
       <HintPath>..\..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\8.0.1\Microsoft.AspNetCore.Routing.dll</HintPath>
     </Reference>
   </ItemGroup>
+  
+  <ItemGroup>
+	<InternalsVisibleTo Include="MockEsu.Application.IntegrationTests" />
+	<InternalsVisibleTo Include="MockEsu.Application.UnitTests" />
+	<InternalsVisibleTo Include="MockEsu.Application.Tests" />
+  </ItemGroup>
 
 </Project>
