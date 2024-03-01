@@ -2,7 +2,7 @@
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.DTOs.Kontragents;
 using Xunit;
-using static MockEsu.Application.UnitTests.ListFilters.ListFiltersValidationTestsClass;
+using static MockEsu.Application.UnitTests.ValidationTestsEntites;
 
 namespace MockEsu.Application.UnitTests.ListFilters;
 
@@ -24,10 +24,10 @@ public class ListFiltersImplementationTests
     public async Task TestDtoValue_ReturnsListOfSingleStartingWithId10_WhenSkip10Take1()
     {
         // Arrange
-        var query = new TestKontragentsQuery { skip = 10, take = 1 };
+        var query = new TestQuery { skip = 10, take = 1 };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         var referenceDto = new TestEntityDto
         {
@@ -60,7 +60,7 @@ public class ListFiltersImplementationTests
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 
@@ -79,14 +79,14 @@ public class ListFiltersImplementationTests
     public async Task TestFilters_ReturnsListOf1WithCorrespondingId_WhenFilterBySingleId()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["id:3"] };
+        var query = new TestQuery { filters = ["id:3"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 
@@ -101,14 +101,14 @@ public class ListFiltersImplementationTests
     public async Task TestFilters_ReturnsListWithCorrespondingId_WhenFilterByRangeOfIds()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["id:3..7"] };
+        var query = new TestQuery { filters = ["id:3..7"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 
@@ -123,14 +123,14 @@ public class ListFiltersImplementationTests
     public async Task TestFilters_ReturnsListOf0_WhenFilterOutOfRange()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["id:133"] };
+        var query = new TestQuery { filters = ["id:133"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 
@@ -145,14 +145,14 @@ public class ListFiltersImplementationTests
     public async Task TestFilters_ReturnsListOfCorrespondingId_WhenFilterWithoutUpperLimit()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["id:3.."] };
+        var query = new TestQuery { filters = ["id:3.."] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 
@@ -167,14 +167,14 @@ public class ListFiltersImplementationTests
     public async Task TestFilters_ReturnsListOfCorrespondingId_WhenFilterWithoutBottomLimit()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["id:..7"] };
+        var query = new TestQuery { filters = ["id:..7"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 
@@ -189,14 +189,14 @@ public class ListFiltersImplementationTests
     public async Task TestFilters_ReturnsList_WhenFilterSingleEntityById()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["someInnerEntity:107"] };
+        var query = new TestQuery { filters = ["someInnerEntity:107"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 
@@ -211,14 +211,14 @@ public class ListFiltersImplementationTests
     public async Task TestFilters_ReturnsList_WhenFilterByRangeOfEntitiesById()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["someInnerEntity:105..107"] };
+        var query = new TestQuery { filters = ["someInnerEntity:105..107"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 
@@ -233,14 +233,14 @@ public class ListFiltersImplementationTests
     public async Task TestFilters_ReturnsListWithAtLeastOneNestedPropertyWithId5_WhenFilterByNestedPeopertyWithId5()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["nestedThings.id:5"] };
+        var query = new TestQuery { filters = ["nestedThings.id:5"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 
@@ -256,14 +256,14 @@ public class ListFiltersImplementationTests
     public async Task TestOrderBy_ReturnsListOrderedByIdDesc_WhenOrderByIdDesc()
     {
         // Arrange
-        var query = new TestKontragentsQuery { orderBy = ["id desc"] };
+        var query = new TestQuery { orderBy = ["id desc"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 
@@ -278,14 +278,14 @@ public class ListFiltersImplementationTests
     public async Task TestOrderBy_ReturnsListOrderedByCount_WhenOrderByCount()
     {
         // Arrange
-        var query = new TestKontragentsQuery { orderBy = ["someCount"] };
+        var query = new TestQuery { orderBy = ["someCount"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 

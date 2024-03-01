@@ -2,7 +2,7 @@
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.DTOs.Kontragents;
 using Xunit;
-using static MockEsu.Application.UnitTests.ListFilters.ListFiltersValidationTestsClass;
+using static MockEsu.Application.UnitTests.ValidationTestsEntites;
 
 namespace MockEsu.Application.UnitTests.ListFilters;
 
@@ -24,9 +24,9 @@ public class ListFiltersValidationTests
     public async Task Validate_ReturnsOk_WhenDefault()
     {
         // Arrange
-        var query = new TestKontragentsQuery();
+        var query = new TestQuery();
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
+        var validator = new TestQueryValidator(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
@@ -41,9 +41,9 @@ public class ListFiltersValidationTests
     public async Task ValidateSkipValue_ReturnsError_WhenSkipIsBelow0()
     {
         // Arrange
-        var query = new TestKontragentsQuery { skip = -1 };
+        var query = new TestQuery { skip = -1 };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
+        var validator = new TestQueryValidator(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
@@ -59,9 +59,9 @@ public class ListFiltersValidationTests
     public async Task ValidateTakeValue_ReturnsError_WhenTakeIsBelow0()
     {
         // Arrange
-        var query = new TestKontragentsQuery { take = -1 };
+        var query = new TestQuery { take = -1 };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
+        var validator = new TestQueryValidator(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
@@ -77,14 +77,14 @@ public class ListFiltersValidationTests
     public async Task ValidateSkipTakeValue_ReturnsListOf10StartingFromId10_WhenSkip10Take10()
     {
         // Arrange
-        var query = new TestKontragentsQuery { skip = 10, take = 10 };
+        var query = new TestQuery { skip = 10, take = 10 };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
-        var handler = new TestKontragentsQueryHandler(_mapper);
+        var validator = new TestQueryValidator(_mapper);
+        var handler = new TestQueryHandler(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
-        TestKontragentsResponse result = null;
+        TestResponse result = null;
         if (validationResult.IsValid)
             result = await handler.Handle(query, default);
 
@@ -99,9 +99,9 @@ public class ListFiltersValidationTests
     public async Task ValidateFilters_ReturnsCorrespondingError_WhenFilterWithoutExpression()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["id=1"] };
+        var query = new TestQuery { filters = ["id=1"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
+        var validator = new TestQueryValidator(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
@@ -119,9 +119,9 @@ public class ListFiltersValidationTests
     public async Task ValidateFilters_ReturnsCorrespondingError_WhenFilterWithNotExistingKey()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["index:1"] };
+        var query = new TestQuery { filters = ["index:1"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
+        var validator = new TestQueryValidator(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
@@ -139,9 +139,9 @@ public class ListFiltersValidationTests
     public async Task ValidateFilters_ReturnsCorrespondingError_WhenFilterWithNotFilterableProperty()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["dateString:2024"] };
+        var query = new TestQuery { filters = ["dateString:2024"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
+        var validator = new TestQueryValidator(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
@@ -159,9 +159,9 @@ public class ListFiltersValidationTests
     public async Task ValidateFilters_ReturnsCorrespondingError_WhenFilterWithNotValidValue()
     {
         // Arrange
-        var query = new TestKontragentsQuery { filters = ["id:one"] };
+        var query = new TestQuery { filters = ["id:one"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
+        var validator = new TestQueryValidator(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
@@ -179,9 +179,9 @@ public class ListFiltersValidationTests
     public async Task ValidateOrderBy_ReturnsCorrespondingError_WhenOrderByWithNotExistingKey()
     {
         // Arrange
-        var query = new TestKontragentsQuery { orderBy = ["index"] };
+        var query = new TestQuery { orderBy = ["index"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
+        var validator = new TestQueryValidator(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
@@ -199,9 +199,9 @@ public class ListFiltersValidationTests
     public async Task ValidateOrderBy_ReturnsCorrespondingError_WhenOrderByWithNotValidExpression()
     {
         // Arrange
-        var query = new TestKontragentsQuery { orderBy = ["id ascending"] };
+        var query = new TestQuery { orderBy = ["id ascending"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
+        var validator = new TestQueryValidator(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
@@ -219,9 +219,9 @@ public class ListFiltersValidationTests
     public async Task TestOrderBy_ReturnsError_WhenOrderByDateStringWhichIsNotSimpleMapping()
     {
         // Arrange
-        var query = new TestKontragentsQuery { orderBy = ["dateString"] };
+        var query = new TestQuery { orderBy = ["dateString"] };
 
-        var validator = new TestKontragentsQueryValidator(_mapper);
+        var validator = new TestQueryValidator(_mapper);
 
         // Act
         var validationResult = validator.Validate(query);
