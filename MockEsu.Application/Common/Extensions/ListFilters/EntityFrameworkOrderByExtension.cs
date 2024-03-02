@@ -24,15 +24,17 @@ public static class EntityFrameworkOrderByExtension
         (this IQueryable<TSource> source, List<Expression>? orderByDelegates)
         where TSource : BaseEntity
     {
+        if (orderByDelegates == null || orderByDelegates.Count() == 0)
+            return source.OrderBy(x => x.Id);
+
         IOrderedQueryable<TSource> result = source.OrderBy(x => 0);
-        if (orderByDelegates != null)
+
+        foreach (var orderByDelegate in orderByDelegates)
         {
-            foreach (var orderByDelegate in orderByDelegates)
-            {
-                var func = (Expression<Func<IOrderedQueryable<TSource>, IOrderedQueryable<TSource>>>)orderByDelegate;
-                result = func.Compile()(result);
-            }
+            var func = (Expression<Func<IOrderedQueryable<TSource>, IOrderedQueryable<TSource>>>)orderByDelegate;
+            result = func.Compile()(result);
         }
+
         return result;
     }
 
