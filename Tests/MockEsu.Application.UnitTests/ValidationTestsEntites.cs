@@ -305,7 +305,7 @@ public static class ValidationTestsEntites
 }
 
 
-public class TestDbContext : DbContext
+public class TestDbContext : DbContext, IDbContext
 {
     public DbSet<TestEntity> TestEntities { get; set; }
     public DbSet<TestNestedEntity> TestNestedEntities { get; set; }
@@ -313,7 +313,6 @@ public class TestDbContext : DbContext
     public TestDbContext(DbContextOptions<TestDbContext> options)
         : base(options)
     { }
-
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -59,7 +59,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             return false;
         }
 
-        IAppDbContext context = dbSet.GetService<IAppDbContext>();
+        IDbContext context = dbSet.GetContext();
         if (parentId == 0)
         {
             return InvokeTryAddEntityToDb(
@@ -143,7 +143,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             }
         }
 
-        IAppDbContext context = dbSet.GetService<IAppDbContext>();
+        IDbContext context = dbSet.GetContext();
         if (parentId == 0)
         {
             Type entityType = segmentTypes[(int)entityIndex];
@@ -188,7 +188,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
     private bool InvokeTryAddEntityToDb(
         Type entityType,
         object convertedValue,
-        IAppDbContext context,
+        IDbContext context,
         out string errorMessage)
     {
         var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
@@ -209,7 +209,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         int parentId,
         string entitiesInParentFieldName,
         object convertedValue,
-        IAppDbContext context,
+        IDbContext context,
         out string errorMessage)
     {
         var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
@@ -227,7 +227,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
     private bool InvokeTryRemoveEntityFromDb(
         Type entityType,
         int entityId,
-        IAppDbContext context,
+        IDbContext context,
         out string errorMessage)
     {
         var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
@@ -248,7 +248,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         int parentId,
         int entityId,
         string entitiesInParentFieldName,
-        IAppDbContext context,
+        IDbContext context,
         out string errorMessage)
     {
         var methodInfo = typeof(CustomDbSetAdapter<TEntity>)
@@ -299,7 +299,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
     private static bool TryAddEntityToDb
         <TEntityToAdd>(
         object value,
-        IAppDbContext context,
+        IDbContext context,
         out string errorMessage)
         where TEntityToAdd : BaseEntity, new()
     {
@@ -337,7 +337,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         int parentId,
         string entitiesInParentPropertyName,
         object value,
-        IAppDbContext context,
+        IDbContext context,
         out string errorMessage)
         where TParent : BaseEntity, new()
         where TEntityToAdd : BaseEntity, new()
@@ -388,7 +388,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
     private static bool TryRemoveEntityFromDb
         <TEntityToDelete>(
         int entityId,
-        IAppDbContext context,
+        IDbContext context,
         out string errorMessage)
         where TEntityToDelete : BaseEntity, new()
     {
@@ -426,7 +426,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         int parentId,
         int entityId,
         string entitiesInParentFieldName,
-        IAppDbContext context,
+        IDbContext context,
         out string errorMessage)
         where TParent : BaseEntity, new()
         where TEntityToDelete : BaseEntity, new()
@@ -643,7 +643,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
     /// </summary>
     /// <param name="entity">Entity instance.</param>
     /// <param name="context">DbContext for performing actions.</param>
-    private static void AddEntityAndItsChildrenToContext(object entity, IAppDbContext context)
+    private static void AddEntityAndItsChildrenToContext(object entity, IDbContext context)
     {
         foreach (var property in entity.GetType().GetProperties())
         {

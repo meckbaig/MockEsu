@@ -11,6 +11,7 @@ using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Common.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
 using Newtonsoft.Json.Serialization;
+using MockEsu.Application.Extensions.DataBaseProvider;
 
 namespace MockEsu.Application.Extensions.JsonPatch;
 
@@ -56,7 +57,7 @@ internal static class JsonPatchExpressions
         (this JsonPatchDocument<DbSet<TDestination>> patch, DbSet<TDestination> dbSet)
         where TDestination : BaseEntity
     {
-        IAppDbContext context = dbSet.GetService<IAppDbContext>();
+        IDbContext context = dbSet.GetContext();
         using (var transaction = context.Database.BeginTransaction())
         {
             int operationIndex = 0;

@@ -7,7 +7,7 @@ using MockEsu.Domain.Entities.Traiffs;
 
 namespace MockEsu.Application.Common.Interfaces;
 
-public interface IAppDbContext
+public interface IAppDbContext : IDbContext
 {
     DbSet<Address> Addresses { get; }
     DbSet<City> Cities { get; }
@@ -25,12 +25,4 @@ public interface IAppDbContext
     DbSet<TariffPrice> TariffPrices { get; }
     DbSet<OrganizationInRegion> OrganizationsInRegions { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
-
-    DatabaseFacade Database {  get; }
-    DbSet<T> Set<T>() where T : class;
-    EntityEntry<T> Entry<T> (T entity) where T : class;
-
-
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-    int SaveChanges();
 }
