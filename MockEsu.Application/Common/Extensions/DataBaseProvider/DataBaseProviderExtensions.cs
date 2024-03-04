@@ -27,7 +27,6 @@ internal static class DataBaseProviderExtensions
         //              p.PropertyType == dbSetType);
         if (isDbSet)
         {
-            ///TODO: THIS IS IT!!@!@!@
             var context = (IDbContext)fieldInfo.GetValue(dbSet);
             queryable = context.CreateDbSet(entityType);
         }

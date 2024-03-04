@@ -1,14 +1,11 @@
 ﻿using AutoMapper;
 using AutoMapper.Internal;
 using MockEsu.Application.Common.Dtos;
-using MockEsu.Application.DTOs.Roles;
 using MockEsu.Application.Common.Extensions.StringExtensions;
-using MockEsu.Domain.Entities.Authentification;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Security.AccessControl;
 using System.Text.RegularExpressions;
 
 namespace MockEsu.Application.Extensions.JsonPatch;
@@ -105,7 +102,7 @@ internal static class DtoExtension
         {
             var parameters = item.GetParameters();
             if (parameters[0].ParameterType == sourceType)
-                return true; 
+                return true;
         }
         return false;
     }
@@ -414,22 +411,16 @@ internal static class DtoExtension
         errorMessage = null;
         var internalApi = provider.Internal();
         var map = internalApi.FindTypeMapFor<TSource, TDto>();
+
+        if (map == null)
+            return GetSourceError($"Property mapping for type of '{dtoProperty.ToCamelCase()}' does not exist",
+                dtoProperty, out sourceProperty, out dtoPropertyType, out errorMessage, throwException);
+
         var propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.DestinationMember.Name == dtoProperty);
 
         if (propertyMap == null)
-        {
-            errorMessage = $"Property '{dtoProperty.ToCamelCase()}' does not exist";
-            if (!throwException)
-            {
-                sourceProperty = null;
-                dtoPropertyType = null;
-                return false;
-            }
-            else
-            {
-                throw new ArgumentException(errorMessage);
-            }
-        }
+            return GetSourceError($"Property '{dtoProperty.ToCamelCase()}' does not exist",
+                dtoProperty, out sourceProperty, out dtoPropertyType, out errorMessage, throwException);
 
         dtoPropertyType = propertyMap?.DestinationType;
         if (propertyMap?.SourceMember?.Name != null)
@@ -455,22 +446,17 @@ internal static class DtoExtension
         errorMessage = null;
         var internalApi = provider.Internal();
         var map = internalApi.FindTypeMapFor<TDto, TSource>();
-        var propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.SourceMember.Name == dtoProperty);
+
+        if (map == null)
+            return GetSourceError($"Property mapping for type of '{dtoProperty.ToCamelCase()}' does not exist",
+                dtoProperty, out sourceProperty, out dtoPropertyType, out errorMessage, throwException);
+
+        var propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.SourceMember?.Name == dtoProperty);
 
         if (propertyMap == null)
-        {
-            errorMessage = $"Property '{dtoProperty.ToCamelCase()}' does not exist";
-            if (!throwException)
-            {
-                sourceProperty = null;
-                dtoPropertyType = null;
-                return false;
-            }
-            else
-            {
-                throw new ArgumentException(errorMessage);
-            }
-        }
+            return GetSourceError($"Property '{dtoProperty.ToCamelCase()}' does not exist",
+                dtoProperty, out sourceProperty, out dtoPropertyType, out errorMessage, throwException);
+
 
         dtoPropertyType = propertyMap?.SourceType;
         if (propertyMap?.DestinationMember?.Name != null)
@@ -481,6 +467,21 @@ internal static class DtoExtension
         sourceProperty = null;
         errorMessage = "Not supported get source action";
         return false;
+    }
+
+    private static bool GetSourceError(string newErrorMessage, string dtoProperty, out string sourceProperty, out Type dtoPropertyType, out string errorMessage, bool throwException)
+    {
+        errorMessage = newErrorMessage;
+        if (!throwException)
+        {
+            sourceProperty = null;
+            dtoPropertyType = null;
+            return false;
+        }
+        else
+        {
+            throw new ArgumentException(errorMessage);
+        }
     }
 
     /// <summary>
