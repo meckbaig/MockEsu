@@ -7,19 +7,24 @@ namespace MockEsu.Application.IntegrationTests.Controllers.Kontragents;
 
 public class GetListTest
 {
+    private readonly HttpClient _client;
+    public GetListTest()
+    {
+        var app = new MockesuWebApplicationFactory();
+
+        _client = app.CreateClient();
+    }
+
     [Fact]
     public async Task GetList_ReturnsListOf10_WhenTake10()
     {
         // Arrange
-        var app = new MockesuWebApplicationFactory();
-
-        var client = app.CreateClient();
 
         // Act
-        client.DefaultRequestHeaders.Authorization
+        _client.DefaultRequestHeaders.Authorization
             = new AuthenticationHeaderValue("Bearer", TestAuth.GetToken(Permission.ReadMember));
 
-        var response = await client.GetAsync("api/v1/Kontragents/Get?take=10");
+        var response = await _client.GetAsync("api/v1/Kontragents/Get?take=10");
 
         // Assert
         response.EnsureSuccessStatusCode();
@@ -32,55 +37,46 @@ public class GetListTest
     public async Task GetList_ReturnsListOfKontragentsWithPositiveBalanse_WhenFilterBalanseGreaterThanOrEquals0()
     {
         // Arrange
-        var app = new MockesuWebApplicationFactory();
-
-        var client = app.CreateClient();
 
         // Act
-        client.DefaultRequestHeaders.Authorization
+        _client.DefaultRequestHeaders.Authorization
             = new AuthenticationHeaderValue("Bearer", TestAuth.GetToken(Permission.ReadMember));
 
-        var response = await client.GetAsync("api/v1/Kontragents/Get?filters=balance:0..");
+        var response = await _client.GetAsync("api/v1/Kontragents/Get?filters=balance:0..");
 
         // Assert
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadFromJsonAsync<GetKontragentsResponse>();
-        Assert.True(!content.Items.Any(k => k.Balance < 0));
+        Assert.Equal(0, content.Items.Where(k => k.Balance < 0).Count());
     }
 
     [Fact]
     public async Task GetList_ReturnsListOfSingle_WhenFilterIdEquals10()
     {
         // Arrange
-        var app = new MockesuWebApplicationFactory();
-
-        var client = app.CreateClient();
 
         // Act
-        client.DefaultRequestHeaders.Authorization
+        _client.DefaultRequestHeaders.Authorization
             = new AuthenticationHeaderValue("Bearer", TestAuth.GetToken(Permission.ReadMember));
 
-        var response = await client.GetAsync("api/v1/Kontragents/Get?filters=id:10");
+        var response = await _client.GetAsync("api/v1/Kontragents/Get?filters=id:10");
 
         // Assert
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadFromJsonAsync<GetKontragentsResponse>();
-        Assert.True(content.Items.Count() == 1);
-        Assert.True(content.Items[0].Id == 10);
+        Assert.Equal(1, content.Items.Count());
+        Assert.Equal(10, content.Items[0].Id);
     }
 
     [Fact]
     public async Task GetList_Returns401_WhenAuthorizationIsMissing()
     {
         // Arrange
-        var app = new MockesuWebApplicationFactory();
-
-        var client = app.CreateClient();
 
         // Act
-        var response = await client.GetAsync("api/v1/Kontragents/Get");
+        var response = await _client.GetAsync("api/v1/Kontragents/Get");
 
         // Assert
         Assert.True(response.StatusCode == System.Net.HttpStatusCode.Unauthorized);
