@@ -574,7 +574,9 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
     /// <returns><see langword="true"/> if expression was successfully created; otherwise, <see langword="false"/>.</returns>
     private static bool TryGetPropertyLambda<TBaseEntity>(
         string propertyName,
-        out Expression<Func<TBaseEntity, object>> expression,
+        Type propertyType,
+        out LambdaExpression expression,
+        //out Expression<Func<TBaseEntity, object>> expression,
         out string errorMessage)
     {
         try
@@ -582,7 +584,11 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             var parameter = Expression.Parameter(typeof(TBaseEntity), "x");
             var property = Expression.Property(parameter, propertyName);
 
-            expression = Expression.Lambda<Func<TBaseEntity, object>>(property, parameter);
+            //expression = Expression.Lambda<Func<TBaseEntity, object>>(property, parameter);
+
+            var lambdaType = typeof(Func<,>).MakeGenericType(typeof(TBaseEntity), propertyType);
+            expression = Expression.Lambda(lambdaType, property, parameter);
+
             errorMessage = null;
             return true;
         }
@@ -610,7 +616,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         out string errorMessage)
         where TBaseEntity : BaseEntity
     {
-        if (!TryGetPropertyLambda<TBaseEntity>(propertyName, out var propExpr, out errorMessage))
+        if (!TryGetPropertyLambda<TBaseEntity>(propertyName, value.GetType(), out LambdaExpression propExpr, out errorMessage))
         {
             expression = null;
             return false;
