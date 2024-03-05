@@ -34,19 +34,19 @@ public static class BaseJsonPatchValidatorExtension
             where TDto : class, IEditDto, new()
     {
         string canParsePathErrorMessage = null!;
-        Type propertyType = null!;
+        List<Type> propertyPathTypes = null!;
         ruleBuilder = ruleBuilder
-            .Must((c, o) => CanParsePath(o, mapper, out propertyType, out canParsePathErrorMessage))
+            .Must((c, o) => CanParsePath(o, mapper, out propertyPathTypes, out canParsePathErrorMessage))
             .WithMessage(x => canParsePathErrorMessage)
             .WithErrorCode(JsonPatchValidationErrorCode.CanParsePathValidator.ToString());
 
         string canParseValueErrorMessage = null!;
         ruleBuilder = ruleBuilder
-            .Must((c, o) => CanParseValue(o, mapper, propertyType, out canParseValueErrorMessage))
+            .Must((c, o) => CanParseValue(o, mapper, propertyPathTypes, out canParseValueErrorMessage))
             .WithMessage(x => canParseValueErrorMessage)
             .WithErrorCode(JsonPatchValidationErrorCode.CanParseValueValidator.ToString());
 
-        ruleBuilder.Custom((o, context) => ValidateValue(o, mapper, context, propertyType, canParseValueErrorMessage));
+        ruleBuilder.Custom((o, context) => ValidateValue(o, mapper, context, propertyPathTypes.Last(), canParseValueErrorMessage));
 
         return ruleBuilder;
     }
@@ -54,7 +54,7 @@ public static class BaseJsonPatchValidatorExtension
     private static bool CanParsePath<TDto>(
         Operation<TDto> operation,
         IMapper mapper,
-        out Type propertyType,
+        out List<Type> propertyTypes,
         out string errorMessage)
         where TDto : class, IEditDto, new()
     {
@@ -63,7 +63,7 @@ public static class BaseJsonPatchValidatorExtension
         bool result = DtoExtension.TryGetSourceJsonPatch<TDto>(
             jsonPatchPath.AsSingleProperty,
             mapper.ConfigurationProvider,
-            out propertyType,
+            out propertyTypes,
             out string _,
             out errorMessage);
 
@@ -75,17 +75,20 @@ public static class BaseJsonPatchValidatorExtension
     private static bool CanParseValue<TDto>(
         Operation<TDto> operation,
         IMapper mapper,
-        Type propertyType,
+        List<Type> propertyTypes,
         out string errorMessage)
         where TDto : class, IEditDto, new()
     {
         errorMessage = null;
-        if (propertyType == null || operation.OperationType == OperationType.Remove)
+        if (propertyTypes == null || operation.OperationType == OperationType.Remove)
             return true;
+
+        var jsonPatchPath = new JsonPatchPath(operation.path);
 
         bool result = DtoExtension.TryGetSourceValueJsonPatch(
                 operation.value,
-                propertyType,
+                propertyTypes,
+                jsonPatchPath.LastSegment,
                 mapper.ConfigurationProvider,
                 out var _,
                 out errorMessage);
@@ -227,8 +230,8 @@ public static class BaseJsonPatchValidatorExtension
         DtoExtension.GetSourceJsonPatch<TDto>(
             jsonPatchPath.AsSingleProperty,
                 mapper.ConfigurationProvider,
-                out Type propertyType);
-        return propertyType;
+                out List<Type> propertyPathTypes);
+        return propertyPathTypes.Last();
     }
 
     private static object GetValidationOptionsAction(Type propertyType, params string[] propertiesToValidate)

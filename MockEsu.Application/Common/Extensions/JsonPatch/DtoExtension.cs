@@ -1,9 +1,12 @@
 ﻿using AutoMapper;
 using AutoMapper.Internal;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Extensions.StringExtensions;
+using MockEsu.Domain.Common;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -21,12 +24,14 @@ internal static class DtoExtension
     /// <returns>Source value.</returns>
     public static object GetSourceValueJsonPatch(
         object value,
-        Type dtoType,
+        List<Type> pathTypes,
+        string dtoPropertyName,
         IConfigurationProvider provider)
     {
         if (!TryGetSourceValueJsonPatch(
             value,
-            dtoType,
+            pathTypes,
+            dtoPropertyName,
             provider,
             out object sourceValue,
             out string errorMessage))
@@ -39,50 +44,99 @@ internal static class DtoExtension
     /// <summary>
     /// Gets source value from DTO mapping.
     /// </summary>
-    /// <param name="value">DTO value.</param>
-    /// <param name="dtoType">DTO type.</param>
+    /// <param name="value">Property value.</param>
+    /// <param name="valueType">Type of value in DTO.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
     /// <param name="sourceValue">Source value.</param>
     /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if source value got successfully; otherwise, <see langword="false"/>.</returns>
     public static bool TryGetSourceValueJsonPatch(
         object value,
-        Type dtoType,
+        List<Type> pathTypes,
+        string dtoPropertyName,
         IConfigurationProvider provider,
         out object sourceValue,
         out string errorMessage)
     {
+        Type valueType = pathTypes.Last();
         string serialized = JsonConvert.SerializeObject(value);
         var jsonValueType = JToken.Parse(serialized).Type;
 
         errorMessage = null;
         sourceValue = null;
-        if (typeof(IBaseDto).IsAssignableFrom(dtoType))
+        if (typeof(IBaseDto).IsAssignableFrom(valueType))
         {
             if (jsonValueType == JTokenType.Object)
             {
-                sourceValue = GetSourceValueFromJsonObject(dtoType, provider, serialized);
+                sourceValue = GetSourceValueFromJsonObject(pathTypes, provider, serialized);
                 return true;
             }
-            else if (CanConvert(value, GetDtoOriginType(dtoType)))
+            else if (CanConvert(value, GetDtoOriginType(valueType)))
             {
-                sourceValue = ConvertToTargetType(value, GetDtoOriginType(dtoType));
+                sourceValue = ConvertToTargetType(value, GetDtoOriginType(valueType));
                 return true;
             }
             errorMessage = "Value is not valid.";
             return false;
         }
-        if (dtoType.IsArray || dtoType.IsListType())
+        if (valueType.IsArray || valueType.IsListType())
         {
             if (jsonValueType == JTokenType.Array)
             {
-                sourceValue = GetSourceValueFromJsonArray(dtoType, provider, serialized);
+                sourceValue = GetSourceValueFromJsonArray(pathTypes, provider, serialized);
                 return true;
             }
             errorMessage = "Value is not an array.";
             return false;
         }
+        ///TODO: придумать, как проверять маппинг значения, если тип не совпадает с нужным
+        // Не работает, так как в dtoType содержится не тип Dto, а тип значения 
+        Type dtoType = pathTypes[pathTypes.Count - 2];
+        return InvokeTryParseThroughDto(value, dtoType, dtoPropertyName, provider, out sourceValue, out errorMessage);
+
         sourceValue = value;
+        return true;
+    }
+
+    private static bool InvokeTryParseThroughDto(
+        object value,
+        Type dtoType,
+        string dtoPropertyName,
+        IConfigurationProvider provider,
+        out object sourceValue,
+        out string errorMessage)
+    {
+        var methodInfo = typeof(DtoExtension).GetMethod(nameof(TryParseThroughDto), BindingFlags.Static | BindingFlags.NonPublic);
+        var genericMethod = methodInfo.MakeGenericMethod(dtoType, GetDtoOriginType(dtoType));
+        object[] parameters = [value, dtoPropertyName, provider, null, null];
+        bool result = (bool)genericMethod.Invoke(null, parameters);
+        sourceValue = parameters[3];
+        errorMessage = parameters[4]?.ToString() ?? null;
+        return (bool)result;
+    }
+
+    private static bool TryParseThroughDto
+        <TDto, TEntity>(
+        object value,
+        string dtoPropertyName,
+        IConfigurationProvider provider,
+        out object sourceValue, 
+        out string errorMessage)
+        where TDto : IEditDto, new()
+        where TEntity : BaseEntity, new()
+    {
+        TDto dto = new();
+        TEntity entity = new();
+        var property = typeof(TDto).GetProperty(dtoPropertyName);
+        if (!TryGetSource<TEntity, TDto>(dtoPropertyName, provider, out string sourcePropertyName, out var _, out errorMessage, false))
+        {
+            sourceValue = null;
+            return false;
+        }
+        var sourceProperty = typeof(TEntity).GetProperty(sourcePropertyName);
+        property.SetMemberValue(dto, value);
+        provider.CreateMapper().Map(dto, entity);
+        sourceValue = sourceProperty.GetMemberValue(entity);
         return true;
     }
 
@@ -149,7 +203,8 @@ internal static class DtoExtension
         if (propertyType == typeof(string) ||
             propertyType == typeof(DateTime) ||
             propertyType == typeof(decimal) ||
-            propertyType == typeof(TimeOnly))
+            propertyType == typeof(TimeOnly) ||
+            propertyType == typeof(DateOnly))
             return false;
         if (propertyType.IsEnum)
             return false;
@@ -164,8 +219,9 @@ internal static class DtoExtension
     /// <param name="provider">Configuraion provider for performing maps.</param>
     /// <param name="serialized">DTO value serialized in string.</param>
     /// <returns>Source array value.</returns>
-    private static object GetSourceValueFromJsonArray(Type dtoArrayType, IConfigurationProvider provider, string serialized)
+    private static object GetSourceValueFromJsonArray(List<Type> dtoPathTypes, IConfigurationProvider provider, string serialized)
     {
+        Type dtoArrayType = dtoPathTypes.Last();
         if (!IsCustomObject(dtoArrayType.GetElementType()))
             return serialized;
 
@@ -175,7 +231,8 @@ internal static class DtoExtension
         Type dtoType = dtoArrayType.GetGenericArguments().Single();
         foreach (var dtoDict in dtoDictionaries)
         {
-            sourceObjects.Add(GetSourceValueFromJsonObject(dtoType, provider, JsonConvert.SerializeObject(dtoDict)));
+            List<Type> newPathTypes = dtoPathTypes.Concat([dtoType]).ToList();
+            sourceObjects.Add(GetSourceValueFromJsonObject(newPathTypes, provider, JsonConvert.SerializeObject(dtoDict)));
         }
         return sourceObjects;
     }
@@ -188,8 +245,9 @@ internal static class DtoExtension
     /// <param name="serialized">DTO value serialized in string.</param>
     /// <returns>Source object value.</returns>
     /// <exception cref="ArgumentNullException">Exception occures when unable to find property source from DTO.</exception>
-    private static object GetSourceValueFromJsonObject(Type dtoType, IConfigurationProvider provider, string serialized)
+    private static object GetSourceValueFromJsonObject(List<Type> dtoPathTypes, IConfigurationProvider provider, string serialized)
     {
+        Type dtoType = dtoPathTypes.Last();
         Dictionary<string, object> sourceProperties = new();
         Dictionary<string, object> properties
             = JsonConvert.DeserializeObject<Dictionary<string, object>>(serialized);
@@ -198,7 +256,8 @@ internal static class DtoExtension
             Type propertyType = dtoType;
             if (!InvokeTryGetSource(property.Key.ToPascalCase(), provider, ref propertyType, out string newKey, out string errorMessage))
                 throw new ArgumentNullException(errorMessage ?? $"Something went wrong while getting json patch source property path for '{property.Key}'");
-            object propValue = GetSourceValueJsonPatch(property.Value, propertyType, provider);
+            List<Type> newPathTypes = dtoPathTypes.Concat([propertyType]).ToList();
+            object propValue = GetSourceValueJsonPatch(property.Value, newPathTypes, newKey, provider);
             sourceProperties.Add(newKey.ToCamelCase(), propValue);
         }
         return JsonConvert.DeserializeObject(JsonConvert.SerializeObject(sourceProperties));
@@ -216,13 +275,13 @@ internal static class DtoExtension
     public static string GetSourceJsonPatch<TSource>(
         string dtoPath,
         IConfigurationProvider provider,
-        out Type propertyType)
+        out List<Type> propertyTypes)
         where TSource : IBaseDto
     {
         if (!TryGetSourceJsonPatch<TSource>(
             dtoPath,
             provider,
-            out propertyType,
+            out propertyTypes,
             out string sourceJsonPach,
             out string errorMessage))
         {
@@ -237,19 +296,19 @@ internal static class DtoExtension
     /// <typeparam name="TSource">Source type.</typeparam>
     /// <param name="dtoPath">DTO property path.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
-    /// <param name="propertyType">Endpoint property type.</param>
+    /// <param name="propertyTypes">Endpoint property type.</param>
     /// <param name="sourceJsonPatch">Source path.</param>
     /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if source path got successfully; otherwise, <see langword="false"/>.</returns>
     public static bool TryGetSourceJsonPatch<TSource>(
         string dtoPath,
         IConfigurationProvider provider,
-        out Type propertyType,
+        out List<Type> propertyTypes,
         out string sourceJsonPatch,
         out string errorMessage)
         where TSource : IBaseDto
     {
-        propertyType = typeof(TSource);
+        propertyTypes = [typeof(TSource)];
         errorMessage = null;
         sourceJsonPatch = null;
         if (dtoPath.Length == 0)
@@ -268,16 +327,19 @@ internal static class DtoExtension
             {
                 nextSegmentMustBeElementOfCollection = false;
                 sourcePathSegments.Add(segment);
-                propertyType = propertyType.GetGenericArguments().Single();
+                propertyTypes.Add(propertyTypes.Last().GetGenericArguments().Single());
             }
             else if (!nextSegmentMustBeElementOfCollection)
             {
-                if (!InvokeTryGetSource(segment, provider, ref propertyType, out string sourceSegment, out errorMessage, throwException: false))
+                Type nextType = propertyTypes.Last();
+                if (!InvokeTryGetSource(segment, provider, ref nextType, out string sourceSegment, out errorMessage, throwException: false))
                 {
                     errorMessage ??= $"Something went wrong while getting json patch source property path for '{dtoPath}'";
                     return false;
                 }
-                if (propertyType.IsCollection())
+                propertyTypes.Add(nextType);
+
+                if (nextType.IsCollection())
                     nextSegmentMustBeElementOfCollection = true;
                 sourcePathSegments.Add(sourceSegment);
             }
@@ -452,6 +514,10 @@ internal static class DtoExtension
                 dtoProperty, out sourceProperty, out dtoPropertyType, out errorMessage, throwException);
 
         var propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.SourceMember?.Name == dtoProperty);
+
+        if (propertyMap == null)
+            propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.CustomMapExpression != null &&
+                                                                pm.CustomMapExpression.ToString().Contains(dtoProperty));
 
         if (propertyMap == null)
             return GetSourceError($"Property '{dtoProperty.ToCamelCase()}' does not exist",

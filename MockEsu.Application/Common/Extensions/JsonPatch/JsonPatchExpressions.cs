@@ -122,7 +122,7 @@ internal static class JsonPatchExpressions
                     DtoExtension.GetSourceJsonPatch<TDto>(
                         jsonPatchPath.AsSingleProperty,
                         provider,
-                        out Type propertyType);
+                        out var propertyPathTypes);
                 newOperation.path = jsonPatchPath.ToFullPropertyPath(newOperation.path);
 
                 if (newOperation.OperationType != OperationType.Remove)
@@ -130,7 +130,8 @@ internal static class JsonPatchExpressions
                     newOperation.value =
                         DtoExtension.GetSourceValueJsonPatch(
                             operation.value,
-                            propertyType,
+                            propertyPathTypes,
+                            jsonPatchPath.LastSegment,
                             provider);
                 }
             }

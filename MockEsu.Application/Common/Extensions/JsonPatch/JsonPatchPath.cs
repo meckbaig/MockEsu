@@ -14,14 +14,16 @@ internal class JsonPatchPath
     public readonly string OriginalPath;
     public readonly string Index;
     public readonly string AsSingleProperty;
+    public readonly string? LastSegment;
 
     public JsonPatchPath(string path)
     {
         OriginalPath = path;
 
         string operationPathAsProperty = path.ToPropetyFormat();
-        string index = operationPathAsProperty.Split('.')[0];
-        if (int.TryParse(operationPathAsProperty.Split('.')[0], out int _) ||
+        string[] pathSegments = operationPathAsProperty.Split('.');
+        string index = pathSegments[0];
+        if (int.TryParse(pathSegments[0], out int _) ||
             index == "-")
         {
             if (index.Length < operationPathAsProperty.Length)
@@ -35,6 +37,7 @@ internal class JsonPatchPath
         }
         AsSingleProperty = operationPathAsProperty;
         Index = index;
+        LastSegment = pathSegments.LastOrDefault();
     }
 
     public string ToFullPropertyPath(string newPropertyPath)
