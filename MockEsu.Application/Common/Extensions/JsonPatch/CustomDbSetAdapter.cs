@@ -130,18 +130,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             return false;
         }
 
-        List<Type> segmentTypes = [typeof(TEntity)];
-        for (int i = 1; i < segments.Length; i++)
-        {
-            if (int.TryParse(segments[i], out int _) && segmentTypes.Last().IsCollection())
-            {
-                segmentTypes.Add(segmentTypes.Last().GetGenericArguments().Single());
-            }
-            else
-            {
-                segmentTypes.Add(segmentTypes.Last().GetProperty(segments[i]).PropertyType);
-            }
-        }
+        List<Type> segmentTypes = GetSegmentsTypes(segments);
 
         IDbContext context = dbSet.GetContext();
         if (parentId == 0)
@@ -425,7 +414,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         <TParent, TEntityToDelete>(
         int parentId,
         int entityId,
-        string entitiesInParentFieldName,
+        string entitiesInParentPropertyName,
         IDbContext context,
         out string errorMessage)
         where TParent : BaseEntity, new()
@@ -435,7 +424,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         {
             TEntityToDelete entity = new TEntityToDelete { Id = entityId };
             TParent parent = new TParent { Id = parentId };
-            var listProperty = typeof(TParent).GetProperty(entitiesInParentFieldName);
+            var listProperty = typeof(TParent).GetProperty(entitiesInParentPropertyName);
             ICollection<TEntityToDelete> list = (ICollection<TEntityToDelete>)listProperty.GetValue(parent);
             list.Add(entity);
             (context as DbContext).ChangeTracker.Clear();
@@ -450,7 +439,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         {
             errorMessage = string.Format(
                 "Could not delete entity '{0}' with id {1} from parent with id {2}",
-                entitiesInParentFieldName.ToCamelCase(),
+                entitiesInParentPropertyName.ToCamelCase(),
                 entityId,
                 parentId);
             return false;
@@ -547,6 +536,14 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return true;
     }
 
+    /// <summary>
+    /// Gets single nested entity property from <typeparamref name="TBaseEntity"/>.
+    /// </summary>
+    /// <typeparam name="TBaseEntity">Type of entity containing property.</typeparam>
+    /// <param name="query">Request query.</param>
+    /// <param name="propertyName">Name of property.</param>
+    /// <param name="newQuery">Query with result type of single nested entity.</param>
+    /// <returns><see langword="true"/> if query was successfully created; otherwise, <see langword="false"/>.</returns>
     private bool TryGetQueryWithProperty<TBaseEntity>(
         IQueryable<TBaseEntity> query,
         string propertyName,
@@ -576,15 +573,12 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         string propertyName,
         Type propertyType,
         out LambdaExpression expression,
-        //out Expression<Func<TBaseEntity, object>> expression,
         out string errorMessage)
     {
         try
         {
             var parameter = Expression.Parameter(typeof(TBaseEntity), "x");
             var property = Expression.Property(parameter, propertyName);
-
-            //expression = Expression.Lambda<Func<TBaseEntity, object>>(property, parameter);
 
             var lambdaType = typeof(Func<,>).MakeGenericType(typeof(TBaseEntity), propertyType);
             expression = Expression.Lambda(lambdaType, property, parameter);
@@ -725,6 +719,29 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         }
         errorMessage = AdapterError.FormatInvalidValueForProperty(originalValue);
         return false;
+    }
+
+    /// <summary>
+    /// Gets types of segments from <typeparamref name="TEntity"/>.
+    /// </summary>
+    /// <param name="segments">Path segmnents.</param>
+    /// <returns>List of segments types.</returns>
+    private static List<Type> GetSegmentsTypes(string[] segments)
+    {
+        List<Type> segmentTypes = [typeof(TEntity)];
+        for (int i = 1; i < segments.Length; i++)
+        {
+            if (int.TryParse(segments[i], out int _) && segmentTypes.Last().IsCollection())
+            {
+                segmentTypes.Add(segmentTypes.Last().GetGenericArguments().Single());
+            }
+            else
+            {
+                segmentTypes.Add(segmentTypes.Last().GetProperty(segments[i]).PropertyType);
+            }
+        }
+
+        return segmentTypes;
     }
 
     #endregion

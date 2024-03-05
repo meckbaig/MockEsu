@@ -19,7 +19,8 @@ internal static class DtoExtension
     /// Gets source value from DTO mapping.
     /// </summary>
     /// <param name="value">DTO value.</param>
-    /// <param name="dtoType">DTO type.</param>
+    /// <param name="pathTypes">All data types in path to endpoint property.</param>
+    /// <param name="dtoPropertyName">Name of property in DTO.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
     /// <returns>Source value.</returns>
     public static object GetSourceValueJsonPatch(
@@ -45,7 +46,8 @@ internal static class DtoExtension
     /// Gets source value from DTO mapping.
     /// </summary>
     /// <param name="value">Property value.</param>
-    /// <param name="valueType">Type of value in DTO.</param>
+    /// <param name="pathTypes">All data types in path to endpoint property.</param>
+    /// <param name="dtoPropertyName">Name of property in DTO.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
     /// <param name="sourceValue">Source value.</param>
     /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
@@ -89,16 +91,21 @@ internal static class DtoExtension
             errorMessage = "Value is not an array.";
             return false;
         }
-        ///TODO: придумать, как проверять маппинг значения, если тип не совпадает с нужным
-        // Не работает, так как в dtoType содержится не тип Dto, а тип значения 
         Type dtoType = pathTypes[pathTypes.Count - 2];
-        return InvokeTryParseThroughDto(value, dtoType, dtoPropertyName, provider, out sourceValue, out errorMessage);
-
-        sourceValue = value;
-        return true;
+        return InvokeTryParseValueThroughDto(value, dtoType, dtoPropertyName, provider, out sourceValue, out errorMessage);
     }
 
-    private static bool InvokeTryParseThroughDto(
+    /// <summary>
+    /// Gets entity value using mapping from <paramref name="dtoType"/> to its source entity
+    /// </summary>
+    /// <param name="value">Property value.</param>
+    /// <param name="dtoType">DTO type.</param>
+    /// <param name="dtoPropertyName">Name of property in DTO.</param>
+    /// <param name="provider">Configuraion provider for performing maps.</param>
+    /// <param name="sourceValue">Source value.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if source value got successfully; otherwise, <see langword="false"/>.</returns>
+    private static bool InvokeTryParseValueThroughDto(
         object value,
         Type dtoType,
         string dtoPropertyName,
@@ -106,7 +113,7 @@ internal static class DtoExtension
         out object sourceValue,
         out string errorMessage)
     {
-        var methodInfo = typeof(DtoExtension).GetMethod(nameof(TryParseThroughDto), BindingFlags.Static | BindingFlags.NonPublic);
+        var methodInfo = typeof(DtoExtension).GetMethod(nameof(TryParseValueThroughDto), BindingFlags.Static | BindingFlags.NonPublic);
         var genericMethod = methodInfo.MakeGenericMethod(dtoType, GetDtoOriginType(dtoType));
         object[] parameters = [value, dtoPropertyName, provider, null, null];
         bool result = (bool)genericMethod.Invoke(null, parameters);
@@ -115,7 +122,18 @@ internal static class DtoExtension
         return (bool)result;
     }
 
-    private static bool TryParseThroughDto
+    /// <summary>
+    /// Gets entity value using mapping from <typeparamref name="TDto"/> to <typeparamref name="TEntity"/>
+    /// </summary>
+    /// <typeparam name="TDto">DTO type.</typeparam>
+    /// <typeparam name="TEntity">Source type.</typeparam>
+    /// <param name="value">Property value.</param>
+    /// <param name="dtoPropertyName">Name of property in DTO.</param>
+    /// <param name="provider">Configuraion provider for performing maps.</param>
+    /// <param name="sourceValue">Source value.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if source value got successfully; otherwise, <see langword="false"/>.</returns>
+    private static bool TryParseValueThroughDto
         <TDto, TEntity>(
         object value,
         string dtoPropertyName,
@@ -215,7 +233,7 @@ internal static class DtoExtension
     /// <summary>
     /// Gets source array from DTO mapping.
     /// </summary>
-    /// <param name="dtoArrayType">DTO array type.</param>
+    /// <param name="dtoPathTypes">All data types in path to endpoint property.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
     /// <param name="serialized">DTO value serialized in string.</param>
     /// <returns>Source array value.</returns>
@@ -240,7 +258,7 @@ internal static class DtoExtension
     /// <summary>
     /// Gets source object from DTO mapping.
     /// </summary>
-    /// <param name="dtoType">DTO object type.</param>
+    /// <param name="dtoPathTypes">All data types in path to endpoint property.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
     /// <param name="serialized">DTO value serialized in string.</param>
     /// <returns>Source object value.</returns>
@@ -269,7 +287,7 @@ internal static class DtoExtension
     /// <typeparam name="TSource">Source type.</typeparam>
     /// <param name="dtoPath">DTO property path.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
-    /// <param name="propertyType">Endpoint property type.</param>
+    /// <param name="propertyTypes">All data types in path to endpoint property.</param>
     /// <returns>Source path.</returns>
     /// <exception cref="ArgumentNullException">Exception occures when unable to find property source from DTO.</exception>
     public static string GetSourceJsonPatch<TSource>(
@@ -296,7 +314,7 @@ internal static class DtoExtension
     /// <typeparam name="TSource">Source type.</typeparam>
     /// <param name="dtoPath">DTO property path.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
-    /// <param name="propertyTypes">Endpoint property type.</param>
+    /// <param name="propertyTypes">All data types in path to endpoint property.</param>
     /// <param name="sourceJsonPatch">Source path.</param>
     /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if source path got successfully; otherwise, <see langword="false"/>.</returns>
