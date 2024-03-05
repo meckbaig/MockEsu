@@ -480,6 +480,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         for (int i = 0; i < segments.Length; i++)
         {
             Type? propertyType = typeof(TBaseEntity).GetProperty(segments[i])?.PropertyType;
+            IQueryable newQuery;
 
             if (propertyType == null && int.TryParse(segments[i], out int entityId))
             {
@@ -488,7 +489,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             }
 
             else if (i + 1 < segments.Length && propertyType.IsCollection()
-                && TryGetQueryFromProperty(dbSet, query, segments[i], out var newQuery))
+                && TryGetQueryFromProperty(dbSet, query, segments[i], out newQuery))
             {
                 Type entityType = newQuery.ElementType;
                 return InvokeTryReplaceWithNewQuery(
@@ -501,6 +502,18 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                     out errorMessage);
             }
 
+            if(propertyType != null && DtoExtension.IsCustomObject(propertyType)
+                && TryGetQueryWithProperty(query, segments[i], out newQuery))
+            {
+                return InvokeTryReplaceWithNewQuery(
+                    newQuery,
+                    newQuery,
+                    propertyType,
+                    segments[++i..],
+                    contractResolver,
+                    value,
+                    out errorMessage);
+            }
             if (propertyType != null && !propertyType.IsCollection())
             {
                 if (!TryConvertValue(
@@ -524,11 +537,6 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                 query.ExecuteUpdate(expression);
             }
 
-            else if (i == segments.Length - 1)
-            {
-                // Реализовать логику многих ко многим
-            }
-
             else
             {
                 errorMessage = "Could not define expression while executing 'replace' method";
@@ -539,7 +547,22 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return true;
     }
 
+    private bool TryGetQueryWithProperty<TBaseEntity>(
+        IQueryable<TBaseEntity> query,
+        string propertyName,
+        out IQueryable newQuery)
+        where TBaseEntity : BaseEntity
+    {
+        var parameter = Expression.Parameter(typeof(TBaseEntity), "e");
+        var property = Expression.Property(parameter, propertyName);
+        var lambda = Expression.Lambda(property, parameter);
 
+        var resultType = typeof(Queryable).GetMethods().First(m => m.Name == "Select" && m.IsGenericMethodDefinition)
+            .MakeGenericMethod(typeof(TBaseEntity), property.Type);
+
+        newQuery = (IQueryable)resultType.Invoke(null, [query, lambda]);
+        return true;
+    }
 
     /// <summary>
     /// Gets lambda of property itself.

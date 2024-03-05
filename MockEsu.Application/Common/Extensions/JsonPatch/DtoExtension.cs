@@ -142,7 +142,7 @@ internal static class DtoExtension
     /// Checks if property is entity, dto or other complex object.
     /// </summary>
     /// <returns><see langword="true"/> if property is a complex object; otherwise, <see langword="false"/>.</returns>
-    private static bool IsCustomObject(Type propertyType)
+    internal static bool IsCustomObject(Type propertyType)
     {
         if (propertyType.IsPrimitive)
             return false;

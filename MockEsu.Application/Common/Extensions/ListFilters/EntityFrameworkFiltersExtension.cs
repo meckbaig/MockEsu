@@ -185,24 +185,24 @@ public static class EntityFrameworkFiltersExtension
             .First(m => m.GetParameters().Length == 2)
             .MakeGenericMethod(filterEx.InnerFilterExpression.EntityType);
 
-        // Создайте выражение Where
+        // Create Where expressiom
         var whereCallExpression = Expression.Call(
             whereMethod,
             propExpression,
             filterLambda);
 
-        // Получите метод Count для IEnumerable<TariffPrice>
+        // Get method Count for IEnumerable<T>
         MethodInfo countMethod = typeof(Enumerable).GetMethods()
             .Where(m => m.Name == "Count" && m.GetParameters().Length == 1)
             .Single()
             .MakeGenericMethod(filterEx.InnerFilterExpression.EntityType);
 
-        // Создайте выражение Count
+        // Create Count expression
         var countCallExpression = Expression.Call(
             countMethod,
             whereCallExpression);
 
-        // Создайте выражение для сравнения с нулем
+        // Create expression for comparison with zero 
         var zeroExpression = Expression.Constant(0);
         var notEqualExpression = Expression.NotEqual(countCallExpression, zeroExpression);
 
