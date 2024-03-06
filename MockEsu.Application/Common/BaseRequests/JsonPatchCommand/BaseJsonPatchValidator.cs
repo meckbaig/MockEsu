@@ -88,10 +88,10 @@ public static class BaseJsonPatchValidatorExtension
         bool result = DtoExtension.TryGetSourceValueJsonPatch(
                 operation.value,
                 propertyTypes,
-                jsonPatchPath.LastSegment,
                 mapper.ConfigurationProvider,
                 out var _,
-                out errorMessage);
+                out errorMessage,
+                jsonPatchPath.LastSegment);
         if (errorMessage != null)
             errorMessage = $"{operation.path}: {errorMessage}";
         return result;

@@ -1,13 +1,11 @@
 ﻿using AutoMapper;
 using AutoMapper.Internal;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using MockEsu.Application.Common.Dtos;
+using MockEsu.Application.Common.Extensions.DataTypesExtensions;
 using MockEsu.Application.Common.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -21,22 +19,25 @@ internal static class DtoExtension
     /// </summary>
     /// <param name="value">DTO value.</param>
     /// <param name="pathTypes">All data types in path to endpoint property.</param>
-    /// <param name="dtoPropertyName">Name of property in DTO.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
+    /// <param name="dtoPropertyName">Name of property in DTO.</param>
+    /// <param name="sourcePropertyName">Name of property in source entity. Will be calulated automatically if not specified</param>
     /// <returns>Source value.</returns>
     public static object GetSourceValueJsonPatch(
         object value,
         List<Type> pathTypes,
+        IConfigurationProvider provider,
         string dtoPropertyName,
-        IConfigurationProvider provider)
+        string? sourcePropertyName = null)
     {
         if (!TryGetSourceValueJsonPatch(
             value,
             pathTypes,
-            dtoPropertyName,
             provider,
             out object sourceValue,
-            out string errorMessage))
+            out string errorMessage,
+            dtoPropertyName,
+            sourcePropertyName))
         {
             throw new ArgumentException(errorMessage);
         }
@@ -48,18 +49,20 @@ internal static class DtoExtension
     /// </summary>
     /// <param name="value">Property value.</param>
     /// <param name="pathTypes">All data types in path to endpoint property.</param>
-    /// <param name="dtoPropertyName">Name of property in DTO.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
     /// <param name="sourceValue">Source value.</param>
     /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
+    /// <param name="dtoPropertyName">Name of property in DTO.</param>
+    /// <param name="sourcePropertyName">Name of property in source entity. Will be calulated automatically if not specified</param>
     /// <returns><see langword="true"/> if source value got successfully; otherwise, <see langword="false"/>.</returns>
     public static bool TryGetSourceValueJsonPatch(
         object value,
         List<Type> pathTypes,
-        string dtoPropertyName,
         IConfigurationProvider provider,
         out object sourceValue,
-        out string errorMessage)
+        out string errorMessage,
+        string dtoPropertyName, 
+        string? sourcePropertyName = null)
     {
         Type valueType = pathTypes.Last();
         string serialized = JsonConvert.SerializeObject(value);
@@ -93,7 +96,9 @@ internal static class DtoExtension
             return false;
         }
         Type dtoType = pathTypes[pathTypes.Count - 2];
-        return InvokeTryParseValueThroughDto(value, dtoType, dtoPropertyName, provider, out sourceValue, out errorMessage);
+        return InvokeTryParseValueThroughDto(value, dtoType, provider, out sourceValue, out errorMessage, dtoPropertyName, sourcePropertyName);
+        sourceValue = value;
+        return true;
     }
 
     /// <summary>
@@ -101,25 +106,27 @@ internal static class DtoExtension
     /// </summary>
     /// <param name="value">Property value.</param>
     /// <param name="dtoType">DTO type.</param>
-    /// <param name="dtoPropertyName">Name of property in DTO.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
     /// <param name="sourceValue">Source value.</param>
     /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
+    /// <param name="dtoPropertyName">Name of property in DTO.</param>
+    /// <param name="sourcePropertyName">Name of property in source entity. Will be calulated automatically if not specified</param>
     /// <returns><see langword="true"/> if source value got successfully; otherwise, <see langword="false"/>.</returns>
     private static bool InvokeTryParseValueThroughDto(
         object value,
         Type dtoType,
-        string dtoPropertyName,
         IConfigurationProvider provider,
         out object sourceValue,
-        out string errorMessage)
+        out string errorMessage,
+        string dtoPropertyName,
+        string? sourcePropertyName = null)
     {
         var methodInfo = typeof(DtoExtension).GetMethod(nameof(TryParseValueThroughDto), BindingFlags.Static | BindingFlags.NonPublic);
         var genericMethod = methodInfo.MakeGenericMethod(dtoType, GetDtoOriginType(dtoType));
-        object[] parameters = [value, dtoPropertyName, provider, null, null];
+        object[] parameters = [value, provider, null, null, dtoPropertyName, sourcePropertyName];
         bool result = (bool)genericMethod.Invoke(null, parameters);
-        sourceValue = parameters[3];
-        errorMessage = parameters[4]?.ToString() ?? null;
+        sourceValue = parameters[2];
+        errorMessage = parameters[3]?.ToString() ?? null;
         return (bool)result;
     }
 
@@ -129,25 +136,29 @@ internal static class DtoExtension
     /// <typeparam name="TDto">DTO type.</typeparam>
     /// <typeparam name="TEntity">Source type.</typeparam>
     /// <param name="value">Property value.</param>
-    /// <param name="dtoPropertyName">Name of property in DTO.</param>
     /// <param name="provider">Configuraion provider for performing maps.</param>
     /// <param name="sourceValue">Source value.</param>
     /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
+    /// <param name="dtoPropertyName">Name of property in DTO.</param>
+    /// <param name="sourcePropertyName">Name of property in source entity. Will be calulated automatically if not specified</param>
     /// <returns><see langword="true"/> if source value got successfully; otherwise, <see langword="false"/>.</returns>
     private static bool TryParseValueThroughDto
         <TDto, TEntity>(
         object value,
-        string dtoPropertyName,
         IConfigurationProvider provider,
-        out object sourceValue, 
-        out string errorMessage)
+        out object sourceValue,
+        out string errorMessage,
+        string dtoPropertyName,
+        string? sourcePropertyName = null)
         where TDto : IEditDto, new()
         where TEntity : BaseEntity, new()
     {
+        errorMessage = null;
         TDto dto = new();
         TEntity entity = new();
         var property = typeof(TDto).GetProperty(dtoPropertyName);
-        if (!TryGetSource<TEntity, TDto>(dtoPropertyName, provider, out string sourcePropertyName, out var _, out errorMessage, false))
+        if (sourcePropertyName == null && !TryGetSource<TEntity, TDto>(
+            dtoPropertyName, provider, out sourcePropertyName, out var _, out errorMessage, false))
         {
             sourceValue = null;
             return false;
@@ -309,10 +320,10 @@ internal static class DtoExtension
         foreach (var property in properties)
         {
             Type propertyType = dtoType;
-            if (!InvokeTryGetSource(property.Key.ToPascalCase(), provider, ref propertyType, out string newKey, out string errorMessage))
+            if (!InvokeTryGetSource(property.Key, provider, ref propertyType, out string newKey, out string errorMessage))
                 throw new ArgumentNullException(errorMessage ?? $"Something went wrong while getting json patch source property path for '{property.Key}'");
             List<Type> newPathTypes = dtoPathTypes.Concat([propertyType]).ToList();
-            object propValue = GetSourceValueJsonPatch(property.Value, newPathTypes, newKey, provider);
+            object propValue = GetSourceValueJsonPatch(property.Value, newPathTypes, provider, property.Key, newKey);
             sourceProperties.Add(newKey.ToCamelCase(), propValue);
         }
         return JsonConvert.DeserializeObject(JsonConvert.SerializeObject(sourceProperties));

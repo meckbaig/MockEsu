@@ -491,7 +491,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                     out errorMessage);
             }
 
-            if(propertyType != null && DtoExtension.IsCustomObject(propertyType)
+            if(i + 1 < segments.Length && propertyType != null && DtoExtension.IsCustomObject(propertyType)
                 && TryGetQueryWithProperty(query, segments[i], out newQuery))
             {
                 return InvokeTryReplaceWithNewQuery(

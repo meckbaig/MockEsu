@@ -131,8 +131,8 @@ internal static class JsonPatchExpressions
                         DtoExtension.GetSourceValueJsonPatch(
                             operation.value,
                             propertyPathTypes,
-                            jsonPatchPath.LastSegment,
-                            provider);
+                            provider,
+                            jsonPatchPath.LastSegment);
                 }
             }
             catch (Exception ex)
