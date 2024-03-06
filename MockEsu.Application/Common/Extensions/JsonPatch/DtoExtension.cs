@@ -7,6 +7,7 @@ using MockEsu.Domain.Common;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -151,10 +152,45 @@ internal static class DtoExtension
             sourceValue = null;
             return false;
         }
-        var sourceProperty = typeof(TEntity).GetProperty(sourcePropertyName);
         property.SetMemberValue(dto, value);
         provider.CreateMapper().Map(dto, entity);
-        sourceValue = sourceProperty.GetMemberValue(entity);
+        return TryGetNestedPropertyValue(entity, sourcePropertyName, out sourceValue);
+    }
+
+    /// <summary>
+    /// Gets value from entity by nested path through reflection.
+    /// </summary>
+    /// <param name="entity">Entity path belongs to.</param>
+    /// <param name="propertyPath">Path to property in entity.</param>
+    /// <param name="sourceValue">Source value.</param>
+    /// <returns><see langword="true"/> if source value got successfully; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// Example:
+    /// <paramref name="entity"/> = TestEntity, 
+    /// <paramref name="propertyPath"/> = "InnerEntity.Name", 
+    /// <paramref name="sourceValue"/> = value from TestEntity.InnerEntity.Name
+    /// </remarks>
+    private static bool TryGetNestedPropertyValue(object entity, string propertyPath, out object sourceValue)
+    {
+        foreach (var segment in propertyPath.Split('.'))
+        {
+            if (entity == null)
+            {
+                sourceValue = null;
+                return false;
+            }
+
+            var type = entity.GetType();
+            var info = type.GetProperty(segment);
+            if (info == null)
+            {
+                sourceValue = null;
+                return false;
+            }
+
+            entity = info.GetValue(entity, null);
+        }
+        sourceValue = entity;
         return true;
     }
 
@@ -531,21 +567,32 @@ internal static class DtoExtension
             return GetSourceError($"Property mapping for type of '{dtoProperty.ToCamelCase()}' does not exist",
                 dtoProperty, out sourceProperty, out dtoPropertyType, out errorMessage, throwException);
 
-        var propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.SourceMember?.Name == dtoProperty);
+        MemberMap propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.SourceMember?.Name == dtoProperty);
 
         if (propertyMap == null)
+        {
             propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.CustomMapExpression != null &&
                                                                 pm.CustomMapExpression.ToString().Contains(dtoProperty));
-
+        }
         if (propertyMap == null)
+        {
+            propertyMap = map.PropertyMaps
+                .FirstOrDefault(pm => pm.TypeMap.PathMaps.Any(pm => pm.SourceMember?.Name == dtoProperty))
+                .TypeMap
+                .PathMaps
+                .FirstOrDefault(pm => pm.SourceMember?.Name == dtoProperty);
+        }
+        if (propertyMap == null)
+        {
             return GetSourceError($"Property '{dtoProperty.ToCamelCase()}' does not exist",
                 dtoProperty, out sourceProperty, out dtoPropertyType, out errorMessage, throwException);
+        }
 
 
         dtoPropertyType = propertyMap?.SourceType;
-        if (propertyMap?.DestinationMember?.Name != null)
+        if (propertyMap?.DestinationName != null)
         {
-            sourceProperty = propertyMap?.DestinationMember?.Name;
+            sourceProperty = propertyMap?.DestinationName;
             return true;
         }
         sourceProperty = null;
