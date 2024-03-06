@@ -301,10 +301,11 @@ internal static class DtoExtension
     /// <exception cref="ArgumentNullException">Exception occures when unable to find property source from DTO.</exception>
     private static object GetSourceValueFromJsonObject(List<Type> dtoPathTypes, IConfigurationProvider provider, string serialized)
     {
+        var settings = new JsonSerializerSettings() { Converters = { new Int32Converter() } };
         Type dtoType = dtoPathTypes.Last();
         Dictionary<string, object> sourceProperties = new();
         Dictionary<string, object> properties
-            = JsonConvert.DeserializeObject<Dictionary<string, object>>(serialized);
+            = JsonConvert.DeserializeObject<Dictionary<string, object>>(serialized, settings);
         foreach (var property in properties)
         {
             Type propertyType = dtoType;
