@@ -1,11 +1,10 @@
 ﻿using AutoMapper.Internal;
 using Microsoft.AspNetCore.JsonPatch.Internal;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Query;
+using MockEsu.Application.Common.Extensions.StringExtensions;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.DataBaseProvider;
-using MockEsu.Application.Common.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
 using MockEsu.Domain.Enums;
 using Newtonsoft.Json.Serialization;
@@ -337,6 +336,10 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             TParent parent = new TParent { Id = parentId };
             var listProperty = typeof(TParent).GetProperty(entitiesInParentPropertyName);
             ICollection<TEntityToAdd> list = (ICollection<TEntityToAdd>)listProperty.GetValue(parent);
+            if (listProperty != null && list == null)
+            {
+                FillCollectionWithNullValue(listProperty, parent, ref list);
+            }
             (context as DbContext).ChangeTracker.Clear();
             context.Entry(parent).State = EntityState.Unchanged;
             context.Entry(entity).State = EntityState.Unchanged;
@@ -357,6 +360,19 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                 entitiesInParentPropertyName.ToCamelCase());
             return false;
         }
+    }
+
+    private static void FillCollectionWithNullValue
+        <TEntityToAdd>(
+        PropertyInfo listProperty,
+        object parent,
+        ref ICollection<TEntityToAdd> list)
+        where TEntityToAdd : BaseEntity, new()
+    {
+        Type listType = listProperty.PropertyType;
+        list = (ICollection<TEntityToAdd>)Activator.CreateInstance(listType);
+        listProperty.SetValue(parent, list);
+        list = (ICollection<TEntityToAdd>)listProperty.GetValue(parent);
     }
 
     private static Relation GetRelation(PropertyInfo property)
@@ -491,7 +507,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                     out errorMessage);
             }
 
-            if(i + 1 < segments.Length && propertyType != null && DtoExtension.IsCustomObject(propertyType)
+            if (i + 1 < segments.Length && propertyType != null && DtoExtension.IsCustomObject(propertyType)
                 && TryGetQueryWithProperty(query, segments[i], out newQuery))
             {
                 return InvokeTryReplaceWithNewQuery(
