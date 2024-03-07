@@ -240,4 +240,109 @@ public class JsonPatchValidationTests
         Assert.NotNull(validationResult);
         Assert.True(validationResult.IsValid);
     }
+
+    [Fact]
+    public async Task ValidateAdd_ReturnsOk_WhenModelIntoCollectionWithManyToMany()
+    {
+        // Arrange
+        var newModel = new TestNestedEntityEditDto
+        {
+            Id = 4,
+            NestedName = "qqqqqqqqqqqq",
+            Number = 111111
+        };
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "add",
+                path = "/1/nestedThings/-",
+                value = newModel
+            }
+        };
+
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+    }
+
+    [Fact]
+    public async Task ValidateAdd_ReturnsOk_WhenModelIntoDB()
+    {
+        // Arrange
+        var newModel = new TestEntityEditDto
+        {
+            Id = 11,
+            EntityName = "NewAddedTestEntity",
+            OriginalDescription = "New Description",
+            DateString = new DateOnly(2022, 1, 2).ToLongDateString(),
+            SomeInnerEntityId = 10,
+            NestedThings = [] // Can not add them in one operation
+        };
+
+        var nestedThings = new List<TestNestedEntityEditDto>
+        {
+            new () { Id = 4, NestedName = "12343567", Number = 12344 },
+            new () { Id = 6, NestedName = "12343567", Number = 12344  },
+            new () { Id = 8, NestedName = "12343567", Number = 12344  }
+        };
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "add",
+                path = "/-",
+                value = newModel
+            },
+            new Operation<TestEntityEditDto>
+            {
+                op = "add",
+                path = "/11/nestedThings/-",
+                value = nestedThings[0]
+            },
+            new Operation<TestEntityEditDto>
+            {
+                op = "add",
+                path = "/11/nestedThings/-",
+                value = nestedThings[1]
+            },
+            new Operation<TestEntityEditDto>
+            {
+                op = "add",
+                path = "/11/nestedThings/-",
+                value = nestedThings[2]
+            },
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+    }
 }

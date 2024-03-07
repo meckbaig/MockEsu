@@ -300,7 +300,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             errorMessage = null;
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             errorMessage = string.Format(
                 "Could not add entity {0}",
@@ -702,7 +702,10 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                 {
                     foreach (var childEntity in childEntities)
                     {
-                        AddEntityAndItsChildrenToContext(childEntity, context);
+                        if (GetRelation(property) == Relation.ManyToMany)
+                            context.Entry(childEntity).State = EntityState.Modified;
+                        else
+                            AddEntityAndItsChildrenToContext(childEntity, context);
                     }
                 }
             }

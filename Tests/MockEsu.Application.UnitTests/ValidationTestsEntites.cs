@@ -130,6 +130,7 @@ public static class ValidationTestsEntites
 
     public record TestEntityEditDto : IEditDto
     {
+        public int Id { set; get; }
         public string EntityName { get; set; }
         public string OriginalDescription { get; set; }
         public string DateString { get; set; }

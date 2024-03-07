@@ -148,9 +148,9 @@ namespace MockEsu.Application.UnitTests.JsonPatch
                 newEntityName,
                 result.TestEntities
                     .FirstOrDefault(x => x.Id == 1)?
-                        .NestedThings
-                            .FirstOrDefault(x => x.Id == 2)
-                                .NestedName);
+                    .NestedThings
+                    .FirstOrDefault(x => x.Id == 2)
+                    .NestedName);
         }
 
         [Fact]
@@ -254,6 +254,127 @@ namespace MockEsu.Application.UnitTests.JsonPatch
             Assert.Equal(
                 newName,
                 result.TestEntities.FirstOrDefault(x => x.Id == 1)?.SomeInnerEntity.NestedName);
+        }
+
+        [Fact]
+        public async Task ValidateAdd_ReturnsOk_WhenModelIntoCollectionWithManyToMany()
+        {
+            // Arrange
+            var newModel = new TestNestedEntityEditDto
+            {
+                Id = 4,
+                NestedName = "qqqqqqqqqqqq",
+                Number = 111111
+            };
+
+            List<Operation<TestEntityEditDto>> operations = new()
+            {
+                new Operation<TestEntityEditDto>
+                {
+                    op = "add",
+                    path = "/1/nestedThings/-",
+                    value = newModel
+                }
+            };
+
+
+            var command = new TestJsonPatchCommand
+            {
+                Patch = new JsonPatchDocument<TestEntityEditDto>(
+                    operations,
+                    new CamelCasePropertyNamesContractResolver())
+            };
+
+            var handler = new TestJsonPatchCommandHandler(Context, _mapper);
+
+            // Act
+            var result = await handler.Handle(command, default);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.NotNull(result
+                .TestEntities
+                .FirstOrDefault(x => x.Id == 1)?
+                .NestedThings
+                .FirstOrDefault(nt => nt.Id == 4));
+        }
+
+        [Fact]
+        public async Task ValidateAdd_ReturnsOk_WhenModelIntoDB()
+        {
+            // Arrange
+            var nestedThings = new List<TestNestedEntityEditDto>
+            {
+                new () { Id = 4, NestedName = "12343567", Number = 12344 },
+                new () { Id = 6, NestedName = "12343567", Number = 12344  },
+                new () { Id = 8, NestedName = "12343567", Number = 12344  }
+            };
+            var newModel = new TestEntityEditDto
+            {
+                Id = 11,
+                EntityName = "NewAddedTestEntity For ValidateAdd_ReturnsOk_WhenModelIntoDB",
+                OriginalDescription = "New Description",
+                DateString = new DateOnly(2022, 1, 2).ToLongDateString(),
+                SomeInnerEntityId = 10,
+                NestedThings = nestedThings
+            };
+
+
+            List<Operation<TestEntityEditDto>> operations = new()
+            {
+                new Operation<TestEntityEditDto>
+                {
+                    op = "add",
+                    path = "/-",
+                    value = newModel
+                },
+                //new Operation<TestEntityEditDto>
+                //{
+                //    op = "add",
+                //    path = "/11/nestedThings/-",
+                //    value = nestedThings[0]
+                //},
+                //new Operation<TestEntityEditDto>
+                //{
+                //    op = "add",
+                //    path = "/11/nestedThings/-",
+                //    value = nestedThings[1]
+                //},
+                //new Operation<TestEntityEditDto>
+                //{
+                //    op = "add",
+                //    path = "/11/nestedThings/-",
+                //    value = nestedThings[2]
+                //},
+            };
+
+            var command = new TestJsonPatchCommand
+            {
+                Patch = new JsonPatchDocument<TestEntityEditDto>(
+                    operations,
+                    new CamelCasePropertyNamesContractResolver())
+            };
+
+            var handler = new TestJsonPatchCommandHandler(Context, _mapper);
+
+            // Act
+            var result = await handler.Handle(command, default);
+
+            // Assert
+            var resultEntity = result.TestEntities.FirstOrDefault(x => x.EntityName == newModel.EntityName);
+
+            Assert.NotNull(result);
+            Assert.NotNull(result
+                .TestEntities
+                .FirstOrDefault(x => x.Id == newModel.Id));
+
+            Assert.Equal(newModel.EntityName, resultEntity?.EntityName);
+            Assert.Equal(newModel.OriginalDescription, resultEntity?.OriginalDescription);
+            Assert.Equal(newModel.DateString, resultEntity?.DateString);
+            Assert.Equal(newModel.SomeInnerEntityId, resultEntity?.SomeInnerEntity?.Id);
+            Assert.Equal(
+                nestedThings.Select(t => t.Id).OrderBy(x => x).ToList(), 
+                resultEntity?.NestedThings.Select(t => t.Id).OrderBy(x => x).ToList());
         }
     }
 }
