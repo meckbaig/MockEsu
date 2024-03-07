@@ -1,26 +1,16 @@
 ﻿using AutoMapper;
-using DotNet.Testcontainers.Builders;
 using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.JsonPatch.Operations;
 using MockEsu.Application.Services.Tariffs;
-using Renci.SshNet;
-using Testcontainers.PostgreSql;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Xunit;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 using static MockEsu.Application.UnitTests.ValidationTestsEntites;
 
 namespace MockEsu.Application.UnitTests.JsonPatch;
 
 public class JsonPatchValidationTests
 {
-    protected readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("postgres:latest")
-        .WithDatabase("MockEsu")
-        .WithUsername("postgres")
-        .WithPassword("testtest")
-        .WithPortBinding(5555, 5432)
-        .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5432))
-        .Build();
     private readonly IMapper _mapper;
 
     public JsonPatchValidationTests()
@@ -29,45 +19,225 @@ public class JsonPatchValidationTests
         {
             c.AddProfile<TestEntityDto.Mapping>();
             c.AddProfile<TestNestedEntityDto.Mapping>();
-            //c.AddProfile<TestEntityEditDto.Mapping>();
-            //c.AddProfile<TestNestedEntityEditDto.Mapping>();
+            c.AddProfile<TestEntityEditDto.Mapping>();
+            c.AddProfile<TestNestedEntityEditDto.Mapping>();
+            c.AddProfile<TestEditDtoWithLongNameMapping.Mapping>();
         });
         _mapper = config.CreateMapper();
-    }
-
-    private async Task<TestDbContext> CreateAndSeedContext()
-    {
-        await _container.StartAsync();
-        var optionsBuilder = new DbContextOptionsBuilder<TestDbContext>();
-        optionsBuilder.UseNpgsql(_container.GetConnectionString());
-        var context = new TestDbContext(optionsBuilder.Options);
-        TestMigration(context);
-        return context;
     }
 
     [Fact]
     public async Task Validate_ReturnsOk_WhenDefault()
     {
         // Arrange
-        using TestDbContext context = await CreateAndSeedContext();
-
-        var command = new TestJsonPatchCommand 
-        { 
+        var command = new TestJsonPatchCommand
+        {
             Patch = new JsonPatchDocument<TestEntityEditDto>()
         };
 
-        var validator = new TestJsonPatchTariffsCommandValidator(_mapper);
-        var handler = new TestJsonPatchCommandHandler(context, _mapper);
+        var validator = new TestJsonPatchCommandValidator(_mapper);
 
         // Act
-        //var validationResult = validator.Validate(command);
-        var result = await handler.Handle(command, default);
+        var validationResult = validator.Validate(command);
 
         // Assert
-        //Assert.NotNull(validationResult);
-        //Assert.True(validationResult.IsValid);
-        //Assert.Equal(0, validationResult.Errors.Count);
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+    }
 
-        //await _container.StopAsync();
+    [Fact]
+    public async Task ValidateReplace_ReturnsOk_WhenStringProperty()
+    {
+        // Arrange
+        string newEntityName = "NewValue1";
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "replace",
+                path = "/1/entityName",
+                value = newEntityName
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+    }
+
+    [Fact]
+    public async Task ValidateReplace_ReturnsOk_WhenNestedStringPropertyInModel()
+    {
+        // Arrange
+        string newEntityName = "NewValue1";
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "replace",
+                path = "/1/someInnerEntity/nestedName",
+                value = newEntityName
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+    }
+
+    [Fact]
+    public async Task ValidateReplace_ReturnsOk_WhenNestedStringPropertyInCollection()
+    {
+        // Arrange
+        string newEntityName = "NewValue1";
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "replace",
+                path = "/1/nestedThings/2/nestedName",
+                value = newEntityName
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+    }
+
+    [Fact]
+    public async Task ValidateReplace_ReturnsOk_WhenPropertyWithComplexMapping()
+    {
+        // Arrange
+        string newDate = "31 декабря 2020 г.";
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "replace",
+                path = "/1/dateString",
+                value = newDate
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+    }
+
+    [Fact]
+    public async Task ValidateReplace_ReturnsOk_WhenPropertyWithModelId()
+    {
+        // Arrange
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "replace",
+                path = "/1/someInnerEntityId",
+                value = 2
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+    }
+
+    [Fact]
+    public async Task ValidateReplace_ReturnsOk_WhenPropertyWithLongMapping()
+    {
+        // Arrange
+        string newName = "NewNestedEntityNameValue1";
+
+        List<Operation<TestEditDtoWithLongNameMapping>> operations = new()
+        {
+            new Operation<TestEditDtoWithLongNameMapping>
+            {
+                op = "replace",
+                path = "/1/nestedName",
+                value = newName
+            }
+        };
+
+        var command = new TestJsonPatchLongMappingCommand
+        {
+            Patch = new JsonPatchDocument<TestEditDtoWithLongNameMapping>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchLongMappingCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
     }
 }

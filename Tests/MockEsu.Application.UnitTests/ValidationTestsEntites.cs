@@ -1,18 +1,13 @@
 ﻿using AutoMapper;
-using AutoMapper.QueryableExtensions;
-using MediatR;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Distributed;
 using MockEsu.Application.Common.Attributes;
-using MockEsu.Application.Common.BaseRequests.ListQuery;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Common.Interfaces;
-using MockEsu.Application.DTOs.Kontragents;
-using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Common;
-using MockEsu.Domain.Entities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Globalization;
 using static MockEsu.Application.UnitTests.ValidationTestsEntites;
 
 namespace MockEsu.Application.UnitTests;
@@ -29,6 +24,7 @@ public static class ValidationTestsEntites
 
         public int SomeCount { get; set; }
 
+        [DatabaseRelation(Domain.Enums.Relation.ManyToMany)]
         public HashSet<TestNestedEntity> TestNestedEntities { get; set; }
 
         [ForeignKey(nameof(InnerEntityId))]
@@ -43,6 +39,7 @@ public static class ValidationTestsEntites
 
         public double Number { get; set; }
 
+        [DatabaseRelation(Domain.Enums.Relation.ManyToMany)]
         public HashSet<TestEntity> TestEntities { get; set; }
     }
 
@@ -136,8 +133,9 @@ public static class ValidationTestsEntites
         public string EntityName { get; set; }
         public string OriginalDescription { get; set; }
         public string DateString { get; set; }
-        public List<TestNestedEntityDto> NestedThings { get; set; }
-        public TestNestedEntityDto SomeInnerEntity { get; set; }
+        public List<TestNestedEntityEditDto> NestedThings { get; set; }
+        public TestNestedEntityEditDto SomeInnerEntity { get; set; }
+        public int SomeInnerEntityId { get; set; }
 
         public static Type GetOriginType()
         {
@@ -146,11 +144,141 @@ public static class ValidationTestsEntites
 
         public static Type GetValidatorType()
         {
-            throw new NotImplementedException();
+            return typeof(Validator);
         }
 
-        /// TODO: ДОПИСАТЬ
+        public class Mapping : Profile
+        {
+            public Mapping()
+            {
+                CreateMap<TestEntityEditDto, TestEntity>()
+                    .ForMember(m => m.Name, opt => opt.MapFrom(o => o.EntityName))
+                    .ForMember(m => m.Description, opt => opt.MapFrom(o => o.OriginalDescription))
+                    .ForMember(m => m.Date, opt => opt.MapFrom(o => ConvertToDateOnly(o.DateString)))
+                    .ForMember(m => m.TestNestedEntities, opt => opt.MapFrom(o => o.NestedThings))
+                    .ForMember(m => m.InnerEntity, opt => opt.MapFrom(o => o.SomeInnerEntity))
+                    .ForMember(m => m.InnerEntityId, opt => opt.MapFrom(o => o.SomeInnerEntityId));
+            }
+
+            private DateOnly ConvertToDateOnly(string dateString)
+            {
+                //CultureInfo provider = CultureInfo.GetCultureInfo("ru-RU");
+                DateTime dateTime = DateTime.Parse(dateString);
+                DateOnly dateOnly = DateOnly.FromDateTime(dateTime);
+                return dateOnly;
+            }
+        }
+
+        internal class Validator : AbstractValidator<TestEntityEditDto>
+        {
+            public Validator()
+            {
+                RuleFor(x => x.EntityName)
+                    .NotEmpty()
+                    .MinimumLength(2)
+                    .MaximumLength(100);
+                RuleFor(x => x.OriginalDescription)
+                    .NotEmpty()
+                    .MinimumLength(2)
+                    .MaximumLength(100);
+                RuleFor(x => x.DateString)
+                    .NotEmpty()
+                    .Must(BeValidDateString);
+                RuleFor(x => x.SomeInnerEntity)
+                    .SetValidator(new TestNestedEntityEditDto.Validator());
+                RuleForEach(x => x.NestedThings)
+                    .SetValidator(new TestNestedEntityEditDto.Validator());
+            }
+
+            private bool BeValidDateString(string dateString)
+            {
+                return DateTime.TryParse(dateString, out var _);
+            }
+        }
     }
+
+    public record TestNestedEntityEditDto : IEditDto
+    {
+        public int Id { get; set; }
+
+        public string NestedName { get; set; }
+
+        public int Number { get; set; }
+
+        public static Type GetOriginType()
+        {
+            return typeof(TestNestedEntity);
+        }
+
+        public static Type GetValidatorType()
+        {
+            return typeof(Validator);
+        }
+
+        public class Mapping : Profile
+        {
+            public Mapping()
+            {
+                CreateMap<TestNestedEntityEditDto, TestNestedEntity>()
+                    .ForMember(m => m.Id, opt => opt.MapFrom(o => o.Id))
+                    .ForMember(m => m.Name, opt => opt.MapFrom(o => o.NestedName))
+                    .ForMember(m => m.Number, opt => opt.MapFrom(o => o.Number));
+            }
+        }
+
+        internal class Validator : AbstractValidator<TestNestedEntityEditDto>
+        {
+            public Validator()
+            {
+                RuleFor(x => x.Id)
+                    .GreaterThan(0);
+                RuleFor(x => x.NestedName)
+                    .NotEmpty()
+                    .MinimumLength(2)
+                    .MaximumLength(100);
+                RuleFor(x => x.Number)
+                    .NotNull();
+            }
+        }
+    }
+
+    public record TestEditDtoWithLongNameMapping : IEditDto
+    {
+        public int NestedId { get; set; }
+        public string NestedName { get; set; }
+
+        public static Type GetOriginType()
+        {
+            return typeof(TestEntity);
+        }
+
+        public static Type GetValidatorType()
+        {
+            return typeof(Validator);
+        }
+
+        public class Mapping : Profile
+        {
+            public Mapping()
+            {
+                CreateMap<TestEditDtoWithLongNameMapping, TestEntity>()
+                    .ForMember(m => m.InnerEntityId, opt => opt.MapFrom(o => o.NestedId))
+                    .ForPath(m => m.InnerEntity.Name, opt => opt.MapFrom(o => o.NestedName));
+            }
+        }
+
+        internal class Validator : AbstractValidator<TestEditDtoWithLongNameMapping>
+        {
+            public Validator()
+            {
+                RuleFor(x => x.NestedName)
+                    .NotEmpty()
+                    .MinimumLength(2)
+                    .MaximumLength(100);
+            }
+        }
+
+    } 
 
     public static IQueryable<TestEntity> SeedTestEntities(int count = 10)
     {
@@ -197,110 +325,6 @@ public static class ValidationTestsEntites
         }
 
         return entities.AsQueryable();
-    }
-
-    public static List<TestEntity> GetTestEntities(int count = 10)
-    {
-        List<TestEntity> entities = new List<TestEntity>();
-
-        int itemsCount = count != 0 ? count : 10;
-        for (int i = 1; i <= itemsCount; i++)
-        {
-            var entity = new TestEntity
-            {
-                Id = i,
-                Name = $"Name{i}",
-                Description = $"Description{i}",
-                Date = DateOnly.FromDateTime(new DateTime(2024, 1, 1).AddDays(-i)),
-                SomeCount = 100 - i * 10,
-                TestNestedEntities = new HashSet<TestNestedEntity>(),
-                InnerEntityId = 100 + i
-            };
-
-            entities.Add(entity);
-        }
-
-        return entities;
-    }
-
-    public static HashSet<TestNestedEntity> GetTestNestedEntities(int count = 10)
-    {
-        HashSet<TestNestedEntity> entities = new HashSet<TestNestedEntity>();
-
-        int itemsCount = count != 0 ? count : 10;
-        for (int i = 1; i <= itemsCount + 2; i++)
-        {
-            var entity = new TestNestedEntity
-            {
-                Id = i,
-                Name = $"NestedName{i}",
-                Number = i * 1.5
-            };
-            entities.Add(entity);
-
-            if (!entities.Any(x => x.Id == 100 + i))
-            {
-                var entity100 = new TestNestedEntity
-                {
-                    Id = 100 + i,
-                    Name = $"NestedName{100 + i}",
-                    Number = (100 + i) * 1.5
-                };
-                entities.Add(entity100);
-            }
-        }
-        return entities;
-    }
-
-    public static List<TestAndNested> GetTestAndNestedEntities(int count = 10)
-    {
-        List<TestAndNested> entities = new List<TestAndNested>();
-
-        int itemsCount = count != 0 ? count : 10;
-        for (int i = 1; i <= itemsCount; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                var entity = new TestAndNested
-                {
-                    TestEntityId = i,
-                    TestNestedEntityId = i+j,
-                };
-
-                entities.Add(entity);
-            }
-        }
-
-        return entities;
-    }
-
-    internal static void TestMigration(TestDbContext context, int count = 10)
-    {
-        try
-        {
-            var TestNestedEntities = GetTestNestedEntities(count);
-            var TestEntities = GetTestEntities(count);
-            var TestAndNesteds = GetTestAndNestedEntities(count);
-
-            InitScript(context);
-            context.TestNestedEntities.AddRange(TestNestedEntities);
-            context.TestEntities.AddRange(TestEntities);
-            context.TestAndNesteds.AddRange(TestAndNesteds);
-            context.SaveChanges();
-
-        }
-        catch (Exception ex)
-        {
-
-            throw;
-        }
-    }
-
-    private static void InitScript(TestDbContext context)
-    {
-        string script = File.ReadAllText(@"..\..\..\dump-unit-test.sql");
-        
-        context.Database.ExecuteSqlRaw(script);
     }
 }
 

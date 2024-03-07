@@ -11,34 +11,34 @@ using AutoMapper.QueryableExtensions;
 
 namespace MockEsu.Application.Services.Tariffs;
 
-public record TestJsonPatchCommand : BaseJsonPatchCommand<TestJsonPatchResponse, TestEntityEditDto>
+public record TestJsonPatchLongMappingCommand : BaseJsonPatchCommand<TestJsonPatchLongMappingResponse, TestEditDtoWithLongNameMapping>
 {
-    public override JsonPatchDocument<TestEntityEditDto> Patch { get; set; }
+    public override JsonPatchDocument<TestEditDtoWithLongNameMapping> Patch { get; set; }
 }
 
-public class TestJsonPatchResponse : BaseResponse
+public class TestJsonPatchLongMappingResponse : BaseResponse
 {
     public List<TestEntityDto> TestEntities { get; set; }
 }
 
-public class TestJsonPatchCommandValidator : BaseJsonPatchValidator
-    <TestJsonPatchCommand, TestJsonPatchResponse, TestEntityEditDto>
+public class TestJsonPatchLongMappingCommandValidator : BaseJsonPatchValidator
+    <TestJsonPatchLongMappingCommand, TestJsonPatchLongMappingResponse, TestEditDtoWithLongNameMapping>
 {
-    public TestJsonPatchCommandValidator(IMapper mapper) : base(mapper) { }
+    public TestJsonPatchLongMappingCommandValidator(IMapper mapper) : base(mapper) { }
 }
 
-public class TestJsonPatchCommandHandler : IRequestHandler<TestJsonPatchCommand, TestJsonPatchResponse>
+public class TestJsonPatchLongMappingCommandHandler : IRequestHandler<TestJsonPatchLongMappingCommand, TestJsonPatchLongMappingResponse>
 {
     private readonly TestDbContext _context;
     private readonly IMapper _mapper;
 
-    public TestJsonPatchCommandHandler(TestDbContext context, IMapper mapper)
+    public TestJsonPatchLongMappingCommandHandler(TestDbContext context, IMapper mapper)
     {
         _context = context;
         _mapper = mapper;
     }
 
-    public async Task<TestJsonPatchResponse> Handle(TestJsonPatchCommand request, CancellationToken cancellationToken)
+    public async Task<TestJsonPatchLongMappingResponse> Handle(TestJsonPatchLongMappingCommand request, CancellationToken cancellationToken)
     {
         request.Patch.ApplyDtoTransactionToSource(_context.TestEntities, _mapper.ConfigurationProvider);
 
@@ -49,6 +49,6 @@ public class TestJsonPatchCommandHandler : IRequestHandler<TestJsonPatchCommand,
             .ProjectTo<TestEntityDto>(_mapper.ConfigurationProvider)
             .ToList();
 
-        return new TestJsonPatchResponse { TestEntities = entities };
+        return new TestJsonPatchLongMappingResponse { TestEntities = entities };
     }
 }
