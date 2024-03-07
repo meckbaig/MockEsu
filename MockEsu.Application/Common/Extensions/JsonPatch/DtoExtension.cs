@@ -70,30 +70,34 @@ internal static class DtoExtension
 
         errorMessage = null;
         sourceValue = null;
-        if (typeof(IBaseDto).IsAssignableFrom(valueType))
+
+        if (value != null)
         {
-            if (jsonValueType == JTokenType.Object)
+            if (typeof(IBaseDto).IsAssignableFrom(valueType))
             {
-                sourceValue = GetSourceValueFromJsonObject(pathTypes, provider, serialized);
-                return true;
+                if (jsonValueType == JTokenType.Object)
+                {
+                    sourceValue = GetSourceValueFromJsonObject(pathTypes, provider, serialized);
+                    return true;
+                }
+                else if (CanConvert(value, GetDtoOriginType(valueType)))
+                {
+                    sourceValue = ConvertToTargetType(value, GetDtoOriginType(valueType));
+                    return true;
+                }
+                errorMessage = "Value is not valid.";
+                return false;
             }
-            else if (CanConvert(value, GetDtoOriginType(valueType)))
+            if (valueType.IsArray || valueType.IsListType())
             {
-                sourceValue = ConvertToTargetType(value, GetDtoOriginType(valueType));
-                return true;
+                if (jsonValueType == JTokenType.Array)
+                {
+                    sourceValue = GetSourceValueFromJsonArray(pathTypes, provider, serialized);
+                    return true;
+                }
+                errorMessage = "Value is not an array.";
+                return false;
             }
-            errorMessage = "Value is not valid.";
-            return false;
-        }
-        if (valueType.IsArray || valueType.IsListType())
-        {
-            if (jsonValueType == JTokenType.Array)
-            {
-                sourceValue = GetSourceValueFromJsonArray(pathTypes, provider, serialized);
-                return true;
-            }
-            errorMessage = "Value is not an array.";
-            return false;
         }
         Type dtoType = pathTypes[pathTypes.Count - 2];
         return InvokeTryParseValueThroughDto(value, dtoType, provider, out sourceValue, out errorMessage, dtoPropertyName, sourcePropertyName);
@@ -287,13 +291,13 @@ internal static class DtoExtension
     private static object GetSourceValueFromJsonArray(List<Type> dtoPathTypes, IConfigurationProvider provider, string serialized)
     {
         Type dtoArrayType = dtoPathTypes.Last();
-        if (!IsCustomObject(dtoArrayType.GetElementType()))
+        Type dtoType = dtoArrayType.GetGenericArguments().Single();
+        if (!IsCustomObject(dtoType))
             return serialized;
 
         List<object> sourceObjects = new();
         List<Dictionary<string, object>> dtoDictionaries
             = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(serialized);
-        Type dtoType = dtoArrayType.GetGenericArguments().Single();
         foreach (var dtoDict in dtoDictionaries)
         {
             List<Type> newPathTypes = dtoPathTypes.Concat([dtoType]).ToList();
