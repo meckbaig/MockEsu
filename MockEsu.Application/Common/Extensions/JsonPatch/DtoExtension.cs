@@ -587,15 +587,17 @@ internal static class DtoExtension
 
         if (propertyMap == null)
         {
-            propertyMap = map.PropertyMaps.FirstOrDefault(pm => pm.CustomMapExpression != null &&
-                                                                pm.CustomMapExpression.ToString().Contains(dtoProperty));
+            var sdfsd = map.PropertyMaps.Select(pm => pm.CustomMapExpression?.ToString().Split('(', ')', '.', '+')).ToList();
+            propertyMap = map.PropertyMaps.FirstOrDefault(
+                pm => pm.CustomMapExpression != null &&
+                pm.CustomMapExpression.ToString().Split('(', ')', '.', '+').Contains(dtoProperty));
         }
         if (propertyMap == null)
         {
             propertyMap = map.PropertyMaps
-                .FirstOrDefault(pm => pm.TypeMap.PathMaps.Any(pm => pm.SourceMember?.Name == dtoProperty))
-                .TypeMap
-                .PathMaps
+                .FirstOrDefault(pm => pm.TypeMap.PathMaps.Any(pm => pm.SourceMember?.Name == dtoProperty))?
+                .TypeMap?
+                .PathMaps?
                 .FirstOrDefault(pm => pm.SourceMember?.Name == dtoProperty);
         }
         if (propertyMap == null)
