@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using MockEsu.Application.Services.Tariffs;
@@ -309,6 +310,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
                 new () { Id = 6, NestedName = "12343567", Number = 12344  },
                 new () { Id = 8, NestedName = "12343567", Number = 12344  }
             };
+
             var newModel = new TestEntityEditDto
             {
                 Id = 11,
@@ -319,6 +321,9 @@ namespace MockEsu.Application.UnitTests.JsonPatch
                 NestedThings = nestedThings
             };
 
+            var nestedEntityBeforeOperation = Context.TestNestedEntities.Where(x => x.Id == nestedThings.First().Id)
+                .ProjectTo<TestNestedEntityDto>(_mapper.ConfigurationProvider)
+                .ToList()[0];
 
             List<Operation<TestEntityEditDto>> operations = new()
             {
@@ -327,25 +332,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
                     op = "add",
                     path = "/-",
                     value = newModel
-                },
-                //new Operation<TestEntityEditDto>
-                //{
-                //    op = "add",
-                //    path = "/11/nestedThings/-",
-                //    value = nestedThings[0]
-                //},
-                //new Operation<TestEntityEditDto>
-                //{
-                //    op = "add",
-                //    path = "/11/nestedThings/-",
-                //    value = nestedThings[1]
-                //},
-                //new Operation<TestEntityEditDto>
-                //{
-                //    op = "add",
-                //    path = "/11/nestedThings/-",
-                //    value = nestedThings[2]
-                //},
+                }
             };
 
             var command = new TestJsonPatchCommand
@@ -361,7 +348,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
             var result = await handler.Handle(command, default);
 
             // Assert
-            var resultEntity = result.TestEntities.FirstOrDefault(x => x.EntityName == newModel.EntityName);
+            var resultEntity = result.TestEntities.FirstOrDefault(x => x.Id == newModel.Id);
 
             Assert.NotNull(result);
             Assert.NotNull(result
@@ -375,6 +362,10 @@ namespace MockEsu.Application.UnitTests.JsonPatch
             Assert.Equal(
                 nestedThings.Select(t => t.Id).OrderBy(x => x).ToList(), 
                 resultEntity?.NestedThings.Select(t => t.Id).OrderBy(x => x).ToList());
+            Assert.Equal(
+                nestedEntityBeforeOperation, 
+                resultEntity?.NestedThings.FirstOrDefault(x => x.Id == nestedEntityBeforeOperation.Id));
+
         }
     }
 }

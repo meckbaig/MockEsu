@@ -7,10 +7,13 @@ using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.DataBaseProvider;
 using MockEsu.Domain.Common;
 using MockEsu.Domain.Enums;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MockEsu.Application.Extensions.JsonPatch;
 
@@ -272,6 +275,27 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         return (bool)result;
     }
 
+    /// <summary>
+    /// Adds items into collection to create many-to-many connections through Entity Framework.
+    /// </summary>
+    /// <param name="collectionProperty">Collection property in parent entity.</param>
+    /// <param name="parent">Parent entity itself.</param>
+    /// <param name="context">Entity Framework DbContext.</param>
+    /// <param name="collection">Value of collection property in parent entity, which is tracked by Entity Framework.</param>
+    private static void InvokeReplaceWithManyToMany(
+        PropertyInfo collectionProperty,
+        object parent,
+        IDbContext context,
+        ref IEnumerable collection)
+    {
+        Type geneticOfCollection = collection.GetType().GetGenericArguments().Single();
+        var methodInfo = typeof(CustomDbSetAdapter<TEntity>).GetMethod(
+            nameof(ReplaceWithManyToMany),
+            BindingFlags.Static | BindingFlags.NonPublic);
+        var genericMethod = methodInfo.MakeGenericMethod(geneticOfCollection);
+        object[] parameters = [collectionProperty, parent, context, collection];
+        object result = genericMethod.Invoke(null, parameters);
+    }
     #endregion
 
     #region PrivateMethods
@@ -703,15 +727,48 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                     foreach (var childEntity in childEntities)
                     {
                         if (GetRelation(property) == Relation.ManyToMany)
-                            context.Entry(childEntity).State = EntityState.Modified;
+                        {
+                            /// Only adds Id's to many-to-many connection
+                            InvokeReplaceWithManyToMany(property, entity, context, ref childEntities);
+                            /// Edits original values in nested entities
+                            //context.Entry(childEntity).State = EntityState.Modified; 
+                        }
                         else
+                        {
                             AddEntityAndItsChildrenToContext(childEntity, context);
+                        }
                     }
                 }
             }
         }
 
         context.Entry(entity).State = EntityState.Added;
+    }
+
+    /// <summary>
+    /// Adds items into collection to create many-to-many connections through Entity Framework.
+    /// </summary>
+    /// <typeparam name="TEntityToAdd">Type of item in collection.</typeparam>
+    /// <param name="collectionProperty">Collection property in parent entity.</param>
+    /// <param name="parent">Parent entity itself.</param>
+    /// <param name="context">Entity Framework DbContext.</param>
+    /// <param name="collection">Value of collection property in parent entity, which is tracked by Entity Framework.</param>
+    private static void ReplaceWithManyToMany
+        <TEntityToAdd>(
+        PropertyInfo collectionProperty,
+        object parent, 
+        IDbContext context,
+        ref ICollection<TEntityToAdd> collection)
+        where TEntityToAdd : BaseEntity, new()
+    {
+        var collectionItems = collection;
+        FillCollectionWithNullValue(collectionProperty, parent, ref collection);
+        //context.Entry(collection).State = EntityState.Unchanged;
+        foreach ( var item in collectionItems)
+        {
+            context.Entry(item).State = EntityState.Unchanged;
+            collection.Add(item);
+        }
     }
 
     /// <summary>
