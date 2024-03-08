@@ -430,10 +430,10 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             errorMessage = null;
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             errorMessage = string.Format(
-                "Could not delete entity with id {0}",
+                "Could not remove entity with id {0}",
                 entityId);
             return false;
         }
@@ -466,6 +466,10 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             TParent parent = new TParent { Id = parentId };
             var listProperty = typeof(TParent).GetProperty(entitiesInParentPropertyName);
             ICollection<TEntityToDelete> list = (ICollection<TEntityToDelete>)listProperty.GetValue(parent);
+            if (listProperty != null && list == null)
+            {
+                FillCollectionWithNullValue(listProperty, parent, ref list);
+            }
             list.Add(entity);
             (context as DbContext).ChangeTracker.Clear();
             context.Entry(parent).State = EntityState.Unchanged;
@@ -475,10 +479,10 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
             errorMessage = null;
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             errorMessage = string.Format(
-                "Could not delete entity '{0}' with id {1} from parent with id {2}",
+                "Could not remove entity '{0}' with id {1} from parent with id {2}",
                 entitiesInParentPropertyName.ToCamelCase(),
                 entityId,
                 parentId);
