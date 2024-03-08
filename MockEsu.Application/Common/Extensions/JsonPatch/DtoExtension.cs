@@ -99,7 +99,9 @@ internal static class DtoExtension
                 return false;
             }
         }
-        Type dtoType = pathTypes[pathTypes.Count - 2];
+        Type dtoType = pathTypes[^2];
+        if (dtoType.IsCollection())
+            dtoType = pathTypes[^1];
         return InvokeTryParseValueThroughDto(value, dtoType, provider, out sourceValue, out errorMessage, dtoPropertyName, sourcePropertyName);
         sourceValue = value;
         return true;

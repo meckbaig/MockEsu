@@ -1,11 +1,11 @@
 ﻿using AutoMapper;
+using AutoMapper.Internal;
 using FluentValidation;
 using FluentValidation.Internal;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.Extensions.JsonPatch;
-using MockEsu.Application.Common.Extensions.StringExtensions;
 using System.Collections;
 using System.Reflection;
 
@@ -46,7 +46,7 @@ public static class BaseJsonPatchValidatorExtension
             .WithMessage(x => canParseValueErrorMessage)
             .WithErrorCode(JsonPatchValidationErrorCode.CanParseValueValidator.ToString());
 
-        ruleBuilder.Custom((o, context) => ValidateValue(o, mapper, context, propertyPathTypes.Last(), 
+        ruleBuilder.Custom((o, context) => ValidateValue(o, mapper, context, propertyPathTypes.Last(),
             canParseValueErrorMessage != null || canParsePathErrorMessage != null));
 
         return ruleBuilder;
@@ -68,8 +68,41 @@ public static class BaseJsonPatchValidatorExtension
             out string _,
             out errorMessage);
 
+        if (result)
+        {
+            switch (operation.OperationType)
+            {
+                case OperationType.Add:
+                    if (propertyTypes.Count > 1 && !(propertyTypes[^2]?.IsCollection() ?? false))
+                    {
+                        errorMessage = "Operation 'add' is available only for collections.";
+                    }
+                    else if (int.TryParse(jsonPatchPath.LastSegment, out int _))
+                    {
+                        errorMessage = "Operation 'add' can not change existing entity.";
+                    }
+                    break;
+                case OperationType.Remove:
+                    if (propertyTypes.Count > 1 && !(propertyTypes[^2]?.IsCollection() ?? false))
+                    {
+                        errorMessage = "Operation 'remove' is available only for collections.";
+                    }
+                    else if (jsonPatchPath.LastSegment == "-")
+                    {
+                        errorMessage = "Operation 'remove' can not change not existing entity.";
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
         if (errorMessage != null)
+        {
             errorMessage = $"{operation.path}: {errorMessage}";
+            return false;
+        }
+
         return result;
     }
 
