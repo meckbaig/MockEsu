@@ -42,11 +42,12 @@ public static class BaseJsonPatchValidatorExtension
 
         string canParseValueErrorMessage = null!;
         ruleBuilder = ruleBuilder
-            .Must((c, o) => CanParseValue(o, mapper, propertyPathTypes, out canParseValueErrorMessage))
+            .Must((c, o) => CanParseValue(o, mapper, propertyPathTypes, canParsePathErrorMessage != null, out canParseValueErrorMessage))
             .WithMessage(x => canParseValueErrorMessage)
             .WithErrorCode(JsonPatchValidationErrorCode.CanParseValueValidator.ToString());
 
-        ruleBuilder.Custom((o, context) => ValidateValue(o, mapper, context, propertyPathTypes.Last(), canParseValueErrorMessage));
+        ruleBuilder.Custom((o, context) => ValidateValue(o, mapper, context, propertyPathTypes.Last(), 
+            canParseValueErrorMessage != null || canParsePathErrorMessage != null));
 
         return ruleBuilder;
     }
@@ -76,11 +77,12 @@ public static class BaseJsonPatchValidatorExtension
         Operation<TDto> operation,
         IMapper mapper,
         List<Type> propertyTypes,
+        bool previousValidationWasThrownWithError,
         out string errorMessage)
         where TDto : class, IEditDto, new()
     {
         errorMessage = null;
-        if (propertyTypes == null || operation.OperationType == OperationType.Remove)
+        if (propertyTypes == null || operation.OperationType == OperationType.Remove || previousValidationWasThrownWithError)
             return true;
 
         var jsonPatchPath = new JsonPatchPath(operation.path);
@@ -102,10 +104,10 @@ public static class BaseJsonPatchValidatorExtension
         IMapper mapper,
         ValidationContext<TCommand> context,
         Type propertyType,
-        string parseValueError)
+        bool previousValidationWasThrownWithError)
         where TDto : class, IEditDto, new()
     {
-        if (propertyType == null || parseValueError != null)
+        if (propertyType == null || operation.OperationType == OperationType.Remove || previousValidationWasThrownWithError)
             return;
 
         switch (operation.OperationType)
@@ -199,7 +201,7 @@ public static class BaseJsonPatchValidatorExtension
             .First(m => m.Name == nameof(DefaultValidatorExtensions.Validate));
 
         var genericValidateMethod = validateMethod.MakeGenericMethod(dtoType);
-        var optionsAction = GetValidationOptionsAction(dtoType, operation.path.Trim('/').ToPascalCase());
+        var optionsAction = GetValidationOptionsAction(dtoType, path.LastSegment);
         object[] parameters = [validator, dto, optionsAction];
         ValidationResult result = (ValidationResult)genericValidateMethod.Invoke(null, parameters);
 
