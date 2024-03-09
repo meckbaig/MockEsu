@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MockEsu.Infrastructure.Data;
+using System.Diagnostics;
 
 namespace MockEsu.Application.IntegrationTests;
 
@@ -25,7 +26,39 @@ internal class MockesuWebApplicationFactory : WebApplicationFactory<Program>
                 options.UseNpgsql(TestConnectionString);
             });
         });
+        //CreateSqlScriptForConnection(schemaOnly: false);
 
         base.ConfigureWebHost(builder);
+    }
+
+    private void CreateSqlScriptForConnection(bool schemaOnly)
+    {
+        string fileName = @"..\..\..\dump-test-database.sql";
+
+        string server = "localhost";
+        string port = "5433";
+        string database = "MockEsu";
+        string userId = "postgres";
+        string password = "testtest";
+
+        ProcessStartInfo psi = new ProcessStartInfo();
+        psi.FileName = @"D:\Progs\pgAdmin 4\runtime\pg_dump.exe"; ///TODO: change pg_dump to environment
+        psi.RedirectStandardOutput = true;
+        if (schemaOnly)
+            psi.Arguments = $"--host={server} --port={port} --username={userId} --no-password --dbname={database} --schema-only --no-owner";
+        else
+            psi.Arguments = $"--host={server} --port={port} --username={userId} --no-password --dbname={database} --no-owner";
+        psi.UseShellExecute = false;
+        psi.Environment["PGPASSWORD"] = password;
+
+        Process process = Process.Start(psi);
+
+        using (StreamReader reader = process.StandardOutput)
+        {
+            string result = reader.ReadToEnd();
+            File.WriteAllText(fileName, result);
+        }
+
+        process.WaitForExit();
     }
 }

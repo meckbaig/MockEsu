@@ -2,7 +2,7 @@
 using FluentValidation;
 using MockEsu.Application.Common.Dtos;
 using MockEsu.Application.UnitTests.Common.Entities;
-using static MockEsu.Application.UnitTests.ValidationTestsEntites;
+using static MockEsu.Application.UnitTests.Common.ValidationTestsEntites;
 
 namespace MockEsu.Application.UnitTests.Common.DTOs;
 

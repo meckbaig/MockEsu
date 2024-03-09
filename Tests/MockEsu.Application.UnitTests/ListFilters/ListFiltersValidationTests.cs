@@ -4,7 +4,7 @@ using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Application.UnitTests.Common.DTOs;
 using MockEsu.Application.UnitTests.Common.Mediators;
 using Xunit;
-using static MockEsu.Application.UnitTests.ValidationTestsEntites;
+using static MockEsu.Application.UnitTests.Common.ValidationTestsEntites;
 
 namespace MockEsu.Application.UnitTests.ListFilters;
 
