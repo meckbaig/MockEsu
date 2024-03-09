@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MockEsu.Application.UnitTests.Common;
+using MockEsu.Application.UnitTests.Common.Entities;
 using Testcontainers.PostgreSql;
-using static MockEsu.Application.UnitTests.ValidationTestsEntites;
 
 namespace MockEsu.Application.UnitTests.JsonPatch;
 

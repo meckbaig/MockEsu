@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using MockEsu.Application.UnitTests.Common;
 using Testcontainers.PostgreSql;
 
 namespace MockEsu.Application.UnitTests.JsonPatch;
@@ -35,7 +31,4 @@ public class TestWithContainer
             return _context;
         }
     }
-
-
-
 }

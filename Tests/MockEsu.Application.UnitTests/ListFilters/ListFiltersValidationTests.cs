@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.DTOs.Kontragents;
+using MockEsu.Application.UnitTests.Common.DTOs;
+using MockEsu.Application.UnitTests.Common.Mediators;
 using Xunit;
 using static MockEsu.Application.UnitTests.ValidationTestsEntites;
 

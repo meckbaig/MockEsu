@@ -3,18 +3,15 @@ using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using MockEsu.Application.Common.Exceptions;
-using MockEsu.Application.Services.Tariffs;
+using MockEsu.Application.UnitTests.Common.DTOs;
+using MockEsu.Application.UnitTests.Common.Mediators;
 using Newtonsoft.Json.Serialization;
-using System.Transactions;
-using Testcontainers.PostgreSql;
 using Xunit;
-using static MockEsu.Application.UnitTests.ValidationTestsEntites;
 
 namespace MockEsu.Application.UnitTests.JsonPatch
 {
     public class JsonPatchImplementationTests : TestWithContainer
     {
-        ///TODO: прогуглить, как там умные люди делают фабрики, чтобы тесты диспозить после выполнения. Надо влепить транзакции, чтобы не пересоздавать несколько баз данных
         private readonly IMapper _mapper;
 
         public JsonPatchImplementationTests()
@@ -361,10 +358,10 @@ namespace MockEsu.Application.UnitTests.JsonPatch
             Assert.Equal(newModel.DateString, resultEntity?.DateString);
             Assert.Equal(newModel.SomeInnerEntityId, resultEntity?.SomeInnerEntity?.Id);
             Assert.Equal(
-                nestedThings.Select(t => t.Id).OrderBy(x => x).ToList(), 
+                nestedThings.Select(t => t.Id).OrderBy(x => x).ToList(),
                 resultEntity?.NestedThings.Select(t => t.Id).OrderBy(x => x).ToList());
             Assert.Equal(
-                nestedEntityBeforeOperation, 
+                nestedEntityBeforeOperation,
                 resultEntity?.NestedThings.FirstOrDefault(x => x.Id == nestedEntityBeforeOperation.Id));
 
         }

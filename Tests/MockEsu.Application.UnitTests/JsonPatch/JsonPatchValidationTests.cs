@@ -2,11 +2,10 @@
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
 using MockEsu.Application.Common.BaseRequests.JsonPatchCommand;
-using MockEsu.Application.Services.Tariffs;
-using Newtonsoft.Json;
+using MockEsu.Application.UnitTests.Common.DTOs;
+using MockEsu.Application.UnitTests.Common.Mediators;
 using Newtonsoft.Json.Serialization;
 using Xunit;
-using static MockEsu.Application.UnitTests.ValidationTestsEntites;
 
 namespace MockEsu.Application.UnitTests.JsonPatch;
 

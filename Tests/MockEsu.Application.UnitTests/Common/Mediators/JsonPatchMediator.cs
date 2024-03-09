@@ -1,15 +1,14 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using MediatR;
 using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.EntityFrameworkCore;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.BaseRequests.JsonPatchCommand;
-using MockEsu.Application.UnitTests;
 using MockEsu.Application.Extensions.JsonPatch;
-using static MockEsu.Application.UnitTests.ValidationTestsEntites;
-using Microsoft.EntityFrameworkCore;
-using AutoMapper.QueryableExtensions;
+using MockEsu.Application.UnitTests.Common.DTOs;
 
-namespace MockEsu.Application.Services.Tariffs;
+namespace MockEsu.Application.UnitTests.Common.Mediators;
 
 public record TestJsonPatchCommand : BaseJsonPatchCommand<TestJsonPatchResponse, TestEntityEditDto>
 {
