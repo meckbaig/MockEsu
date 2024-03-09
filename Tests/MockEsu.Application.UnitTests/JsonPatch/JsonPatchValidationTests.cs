@@ -429,6 +429,9 @@ public class JsonPatchValidationTests
         Assert.Equal(
             JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
             validationResult.Errors[0].ErrorCode);
+        Assert.Equal(
+            "/1/name: Property 'name' does not exist",
+            validationResult.Errors[0].ErrorMessage);
     }
 
     [Fact]
@@ -465,6 +468,9 @@ public class JsonPatchValidationTests
         Assert.Equal(
             JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
             validationResult.Errors[0].ErrorCode);
+        Assert.Equal(
+            "/1/name: Property 'name' does not exist",
+            validationResult.Errors[0].ErrorMessage);
     }
 
     [Fact]
@@ -501,6 +507,9 @@ public class JsonPatchValidationTests
         Assert.Equal(
             "NotEmptyValidator",
             validationResult.Errors[0].ErrorCode);
+        Assert.Equal(
+            "'Nested Name' must not be empty.",
+            validationResult.Errors[0].ErrorMessage);
     }
 
     [Fact]
@@ -537,6 +546,9 @@ public class JsonPatchValidationTests
         Assert.Equal(
             JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
             validationResult.Errors[0].ErrorCode);
+        Assert.Equal(
+            "/1/nestedThings/1/nestedName: Operation 'add' is available only for collections.",
+            validationResult.Errors[0].ErrorMessage);
     }
 
     [Fact]
@@ -573,6 +585,9 @@ public class JsonPatchValidationTests
         Assert.Equal(
             JsonPatchValidationErrorCode.CanParseValueValidator.ToString(),
             validationResult.Errors[0].ErrorCode);
+        Assert.Equal(
+            "/1/nestedThings/-: Value is not valid.",
+            validationResult.Errors[0].ErrorMessage);
     }
 
     [Fact]
@@ -609,6 +624,9 @@ public class JsonPatchValidationTests
         Assert.Equal(
             JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
             validationResult.Errors[0].ErrorCode);
+        Assert.Equal(
+            "/1/nestedThings/2: Operation 'add' can not change existing entity.",
+            validationResult.Errors[0].ErrorMessage);
     }
 
     [Fact]
@@ -642,6 +660,9 @@ public class JsonPatchValidationTests
         Assert.Equal(
             JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
             validationResult.Errors[0].ErrorCode);
+        Assert.Equal(
+            "/1/nestedThings/1/nestedName: Operation 'remove' is available only for collections.",
+            validationResult.Errors[0].ErrorMessage);
     }
 
     [Fact]
@@ -675,6 +696,9 @@ public class JsonPatchValidationTests
         Assert.Equal(
             JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
             validationResult.Errors[0].ErrorCode);
+        Assert.Equal(
+            "/1/nestedThings/-: Operation 'remove' can not change not existing entity.",
+            validationResult.Errors[0].ErrorMessage);
     }
 
     [Fact]
@@ -708,6 +732,9 @@ public class JsonPatchValidationTests
         Assert.Equal(
             JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
             validationResult.Errors[0].ErrorCode);
+        Assert.Equal(
+            "/-: Operation 'remove' can not change not existing entity.",
+            validationResult.Errors[0].ErrorMessage);
     }
 
     [Fact]
@@ -741,6 +768,9 @@ public class JsonPatchValidationTests
         Assert.Equal(
             JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
             validationResult.Errors[0].ErrorCode);
+        Assert.Equal(
+            "/1/-/-: Property '-' does not exist",
+            validationResult.Errors[0].ErrorMessage);
     }
 
     #endregion
