@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
+using MockEsu.Application.Common.BaseRequests.JsonPatchCommand;
 using MockEsu.Application.Services.Tariffs;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -25,6 +26,8 @@ public class JsonPatchValidationTests
         });
         _mapper = config.CreateMapper();
     }
+
+    #region Success
 
     [Fact]
     public async Task Validate_ReturnsOk_WhenDefault()
@@ -327,4 +330,418 @@ public class JsonPatchValidationTests
         Assert.NotNull(validationResult);
         Assert.True(validationResult.IsValid);
     }
+
+    [Fact]
+    public async Task ValidateRemove_ReturnsOk_WhenRemoveNestedEntityWithManyToMany()
+    {
+        // Arrange
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "remove",
+                path = "/2/nestedThings/2"
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+    }
+
+    [Fact]
+    public async Task ValidateRemove_ReturnsOk_WhenModelFromDB()
+    {
+        // Arrange
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "remove",
+                path = "/3"
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.True(validationResult.IsValid);
+    }
+
+    #endregion
+
+    #region Error
+
+    [Fact]
+    public async Task ValidateReplace_ReturnsValidationError_WhenWrongPropertyName()
+    {
+        // Arrange
+        string newEntityName = "NewValue1";
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "replace",
+                path = "/1/name",
+                value = newEntityName
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.Equal(
+            JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
+            validationResult.Errors[0].ErrorCode);
+    }
+
+    [Fact]
+    public async Task ValidateReplace_ReturnsValidationError_WhenWrongPropertyType()
+    {
+        // Arrange
+        string newEntityName = "NewValue1";
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "replace",
+                path = "/1/name",
+                value = newEntityName
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.Equal(
+            JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
+            validationResult.Errors[0].ErrorCode);
+    }
+
+    [Fact]
+    public async Task ValidateReplace_ReturnsValidationError_WhenWrongPropertyValue()
+    {
+        // Arrange
+        string newEntityName = "";
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "replace",
+                path = "/1/nestedThings/1/nestedName",
+                value = newEntityName
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.Equal(
+            "NotEmptyValidator",
+            validationResult.Errors[0].ErrorCode);
+    }
+
+    [Fact]
+    public async Task ValidateAdd_ReturnsValidationError_WhenPropertyIsNotCollection()
+    {
+        // Arrange
+        string newEntityName = "New name 1";
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "add",
+                path = "/1/nestedThings/1/nestedName",
+                value = newEntityName
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.Equal(
+            JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
+            validationResult.Errors[0].ErrorCode);
+    }
+
+    [Fact]
+    public async Task ValidateAdd_ReturnsValidationError_WhenWrongPropertyType()
+    {
+        // Arrange
+        string newEntityName = "New name 1";
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "add",
+                path = "/1/nestedThings/-",
+                value = newEntityName
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.Equal(
+            JsonPatchValidationErrorCode.CanParseValueValidator.ToString(),
+            validationResult.Errors[0].ErrorCode);
+    }
+
+    [Fact]
+    public async Task ValidateAdd_ReturnsValidationError_WhenNumberAtTheEnd()
+    {
+        // Arrange
+        object newEntityName = null;
+
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "add",
+                path = "/1/nestedThings/2",
+                value = newEntityName
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.Equal(
+            JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
+            validationResult.Errors[0].ErrorCode);
+    }
+
+    [Fact]
+    public async Task ValidateRemove_ReturnsValidationError_WhenPropertyIsNotCollection()
+    {
+        // Arrange
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "remove",
+                path = "/1/nestedThings/1/nestedName"
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.Equal(
+            JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
+            validationResult.Errors[0].ErrorCode);
+    }
+
+    [Fact]
+    public async Task ValidateRemove_ReturnsValidationError_WhenNotANumberAtTheEnd()
+    {
+        // Arrange
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "remove",
+                path = "/1/nestedThings/-",
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.Equal(
+            JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
+            validationResult.Errors[0].ErrorCode);
+    }
+
+    [Fact]
+    public async Task ValidateRemove_ReturnsValidationError_WhenNotANumberAtTheEndFromDb()
+    {
+        // Arrange
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "remove",
+                path = "/-",
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.Equal(
+            JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
+            validationResult.Errors[0].ErrorCode);
+    }
+
+    [Fact]
+    public async Task ValidateRemove_ReturnsValidationError_WhenMultipleDashes()
+    {
+        // Arrange
+        List<Operation<TestEntityEditDto>> operations = new()
+        {
+            new Operation<TestEntityEditDto>
+            {
+                op = "remove",
+                path = "/1/-/-",
+            }
+        };
+
+        var command = new TestJsonPatchCommand
+        {
+            Patch = new JsonPatchDocument<TestEntityEditDto>(
+                operations,
+                new CamelCasePropertyNamesContractResolver())
+        };
+
+        var validator = new TestJsonPatchCommandValidator(_mapper);
+
+        // Act
+        var validationResult = validator.Validate(command);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.Equal(
+            JsonPatchValidationErrorCode.CanParsePathValidator.ToString(),
+            validationResult.Errors[0].ErrorCode);
+    }
+
+    #endregion
 }

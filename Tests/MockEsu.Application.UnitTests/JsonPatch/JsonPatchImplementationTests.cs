@@ -2,6 +2,7 @@
 using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.JsonPatch.Operations;
+using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.Services.Tariffs;
 using Newtonsoft.Json.Serialization;
 using System.Transactions;
@@ -258,7 +259,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
         }
 
         [Fact]
-        public async Task ValidateAdd_ReturnsOk_WhenModelIntoCollectionWithManyToMany()
+        public async Task TestPatchAdd_ReturnsOk_WhenModelIntoCollectionWithManyToMany()
         {
             // Arrange
             var newModel = new TestNestedEntityEditDto
@@ -301,7 +302,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
         }
 
         [Fact]
-        public async Task ValidateAdd_ReturnsOk_WhenModelIntoDB()
+        public async Task TestPatchAdd_ReturnsOk_WhenModelIntoDB()
         {
             // Arrange
             var nestedThings = new List<TestNestedEntityEditDto>
@@ -365,6 +366,106 @@ namespace MockEsu.Application.UnitTests.JsonPatch
             Assert.Equal(
                 nestedEntityBeforeOperation, 
                 resultEntity?.NestedThings.FirstOrDefault(x => x.Id == nestedEntityBeforeOperation.Id));
+
+        }
+
+        [Fact]
+        public async Task TestPatchRemove_ReturnsOk_WhenRemoveNestedEntityWithManyToMany()
+        {
+            // Arrange
+            List<Operation<TestEntityEditDto>> operations = new()
+            {
+                new Operation<TestEntityEditDto>
+                {
+                    op = "remove",
+                    path = "/2/nestedThings/2"
+                }
+            };
+
+            var command = new TestJsonPatchCommand
+            {
+                Patch = new JsonPatchDocument<TestEntityEditDto>(
+                    operations,
+                    new CamelCasePropertyNamesContractResolver())
+            };
+
+            var handler = new TestJsonPatchCommandHandler(Context, _mapper);
+
+            // Act
+            var result = await handler.Handle(command, default);
+
+            // Assert
+            var nestedEntityAfterOperation = Context.TestNestedEntities.Where(x => x.Id == 2)
+                .ProjectTo<TestNestedEntityDto>(_mapper.ConfigurationProvider)
+                .ToList()?[0];
+
+            Assert.NotNull(result);
+            Assert.NotNull(nestedEntityAfterOperation);
+            Assert.Null(result.TestEntities
+                .FirstOrDefault(x => x.Id == 2)
+                .NestedThings
+                .FirstOrDefault(x => x.Id == 2));
+        }
+
+        [Fact]
+        public async Task TestPatchRemove_ReturnsOk_WhenModelFromDB()
+        {
+            // Arrange
+            List<Operation<TestEntityEditDto>> operations = new()
+            {
+                new Operation<TestEntityEditDto>
+                {
+                    op = "remove",
+                    path = "/3"
+                }
+            };
+
+            var command = new TestJsonPatchCommand
+            {
+                Patch = new JsonPatchDocument<TestEntityEditDto>(
+                    operations,
+                    new CamelCasePropertyNamesContractResolver())
+            };
+
+            var handler = new TestJsonPatchCommandHandler(Context, _mapper);
+
+            // Act
+            var result = await handler.Handle(command, default);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Null(result.TestEntities.FirstOrDefault(x => x.Id == 3));
+        }
+
+        [Fact]
+        public async Task TestPatchRemove_ReturnsError_WhenModelDoesNotExistInDB()
+        {
+            // Arrange
+            List<Operation<TestEntityEditDto>> operations = new()
+            {
+                new Operation<TestEntityEditDto>
+                {
+                    op = "remove",
+                    path = "/3000000"
+                }
+            };
+
+            var command = new TestJsonPatchCommand
+            {
+                Patch = new JsonPatchDocument<TestEntityEditDto>(
+                    operations,
+                    new CamelCasePropertyNamesContractResolver())
+            };
+
+            var handler = new TestJsonPatchCommandHandler(Context, _mapper);
+
+            // Act
+            // Assert
+            var exception = await Assert.ThrowsAsync<JsonPatchExceptionWithPosition>(async () =>
+            {
+                var result = await handler.Handle(command, default);
+            });
+            Assert.Equal("/3000000: Could not remove entity with id 3000000", exception.Message);
 
         }
     }
