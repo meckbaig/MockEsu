@@ -1,6 +1,6 @@
 ﻿using MockEsu.Application.UnitTests.Common.Entities;
 
-namespace MockEsu.Application.UnitTests;
+namespace MockEsu.Application.UnitTests.Common;
 
 public static class ValidationTestsEntites
 {

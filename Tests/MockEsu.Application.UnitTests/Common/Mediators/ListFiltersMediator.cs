@@ -5,7 +5,7 @@ using MockEsu.Application.Common.BaseRequests.ListQuery;
 using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Application.UnitTests.Common.DTOs;
 using MockEsu.Application.UnitTests.Common.Entities;
-using static MockEsu.Application.UnitTests.ValidationTestsEntites;
+using static MockEsu.Application.UnitTests.Common.ValidationTestsEntites;
 
 namespace MockEsu.Application.UnitTests.Common.Mediators;
 
