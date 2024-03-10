@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -44,10 +43,9 @@ internal class MockesuWebApplicationFactory : WebApplicationFactory<Program>
         ProcessStartInfo psi = new ProcessStartInfo();
         psi.FileName = @"D:\Progs\pgAdmin 4\runtime\pg_dump.exe"; ///TODO: change pg_dump to environment
         psi.RedirectStandardOutput = true;
+        psi.Arguments = $"--host={server} --port={port} --username={userId} --no-password --dbname={database} --no-owner";
         if (schemaOnly)
-            psi.Arguments = $"--host={server} --port={port} --username={userId} --no-password --dbname={database} --schema-only --no-owner";
-        else
-            psi.Arguments = $"--host={server} --port={port} --username={userId} --no-password --dbname={database} --no-owner";
+            psi.Arguments += "--schema-only";
         psi.UseShellExecute = false;
         psi.Environment["PGPASSWORD"] = password;
 
