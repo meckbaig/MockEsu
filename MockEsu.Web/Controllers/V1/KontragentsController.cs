@@ -32,4 +32,12 @@ public class KontragentsController : ControllerBase
         var result = await _mediator.Send(query);
         return result.ToJsonResponse();
     }
+
+    [HttpGet]
+    [Route("ElasticSearch")]
+    public async Task<ActionResult<GetFromElasticResponse>> GetWithElasticSearch([FromQuery] GetFromElasticQuery query)
+    {
+        var result = await _mediator.Send(query);
+        return result.ToJsonResponse();
+    }
 }

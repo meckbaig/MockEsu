@@ -27,10 +27,12 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
+        services.AddElasticSearch(configuration);
         services.AddSingleton<IJwtProvider, JwtProvider>();
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
         services.AddTransient<IPasswordHasher<User>, PasswordHasher<User>>();
+
 
         //services.AddScoped<AppDbContextInitialiser>();
 
