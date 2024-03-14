@@ -4,5 +4,6 @@ namespace MockEsu.Application.Common.Interfaces;
 
 public interface IElasticSearchClient
 {
-    Task SearchAsync<TEntity>(string searchString) where TEntity : BaseEntity;
+    Task<List<TEntity>> SearchAsync<TEntity>(string searchString) where TEntity : class;
+    Task AddAsync<TEntity>(IEnumerable<TEntity> entities) where TEntity : class;
 }
