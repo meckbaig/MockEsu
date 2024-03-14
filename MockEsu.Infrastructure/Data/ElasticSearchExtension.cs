@@ -20,8 +20,11 @@ internal static class ElasticSearchExtension
 
         var settings = new ConnectionSettings(new Uri(url))
             .PrettyJson()
+            .CertificateFingerprint("205b1fbdcdb4755f67bbab0518616e55d80aee5c6a1a729e8605210508364333")
+            .BasicAuthentication("elastic", "SLdC*BPfYs_m7h=lgD8B")
             .DefaultIndex(defaultIndex);
 
+        // AddDefaultMappings(settings);
         var client = new ElasticClient(settings);
         services.AddSingleton<IElasticSearchClient>(new ElasticSearchClient(client));
         CreateIndex(client, defaultIndex);
