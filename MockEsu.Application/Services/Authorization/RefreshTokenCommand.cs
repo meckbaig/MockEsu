@@ -43,6 +43,8 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
 
     public async Task<RefreshTokenResponse> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
+        request.refreshToken = request.refreshToken.Replace(' ', '+');
+
         int userId = _jwtProvider.GetUserIdFromClaimsPrincipal(request.principal);
         User user = _context.Users
             .Include(u => u.RefreshTokens.Where(t => t.Token.Equals(request.refreshToken)))
