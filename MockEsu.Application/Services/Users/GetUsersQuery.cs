@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using MockEsu.Application.Common.BaseRequests;
 using MockEsu.Application.Common.BaseRequests.ListQuery;
+using MockEsu.Application.Common.Extensions.Caching;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Users;
 using MockEsu.Application.Extensions.ListFilters;
@@ -54,10 +55,12 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, GetUsersRespo
             .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)
             .ProjectTo<UserPreviewDto>(_mapper.ConfigurationProvider);
 
-        var result = await _cache.GetOrCreate(
-            request.GetKey(),
-            () => query.ToList(),
-            cancellationToken);
+        //var result = await _cache.GetOrCreate(
+        //    request.GetKey(),
+        //    () => query.ToList(),
+        //    cancellationToken);
+
+        var result = query.ToList();
 
         return new GetUsersResponse { Items = result };
     }
