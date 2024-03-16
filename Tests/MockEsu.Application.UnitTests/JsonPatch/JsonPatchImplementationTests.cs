@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.JsonPatch.Operations;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Application.UnitTests.Common.DTOs;
 using MockEsu.Application.UnitTests.Common.Mediators;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Xunit;
 
@@ -13,6 +14,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
     public class JsonPatchImplementationTests : TestWithContainer
     {
         private readonly IMapper _mapper;
+        private readonly Newtonsoft.Json.JsonSerializer _jsonSerializer;
 
         public JsonPatchImplementationTests()
         {
@@ -27,6 +29,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
             _mapper = config.CreateMapper();
             if (Context == null)
                 throw new Exception("Context is null");
+            _jsonSerializer = new Newtonsoft.Json.JsonSerializer() { ContractResolver = new CamelCasePropertyNamesContractResolver() };
         }
 
         [Fact]
@@ -265,6 +268,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
                 NestedName = "qqqqqqqqqqqq",
                 Number = 111111
             };
+            JObject jsonModel = JObject.FromObject(newModel, _jsonSerializer);
 
             List<Operation<TestEntityEditDto>> operations = new()
             {
@@ -272,7 +276,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
                 {
                     op = "add",
                     path = "/1/nestedThings/-",
-                    value = newModel
+                    value = jsonModel
                 }
             };
 
@@ -318,6 +322,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
                 SomeInnerEntityId = 10,
                 NestedThings = nestedThings
             };
+            JObject jsonModel = JObject.FromObject(newModel, _jsonSerializer);
 
             var nestedEntityBeforeOperation = Context.TestNestedEntities.Where(x => x.Id == nestedThings.First().Id)
                 .ProjectTo<TestNestedEntityDto>(_mapper.ConfigurationProvider)
@@ -329,7 +334,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
                 {
                     op = "add",
                     path = "/-",
-                    value = newModel
+                    value = jsonModel
                 }
             };
 

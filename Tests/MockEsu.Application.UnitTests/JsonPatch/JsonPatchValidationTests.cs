@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.JsonPatch.Operations;
 using MockEsu.Application.Common.BaseRequests.JsonPatchCommand;
 using MockEsu.Application.UnitTests.Common.DTOs;
 using MockEsu.Application.UnitTests.Common.Mediators;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Xunit;
 
@@ -12,6 +13,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch;
 public class JsonPatchValidationTests
 {
     private readonly IMapper _mapper;
+    private readonly Newtonsoft.Json.JsonSerializer _jsonSerializer;
 
     public JsonPatchValidationTests()
     {
@@ -24,6 +26,7 @@ public class JsonPatchValidationTests
             c.AddProfile<TestEditDtoWithLongNameMapping.Mapping>();
         });
         _mapper = config.CreateMapper();
+        _jsonSerializer = new Newtonsoft.Json.JsonSerializer() { ContractResolver = new CamelCasePropertyNamesContractResolver() };
     }
 
     #region Success
@@ -253,6 +256,7 @@ public class JsonPatchValidationTests
             NestedName = "qqqqqqqqqqqq",
             Number = 111111
         };
+        JObject jsonModel = JObject.FromObject(newModel, _jsonSerializer);
 
         List<Operation<TestEntityEditDto>> operations = new()
         {
@@ -260,7 +264,7 @@ public class JsonPatchValidationTests
             {
                 op = "add",
                 path = "/1/nestedThings/-",
-                value = newModel
+                value = jsonModel
             }
         };
 
@@ -302,6 +306,7 @@ public class JsonPatchValidationTests
             SomeInnerEntityId = 10,
             NestedThings = nestedThings
         };
+        JObject jsonModel = JObject.FromObject(newModel, _jsonSerializer);
 
         List<Operation<TestEntityEditDto>> operations = new()
         {
@@ -309,7 +314,7 @@ public class JsonPatchValidationTests
             {
                 op = "add",
                 path = "/-",
-                value = newModel
+                value = jsonModel
             }
         };
 
