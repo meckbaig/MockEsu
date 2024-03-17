@@ -60,10 +60,10 @@ internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery,
             .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue);
             //.ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider);
 
-        var projection = (IList<Kontragent> kontragents)
+        var projection = (List<Kontragent> kontragents)
                 => kontragents.Select(x => _mapper.Map<KonragentPreviewDto>(x)).ToList();
 
-        var result = await _cache.GetOrCreate(
+        var result = await _cache.GetOrCreateAsync(
             request.GetKey(), 
             () => query.ToList(), 
             projection,

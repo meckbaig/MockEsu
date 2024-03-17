@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Caching.Distributed;
 using MockEsu.Application.Common.BaseRequests.ListQuery;
+using MockEsu.Application.Common.Extensions.Caching;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Tariffs;
 using MockEsu.Application.Extensions.DataBaseProvider;
@@ -33,21 +35,31 @@ public class GetTariffsQueryHandler : IRequestHandler<GetTariffsQuery, GetTariff
 {
     private readonly IAppDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IDistributedCache _cache;
 
-    public GetTariffsQueryHandler(IAppDbContext context, IMapper mapper)
+    public GetTariffsQueryHandler(IAppDbContext context, IMapper mapper, IDistributedCache cache)
     {
         _context = context;
         _mapper = mapper;
+        _cache = cache;
     }
 
     public async Task<GetTariffsResponse> Handle(GetTariffsQuery request, CancellationToken cancellationToken)
     {
-        var list = _context.Tariffs.WithPrices()
+        var query = _context.Tariffs.WithPrices()
             .AddFilters(request.GetFilterExpressions())
             .AddOrderBy(request.GetOrderExpressions())
-            .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)
-            .Select(t => _mapper.Map<TariffDto>(t))
-            .ToList();
+            .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue);
+
+        var projection = (List<Tariff> tariffs)
+            => tariffs.Select(t => _mapper.Map<TariffDto>(t)).ToList();
+
+        var list = await _cache.GetOrCreateAsync(
+            request.GetKey(),
+            () => query.ToList(),
+            projection,
+            cancellationToken);
+
         return new GetTariffsResponse { Items = list };
     }
 }
