@@ -27,6 +27,8 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
+        services.AddStackExchangeRedisCache(options =>
+            options.Configuration = configuration.GetConnectionString("Redis"));
         services.AddSingleton<IJwtProvider, JwtProvider>();
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
