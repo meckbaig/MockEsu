@@ -12,7 +12,7 @@ public static class CachingExtension
 {
     private static readonly DistributedCacheEntryOptions CacheEntryOptions = new()
     {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30)
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(3000)
     };
 
     /// <summary>
@@ -25,7 +25,7 @@ public static class CachingExtension
     /// <param name="options">Options for caching provider.</param>
     /// <param name="cancellationToken"></param>
     /// <returns><typeparamref name="TResult"/> from <paramref name="requestResultFactory"/> or from cache.</returns>
-    public static async Task<TDto> GetOrCreate<TResult, TDto>(
+    public static async Task<TDto> GetOrCreateAsync<TResult, TDto>(
         this IDistributedCache cache,
         string key,
         Func<TResult> requestResultFactory,
@@ -40,11 +40,8 @@ public static class CachingExtension
         TResult requestResult = requestResultFactory.Invoke();
         options ??= CacheEntryOptions;
         
-        Stopwatch sw = Stopwatch.StartNew();
         await TrackIds(requestResult, key, 
-            DateTimeOffset.Now.Add(options.AbsoluteExpirationRelativeToNow ?? TimeSpan.Zero));
-        sw.Stop();
-        Console.WriteLine($"TrackIds: {sw.ElapsedMilliseconds}ms");
+            DateTimeOffset.UtcNow.Add(options.AbsoluteExpirationRelativeToNow ?? TimeSpan.Zero));
 
         TDto dtoResult = projectionFactory.Invoke(requestResult);
         await cache.SetStringAsync(key,
@@ -64,7 +61,7 @@ public static class CachingExtension
     /// <param name="absoluteExpirationRelativeToNow">Caching time.</param>
     /// <param name="cancellationToken"></param>
     /// <returns><typeparamref name="TResult"/> from <paramref name="factory"/> or from cache.</returns>
-    public static async Task<TDto> GetOrCreate<TResult, TDto>(
+    public static async Task<TDto> GetOrCreateAsync<TResult, TDto>(
         this IDistributedCache cache,
         string key,
         Func<TResult> factory,
@@ -76,7 +73,7 @@ public static class CachingExtension
         {
             AbsoluteExpirationRelativeToNow = absoluteExpirationRelativeToNow
         };
-        return await cache.GetOrCreate(
+        return await cache.GetOrCreateAsync(
             key,
             factory,
             projectionFactory,
@@ -87,10 +84,11 @@ public static class CachingExtension
     private static async Task TrackIds<TResult>(TResult result, string key, DateTimeOffset expires)
     {
         Type resultType = typeof(TResult);
-        await TrackIds(result, resultType, key, expires);
+        await TrackIdsInternal(result, resultType, key, expires);
+        CachedKeys2.CompleteFormation(key);
     }
 
-    private static async Task TrackIds(object result, Type resultType, string key, DateTimeOffset expires)
+    private static async Task TrackIdsInternal(object result, Type resultType, string key, DateTimeOffset expires)
     {
         if (resultType.IsCollection())
         {
@@ -100,7 +98,7 @@ public static class CachingExtension
             Type collectionElementType = resultType.GetGenericArguments().Single();
             foreach (var collectionElement in resultCollection)
             {
-                await TrackIds(collectionElement, collectionElementType, key, expires);
+                await TrackIdsInternal(collectionElement, collectionElementType, key, expires);
             }
         }
         else if (typeof(BaseEntity).IsAssignableFrom(resultType))
@@ -115,10 +113,17 @@ public static class CachingExtension
                     {
                         var value = property.GetValue(result);
                         if (value != null)
-                            await TrackIds(value, property.PropertyType, key, expires);
+                            await TrackIdsInternal(value, property.PropertyType, key, expires);
                     }
                 }
             }
         }
+    }
+
+    public static void RemoveFromCache(
+        this IDistributedCache cache,
+        string key)
+    {
+        cache.Remove(key);
     }
 }
