@@ -2,16 +2,22 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.Data.Common;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using MockEsu.Domain.Common;
+using MockEsu.Application.Common.Extensions.Caching;
 
 namespace MockEsu.Infrastructure.Interceptors;
 
 public class TransactionLoggingInterceptor : DbTransactionInterceptor
 {
     private readonly ILogger<TransactionLoggingInterceptor> _logger;
+    private readonly IDistributedCache _cache;
 
-    public TransactionLoggingInterceptor(ILogger<TransactionLoggingInterceptor> logger)
+    public TransactionLoggingInterceptor(ILogger<TransactionLoggingInterceptor> logger, IDistributedCache cache)
     {
         _logger = logger;
+        _cache = cache;
     }
 
     public override DbTransaction TransactionStarted(DbConnection connection, TransactionEndEventData eventData, DbTransaction result)
@@ -29,12 +35,14 @@ public class TransactionLoggingInterceptor : DbTransactionInterceptor
     public override void TransactionCommitted(DbTransaction transaction, TransactionEndEventData eventData)
     {
         _logger.Log(LogLevel.Information, "Transaction commited");
+        RemoveChangedEntitiesFromCache(eventData.Context.ChangeTracker);
         base.TransactionCommitted(transaction, eventData);
     }
 
     public override Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default)
     {
         _logger.Log(LogLevel.Information, "Transaction commited");
+        RemoveChangedEntitiesFromCache(eventData.Context.ChangeTracker);
         return base.TransactionCommittedAsync(transaction, eventData, cancellationToken);
     }
 
@@ -60,5 +68,16 @@ public class TransactionLoggingInterceptor : DbTransactionInterceptor
     {
         _logger.Log(LogLevel.Information, "Transaction rolled back");
         return base.TransactionRolledBackAsync(transaction, eventData, cancellationToken);
+    }
+
+    private void RemoveChangedEntitiesFromCache(ChangeTracker tracker)
+    {
+        foreach (var entry in tracker.Entries<BaseEntity>())
+        {
+            if (CachedKeys2.TryGetAndRemoveKeyById(entry.Entity.GetType(), entry.Entity.Id, out var key))
+            {
+                _cache.RemoveFromCache(key);
+            }
+        }
     }
 }
