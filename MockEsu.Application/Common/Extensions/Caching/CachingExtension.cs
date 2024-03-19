@@ -18,18 +18,20 @@ public static class CachingExtension
     /// <summary>
     /// Gets data from cache if present; otherwise, executes factory and saves in cache.
     /// </summary>
-    /// <typeparam name="TResult">Result type.</typeparam>
+    /// <typeparam name="TRequestResult">Type of data from request expression.</typeparam>
+    /// <typeparam name="TDto">Type of data to project result data to.</typeparam>
     /// <param name="cache">Caching provider.</param>
     /// <param name="key">Key for saving data.</param>
     /// <param name="requestResultFactory">Execution factory with operation to get data.</param>
-    /// <param name="options">Options for caching provider.</param>
+    /// <param name="projectionFactory">Execution factory to project data to <typeparamref name="TDto"/></param>
     /// <param name="cancellationToken"></param>
-    /// <returns><typeparamref name="TResult"/> from <paramref name="requestResultFactory"/> or from cache.</returns>
-    public static async Task<TDto> GetOrCreateAsync<TResult, TDto>(
+    /// <param name="options">Options for caching provider.</param>
+    /// <returns></returns>
+    public static async Task<TDto> GetOrCreateAsync<TRequestResult, TDto>(
         this IDistributedCache cache,
         string key,
-        Func<TResult> requestResultFactory,
-        Func<TResult, TDto> projectionFactory,
+        Func<TRequestResult> requestResultFactory,
+        Func<TRequestResult, TDto> projectionFactory,
         CancellationToken cancellationToken = default,
         DistributedCacheEntryOptions? options = null)
     {
@@ -37,7 +39,7 @@ public static class CachingExtension
         if (!string.IsNullOrEmpty(cachedMember))
             return JsonConvert.DeserializeObject<TDto>(cachedMember);
 
-        TResult requestResult = requestResultFactory.Invoke();
+        TRequestResult requestResult = requestResultFactory.Invoke();
         options ??= CacheEntryOptions;
         
         await TrackIds(requestResult, key, 
@@ -54,18 +56,20 @@ public static class CachingExtension
     /// <summary>
     /// Gets data from cache if present; otherwise, executes factory and saves in cache.
     /// </summary>
-    /// <typeparam name="TResult">Result type.</typeparam>
+    /// <typeparam name="TRequestResult">Type of data from request expression.</typeparam>
+    /// <typeparam name="TDto">Type of data to project result data to.</typeparam>
     /// <param name="cache">Caching provider.</param>
     /// <param name="key">Key for saving data.</param>
-    /// <param name="factory">Execution factory with operation to get data.</param>
-    /// <param name="absoluteExpirationRelativeToNow">Caching time.</param>
+    /// <param name="requestResultFactory">Execution factory with operation to get data.</param>
+    /// <param name="projectionFactory">Execution factory to project data to <typeparamref name="TDto"/></param>
+    /// <param name="absoluteExpirationRelativeToNow">Caching lifetime.</param>
     /// <param name="cancellationToken"></param>
-    /// <returns><typeparamref name="TResult"/> from <paramref name="factory"/> or from cache.</returns>
-    public static async Task<TDto> GetOrCreateAsync<TResult, TDto>(
+    /// <returns></returns>
+    public static async Task<TDto> GetOrCreateAsync<TRequestResult, TDto>(
         this IDistributedCache cache,
         string key,
-        Func<TResult> factory,
-        Func<TResult, TDto> projectionFactory,
+        Func<TRequestResult> requestResultFactory,
+        Func<TRequestResult, TDto> projectionFactory,
         TimeSpan? absoluteExpirationRelativeToNow,
         CancellationToken cancellationToken = default)
     {
@@ -75,12 +79,19 @@ public static class CachingExtension
         };
         return await cache.GetOrCreateAsync(
             key,
-            factory,
+            requestResultFactory,
             projectionFactory,
             cancellationToken,
             options);
     }
 
+    /// <summary>
+    /// Saves all id's from recieved data to invalidate cache when this data will be changed in the future
+    /// </summary>
+    /// <typeparam name="TResult">Type of data to track id's from.</typeparam>
+    /// <param name="result">Data to track id's from.</param>
+    /// <param name="key">Key for saving data.</param>
+    /// <param name="expires">Expiration time.</param>
     private static async Task TrackIds<TResult>(TResult result, string key, DateTimeOffset expires)
     {
         Type resultType = typeof(TResult);
@@ -88,6 +99,14 @@ public static class CachingExtension
         CachedKeys2.CompleteFormation(key);
     }
 
+    /// <summary>
+    /// Saves all id's from recieved data to invalidate cache when this data will be changed in the future
+    /// </summary>
+    /// <param name="result">Data to track id's from.</param>
+    /// <param name="resultType">Type of data to track id's from.</param>
+    /// <param name="key">Key for saving data.</param>
+    /// <param name="expires">Expiration time.</param>
+    /// <remarks>DO NOT USE THIS METHOD OUTSIDE OF CALL IN TrackIds()</remarks>
     private static async Task TrackIdsInternal(object result, Type resultType, string key, DateTimeOffset expires)
     {
         if (resultType.IsCollection())
@@ -120,6 +139,11 @@ public static class CachingExtension
         }
     }
 
+    /// <summary>
+    /// Removes data by key from cache.
+    /// </summary>
+    /// <param name="cache">Caching provider.</param>
+    /// <param name="key">Key for removing data.</param>
     public static void RemoveFromCache(
         this IDistributedCache cache,
         string key)
