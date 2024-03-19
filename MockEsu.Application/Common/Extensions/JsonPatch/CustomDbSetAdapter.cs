@@ -7,17 +7,14 @@ using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.Extensions.DataBaseProvider;
 using MockEsu.Domain.Common;
 using MockEsu.Domain.Enums;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MockEsu.Application.Extensions.JsonPatch;
 
-public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
+public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity, new()
 {
     public bool TryAdd(
         object target,
@@ -508,38 +505,22 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         IContractResolver contractResolver,
         object value,
         out string errorMessage)
-        where TBaseEntity : BaseEntity
+        where TBaseEntity : BaseEntity, new()
     {
+        Type? propertyType = typeof(TBaseEntity);
         for (int i = 0; i < segments.Length; i++)
         {
-            Type? propertyType = typeof(TBaseEntity).GetProperty(segments[i])?.PropertyType;
-            IQueryable newQuery;
-
-            if (propertyType == null && int.TryParse(segments[i], out int entityId))
-            {
-                query = query.Where(e => e.Id == entityId);
+            if (int.TryParse(segments[i], out int _))
                 continue;
-            }
 
-            else if (i + 1 < segments.Length && propertyType.IsCollection()
-                && TryGetQueryFromProperty(dbSet, query, segments[i], out newQuery))
-            {
-                Type entityType = newQuery.ElementType;
-                return InvokeTryReplaceWithNewQuery(
-                    newQuery,
-                    newQuery,
-                    entityType,
-                    segments[++i..],
-                    contractResolver,
-                    value,
-                    out errorMessage);
-            }
+            propertyType = propertyType.GetProperty(segments[i])?.PropertyType;
 
-            if (i + 1 < segments.Length && propertyType != null && DtoExtension.IsCustomObject(propertyType)
-                && TryGetQueryWithProperty(query, segments[i], out newQuery))
+            if (i + 1 < segments.Length && propertyType.IsCollection()
+                && TryGetQueryFromProperty(dbSet, query, segments[i], out IQueryable newQuery))
             {
+                propertyType = newQuery.ElementType;
                 return InvokeTryReplaceWithNewQuery(
-                    newQuery,
+                    dbSet,
                     newQuery,
                     propertyType,
                     segments[++i..],
@@ -547,138 +528,153 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
                     value,
                     out errorMessage);
             }
-            if (propertyType != null && !propertyType.IsCollection())
+
+            if (i + 1 == segments.Length && propertyType != null && !propertyType.IsCollection())
             {
                 if (!TryConvertValue(
                     value,
                     propertyType!,
                     out var convertedValue,
-                    out errorMessage))
+                    out _))
                 {
                     errorMessage = $"'{value}' is not correct value for '{propertyType.Name}' type";
                     return false;
                 }
 
-                if (!TryGetExecuteUpdateLambda<TBaseEntity>(
-                    segments[i],
-                    convertedValue,
-                    out var expression,
-                    out errorMessage))
+                IDbContext context = (dbSet as DbSet<TEntity>).GetContext();
+                if (segments[1..].Length == 1)
                 {
-                    return false;
+                    return TryReplaceParameterInEntity<TBaseEntity>(
+                        Convert.ToInt32(segments[0]),
+                        segments[1],
+                        convertedValue,
+                        context,
+                        out errorMessage);
                 }
-                query.ExecuteUpdate(expression);
-            }
-
-            else
-            {
-                errorMessage = "Could not define expression while executing 'replace' method";
-                return false;
+                return TryReplaceNestedParameterInEntity<TBaseEntity>(
+                    Convert.ToInt32(segments[0]),
+                    segments[1..],
+                    convertedValue,
+                    context,
+                    out errorMessage);
             }
         }
-        errorMessage = null;
-        return true;
+        errorMessage = "Nothing was done due to unknown reason";
+        return false;
     }
 
-    /// <summary>
-    /// Gets single nested entity property from <typeparamref name="TBaseEntity"/>.
-    /// </summary>
-    /// <typeparam name="TBaseEntity">Type of entity containing property.</typeparam>
-    /// <param name="query">Request query.</param>
-    /// <param name="propertyName">Name of property.</param>
-    /// <param name="newQuery">Query with result type of single nested entity.</param>
-    /// <returns><see langword="true"/> if query was successfully created; otherwise, <see langword="false"/>.</returns>
-    private bool TryGetQueryWithProperty<TBaseEntity>(
-        IQueryable<TBaseEntity> query,
+    private static bool TryReplaceParameterInEntity
+        <TBaseEntity>(
+        int entityId,
         string propertyName,
-        out IQueryable newQuery)
-        where TBaseEntity : BaseEntity
-    {
-        var parameter = Expression.Parameter(typeof(TBaseEntity), "e");
-        var property = Expression.Property(parameter, propertyName);
-        var lambda = Expression.Lambda(property, parameter);
-
-        var resultType = typeof(Queryable).GetMethods().First(m => m.Name == "Select" && m.IsGenericMethodDefinition)
-            .MakeGenericMethod(typeof(TBaseEntity), property.Type);
-
-        newQuery = (IQueryable)resultType.Invoke(null, [query, lambda]);
-        return true;
-    }
-
-    /// <summary>
-    /// Gets lambda of property itself.
-    /// </summary>
-    /// <typeparam name="TBaseEntity">Type of entity containing property.</typeparam>
-    /// <param name="propertyName">Name of property.</param>
-    /// <param name="expression">Result expression.</param>
-    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>    
-    /// <returns><see langword="true"/> if expression was successfully created; otherwise, <see langword="false"/>.</returns>
-    private static bool TryGetPropertyLambda<TBaseEntity>(
-        string propertyName,
-        Type propertyType,
-        out LambdaExpression expression,
+        object value,
+        IDbContext context,
         out string errorMessage)
+        where TBaseEntity : BaseEntity, new()
     {
         try
         {
-            var parameter = Expression.Parameter(typeof(TBaseEntity), "x");
-            var property = Expression.Property(parameter, propertyName);
-
-            var lambdaType = typeof(Func<,>).MakeGenericType(typeof(TBaseEntity), propertyType);
-            expression = Expression.Lambda(lambdaType, property, parameter);
-
+            TBaseEntity entity = new TBaseEntity { Id = entityId };
+            var property = typeof(TBaseEntity).GetProperty(propertyName);
+            (context as DbContext).ChangeTracker.Clear();
+            context.Entry(entity).State = EntityState.Unchanged;
+            property.SetMemberValue(entity, value);
+            context.SaveChanges();
             errorMessage = null;
             return true;
         }
         catch (Exception ex)
         {
-            expression = null;
+            errorMessage = string.Format(
+                "Could not replace value of property {0} from entity with id {1}",
+                propertyName.ToCamelCase(),
+                entityId);
+            return false;
+        }
+    }
+
+    /// TODO: дописать это чудище, там что-то чатгпт написал, возможно пригодится. 
+    /// После чего сделать поумнее перебор в основном методе, так как если там будут в пути Id, он помрёт на данном методе
+    private static bool TryReplaceNestedParameterInEntity<TBaseEntity>(
+        int entityId,
+        string[] pathSegments,
+        object value,
+        IDbContext context,
+        out string errorMessage)
+        where TBaseEntity : BaseEntity, new()
+    {
+        errorMessage = null;
+        try
+        {
+            (context as DbContext).ChangeTracker.Clear();
+            var query = (IQueryable<TBaseEntity>)context.Set<TBaseEntity>();
+            if (pathSegments.Length > 1)
+                query = query.Include(string.Join('.', pathSegments[..^1]));
+
+            TBaseEntity entity = query.FirstOrDefault(e => e.Id == entityId);
+            if (entity == null)
+            {
+                errorMessage = string.Format(
+                    "Could not find entity {0} with id {1}",
+                    typeof(TBaseEntity).Name.ToCamelCase(),
+                    entityId);
+                return false;
+            }
+
+            var property = typeof(TBaseEntity).GetProperty(pathSegments[0]);
+            if (property == null)
+            {
+                errorMessage = string.Format(
+                    "Could not find property {0} in entity {1}",
+                    pathSegments[0].ToCamelCase(),
+                    typeof(TBaseEntity).Name.ToCamelCase());
+                return false;
+            }
+
+            if (pathSegments.Length == 1)
+            {
+                property.SetValue(entity, Convert.ChangeType(value, property.PropertyType));
+            }
+            else
+            {
+                SetNestedProperty(property.GetValue(entity), pathSegments.Skip(1).ToArray(), value, out errorMessage);
+            }
+
+            context.SaveChanges();
+            return true;
+        }
+        catch (Exception ex)
+        {
             errorMessage = ex.Message;
             return false;
         }
     }
 
-    /// <summary>
-    /// Gets expression for <c>ExecuteUpdate()</c> method.
-    /// </summary>
-    /// <typeparam name="TBaseEntity">Type of entity containing property.</typeparam>
-    /// <param name="propertyName">Name of property.</param>
-    /// <param name="value">New value for property.</param>
-    /// <param name="expression">Result expression.</param>
-    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>    
-    /// <returns><see langword="true"/> if expression was successfully created; otherwise, <see langword="false"/>.</returns>
-    private static bool TryGetExecuteUpdateLambda<TBaseEntity>(
-        string propertyName,
-        object? value,
-        out Expression<Func<SetPropertyCalls<TBaseEntity>, SetPropertyCalls<TBaseEntity>>> expression,
+    private static void SetNestedProperty(
+        object obj,
+        string[] pathSegments,
+        object value,
         out string errorMessage)
-        where TBaseEntity : BaseEntity
     {
-        if (!TryGetPropertyLambda<TBaseEntity>(propertyName, value.GetType(), out LambdaExpression propExpr, out errorMessage))
+        var property = obj.GetType().GetProperty(pathSegments[0]);
+        if (property == null)
         {
-            expression = null;
-            return false;
+            errorMessage = string.Format(
+                "Could not find property {0} in entity {1}",
+                pathSegments[0].ToCamelCase(),
+                obj.GetType().Name.ToCamelCase());
+            return;
         }
-        var param = Expression.Parameter(typeof(SetPropertyCalls<TBaseEntity>));
 
-        // find method SetProperty(Func<T, TProp>, TProp):
-        var method = typeof(SetPropertyCalls<TBaseEntity>)
-            .GetMethods()
-            .Where(info => info.Name == nameof(SetPropertyCalls<TBaseEntity>.SetProperty))
-            // filter out SetProperty(Func<T, TProp>, Func<T, TProp>) overload
-            .Where(info => info.GetParameters() is [_, { ParameterType.IsConstructedGenericType: false }])
-            .Single();
-
-        // construct appropriately typed generic SetProperty
-        var makeGenericMethod = method.MakeGenericMethod(propExpr.Type.GetGenericArguments()[1]);
-
-        var methodCallExpression = Expression.Call(param, makeGenericMethod, propExpr, Expression.Constant(value, value.GetType()));
-
-        // construct final expression
-        var lambdaExpression = Expression.Lambda<Func<SetPropertyCalls<TBaseEntity>, SetPropertyCalls<TBaseEntity>>>(methodCallExpression, param);
-        lambdaExpression.Compile();
-        expression = lambdaExpression;
-        return true;
+        if (pathSegments.Length == 1)
+        {
+            property.SetValue(obj, Convert.ChangeType(value, property.PropertyType));
+        }
+        else
+        {
+            SetNestedProperty(property.GetValue(obj), pathSegments.Skip(1).ToArray(), value, out errorMessage);
+        }
+        errorMessage = null;
     }
 
     /// <summary>
@@ -760,7 +756,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
     private static void ReplaceWithManyToMany
         <TEntityToAdd>(
         PropertyInfo collectionProperty,
-        object parent, 
+        object parent,
         IDbContext context,
         ref ICollection<TEntityToAdd> collection)
         where TEntityToAdd : BaseEntity, new()
@@ -768,7 +764,7 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity
         var collectionItems = collection;
         FillCollectionWithNullValue(collectionProperty, parent, ref collection);
         //context.Entry(collection).State = EntityState.Unchanged;
-        foreach ( var item in collectionItems)
+        foreach (var item in collectionItems)
         {
             context.Entry(item).State = EntityState.Unchanged;
             collection.Add(item);
