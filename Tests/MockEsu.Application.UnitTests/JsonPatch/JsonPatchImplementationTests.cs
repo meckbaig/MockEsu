@@ -87,7 +87,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
         public async Task TestPatchReplace_ReturnsOk_WhenNestedStringPropertyInModel()
         {
             // Arrange
-            string newEntityName = "NewValue1";
+            string newEntityName = "NewValue2";
 
             List<Operation<TestEntityEditDto>> operations = new()
             {
@@ -120,7 +120,7 @@ namespace MockEsu.Application.UnitTests.JsonPatch
         public async Task TestPatchReplace_ReturnsOk_WhenNestedStringPropertyInCollection()
         {
             // Arrange
-            string newEntityName = "NewValue1";
+            string newEntityName = "NewValue3";
 
             List<Operation<TestEntityEditDto>> operations = new()
             {
