@@ -563,6 +563,16 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity, 
         return false;
     }
 
+    /// <summary>
+    /// Replace operation without getting entity data from DB (without nesting).
+    /// </summary>
+    /// <typeparam name="TBaseEntity">Type of entity in which replacement will be performed.</typeparam>
+    /// <param name="entityId">Id of entity.</param>
+    /// <param name="propertyName">Name of property in which replacement will be performed.</param>
+    /// <param name="value">New property value.</param>
+    /// <param name="context">DbContext for performing actions.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if update was successfully performed; otherwise, <see langword="false"/>.</returns>
     private static bool TryReplaceParameterInEntity
         <TBaseEntity>(
         int entityId,
@@ -593,8 +603,16 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity, 
         }
     }
 
-    /// TODO: дописать это чудище, там что-то чатгпт написал, возможно пригодится. 
-    /// После чего сделать поумнее перебор в основном методе, так как если там будут в пути Id, он помрёт на данном методе
+    /// <summary>
+    /// Replace operation with getting entity data from DB (with nesting).
+    /// </summary>
+    /// <typeparam name="TBaseEntity">Type of entity in which replacement will be performed.</typeparam>
+    /// <param name="entityId">Id of entity.</param>
+    /// <param name="pathSegments">Path to a property.</param>
+    /// <param name="value">New property value.</param>
+    /// <param name="context">DbContext for performing actions.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if update was successfully performed; otherwise, <see langword="false"/>.</returns>
     private static bool TryReplaceNestedParameterInEntity<TBaseEntity>(
         int entityId,
         string[] pathSegments,
@@ -637,8 +655,11 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity, 
             }
             else
             {
-                SetNestedProperty(property.GetValue(entity), pathSegments.Skip(1).ToArray(), value, out errorMessage);
+                SetNestedProperty(property.GetValue(entity), pathSegments[1..], value, out errorMessage);
             }
+
+            if (errorMessage != null)
+                return false;
 
             context.SaveChanges();
             return true;
@@ -650,29 +671,36 @@ public class CustomDbSetAdapter<TEntity> : IAdapter where TEntity : BaseEntity, 
         }
     }
 
+    /// <summary>
+    /// Replaces value in entity with nested path.
+    /// </summary>
+    /// <param name="entity">Entity value.</param>
+    /// <param name="pathSegments">Path to a property.</param>
+    /// <param name="value">New property value.</param>
+    /// <param name="errorMessage">Message if error occures; otherwise, <see langword="null"/>.</param>
     private static void SetNestedProperty(
-        object obj,
+        object entity,
         string[] pathSegments,
         object value,
         out string errorMessage)
     {
-        var property = obj.GetType().GetProperty(pathSegments[0]);
+        var property = entity.GetType().GetProperty(pathSegments[0]);
         if (property == null)
         {
             errorMessage = string.Format(
                 "Could not find property {0} in entity {1}",
                 pathSegments[0].ToCamelCase(),
-                obj.GetType().Name.ToCamelCase());
+                entity.GetType().Name.ToCamelCase());
             return;
         }
 
         if (pathSegments.Length == 1)
         {
-            property.SetValue(obj, Convert.ChangeType(value, property.PropertyType));
+            property.SetValue(entity, Convert.ChangeType(value, property.PropertyType));
         }
         else
         {
-            SetNestedProperty(property.GetValue(obj), pathSegments.Skip(1).ToArray(), value, out errorMessage);
+            SetNestedProperty(property.GetValue(entity), pathSegments.Skip(1).ToArray(), value, out errorMessage);
         }
         errorMessage = null;
     }
