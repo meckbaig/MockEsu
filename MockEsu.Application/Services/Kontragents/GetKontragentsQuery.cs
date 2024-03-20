@@ -65,7 +65,7 @@ internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery,
 
         var result = await _cache.GetOrCreateAsync(
             request.GetKey(), 
-            () => query.ToList(), 
+            () => query.ToListAsync(), 
             projection,
             cancellationToken);
         

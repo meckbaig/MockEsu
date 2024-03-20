@@ -30,7 +30,7 @@ public static class CachingExtension
     public static async Task<TDto> GetOrCreateAsync<TRequestResult, TDto>(
         this IDistributedCache cache,
         string key,
-        Func<TRequestResult> requestResultFactory,
+        Func<Task<TRequestResult>> requestResultFactory,
         Func<TRequestResult, TDto> projectionFactory,
         CancellationToken cancellationToken = default,
         DistributedCacheEntryOptions? options = null)
@@ -39,7 +39,7 @@ public static class CachingExtension
         if (!string.IsNullOrEmpty(cachedMember))
             return JsonConvert.DeserializeObject<TDto>(cachedMember);
 
-        TRequestResult requestResult = requestResultFactory.Invoke();
+        TRequestResult requestResult = await requestResultFactory.Invoke();
         options ??= CacheEntryOptions;
         
         await TrackIds(requestResult, key, 
@@ -68,7 +68,7 @@ public static class CachingExtension
     public static async Task<TDto> GetOrCreateAsync<TRequestResult, TDto>(
         this IDistributedCache cache,
         string key,
-        Func<TRequestResult> requestResultFactory,
+        Func<Task<TRequestResult>> requestResultFactory,
         Func<TRequestResult, TDto> projectionFactory,
         TimeSpan? absoluteExpirationRelativeToNow,
         CancellationToken cancellationToken = default)
