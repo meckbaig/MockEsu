@@ -44,12 +44,14 @@ internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery,
     private readonly IAppDbContext _context;
     private readonly IMapper _mapper;
     private readonly IDistributedCache _cache;
-    
-    public GetKontragentsQueryHandler(IAppDbContext context, IMapper mapper, IDistributedCache cache)
+    private readonly ICachedKeysProvider _cachedKeysProvider;
+
+    public GetKontragentsQueryHandler(IAppDbContext context, IMapper mapper, IDistributedCache cache, ICachedKeysProvider cachedKeysProvider)
     {
         _context = context;
         _mapper = mapper;
         _cache = cache;
+        _cachedKeysProvider = cachedKeysProvider;
     }
 
     public async Task<GetKontragentsResponse> Handle(GetKontragentsQuery request, CancellationToken cancellationToken)
@@ -64,6 +66,7 @@ internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery,
                 => kontragents.Select(x => _mapper.Map<KonragentPreviewDto>(x)).ToList();
 
         var result = await _cache.GetOrCreateAsync(
+            _cachedKeysProvider,
             request.GetKey(), 
             () => query.ToListAsync(), 
             projection,

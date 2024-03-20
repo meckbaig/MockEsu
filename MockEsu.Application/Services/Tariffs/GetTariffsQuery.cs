@@ -37,12 +37,14 @@ public class GetTariffsQueryHandler : IRequestHandler<GetTariffsQuery, GetTariff
     private readonly IAppDbContext _context;
     private readonly IMapper _mapper;
     private readonly IDistributedCache _cache;
+    private readonly ICachedKeysProvider _cachedKeysProvider;
 
-    public GetTariffsQueryHandler(IAppDbContext context, IMapper mapper, IDistributedCache cache)
+    public GetTariffsQueryHandler(IAppDbContext context, IMapper mapper, IDistributedCache cache, ICachedKeysProvider cachedKeysProvider)
     {
         _context = context;
         _mapper = mapper;
         _cache = cache;
+        _cachedKeysProvider = cachedKeysProvider;
     }
 
     public async Task<GetTariffsResponse> Handle(GetTariffsQuery request, CancellationToken cancellationToken)
@@ -56,6 +58,7 @@ public class GetTariffsQueryHandler : IRequestHandler<GetTariffsQuery, GetTariff
             => tariffs.Select(t => _mapper.Map<TariffDto>(t)).ToList();
 
         var list = await _cache.GetOrCreateAsync(
+            _cachedKeysProvider,
             request.GetKey(),
             () => query.ToListAsync(),
             projection,
