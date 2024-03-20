@@ -1,5 +1,6 @@
 ﻿using AutoMapper.Internal;
 using Microsoft.Extensions.Caching.Distributed;
+using MockEsu.Application.Common.Interfaces;
 using MockEsu.Domain.Common;
 using Newtonsoft.Json;
 using System.Collections;
@@ -21,6 +22,7 @@ public static class CachingExtension
     /// <typeparam name="TRequestResult">Type of data from request expression.</typeparam>
     /// <typeparam name="TDto">Type of data to project result data to.</typeparam>
     /// <param name="cache">Caching provider.</param>
+    /// <param name="cachedKeysProvider">Provider to perform saving of cached keys.</param>
     /// <param name="key">Key for saving data.</param>
     /// <param name="requestResultFactory">Execution factory with operation to get data.</param>
     /// <param name="projectionFactory">Execution factory to project data to <typeparamref name="TDto"/></param>
@@ -29,6 +31,7 @@ public static class CachingExtension
     /// <returns></returns>
     public static async Task<TDto> GetOrCreateAsync<TRequestResult, TDto>(
         this IDistributedCache cache,
+        ICachedKeysProvider cachedKeysProvider,
         string key,
         Func<Task<TRequestResult>> requestResultFactory,
         Func<TRequestResult, TDto> projectionFactory,
@@ -42,7 +45,7 @@ public static class CachingExtension
         TRequestResult requestResult = await requestResultFactory.Invoke();
         options ??= CacheEntryOptions;
         
-        await TrackIds(requestResult, key, 
+        await TrackIds(cachedKeysProvider, requestResult, key,
             DateTimeOffset.UtcNow.Add(options.AbsoluteExpirationRelativeToNow ?? TimeSpan.Zero));
 
         TDto dtoResult = projectionFactory.Invoke(requestResult);
@@ -59,6 +62,7 @@ public static class CachingExtension
     /// <typeparam name="TRequestResult">Type of data from request expression.</typeparam>
     /// <typeparam name="TDto">Type of data to project result data to.</typeparam>
     /// <param name="cache">Caching provider.</param>
+    /// <param name="cachedKeysProvider">Provider to perform saving of cached keys.</param>
     /// <param name="key">Key for saving data.</param>
     /// <param name="requestResultFactory">Execution factory with operation to get data.</param>
     /// <param name="projectionFactory">Execution factory to project data to <typeparamref name="TDto"/></param>
@@ -67,6 +71,7 @@ public static class CachingExtension
     /// <returns></returns>
     public static async Task<TDto> GetOrCreateAsync<TRequestResult, TDto>(
         this IDistributedCache cache,
+        ICachedKeysProvider cachedKeysProvider,
         string key,
         Func<Task<TRequestResult>> requestResultFactory,
         Func<TRequestResult, TDto> projectionFactory,
@@ -78,6 +83,7 @@ public static class CachingExtension
             AbsoluteExpirationRelativeToNow = absoluteExpirationRelativeToNow
         };
         return await cache.GetOrCreateAsync(
+            cachedKeysProvider,
             key,
             requestResultFactory,
             projectionFactory,
@@ -89,25 +95,36 @@ public static class CachingExtension
     /// Saves all id's from recieved data to invalidate cache when this data will be changed in the future
     /// </summary>
     /// <typeparam name="TResult">Type of data to track id's from.</typeparam>
+    /// <param name="cachedKeysProvider">Provider to perform saving of cached keys.</param>
     /// <param name="result">Data to track id's from.</param>
     /// <param name="key">Key for saving data.</param>
     /// <param name="expires">Expiration time.</param>
-    private static async Task TrackIds<TResult>(TResult result, string key, DateTimeOffset expires)
+    private static async Task TrackIds<TResult>(
+        ICachedKeysProvider cachedKeysProvider,
+        TResult result,
+        string key,
+        DateTimeOffset expires)
     {
         Type resultType = typeof(TResult);
-        await TrackIdsInternal(result, resultType, key, expires);
-        CachedKeys2.CompleteFormation(key);
+        await TrackIdsInternal(cachedKeysProvider, result, resultType, key, expires);
+        await cachedKeysProvider.TryCompleteFormationAsync(key);
     }
 
     /// <summary>
     /// Saves all id's from recieved data to invalidate cache when this data will be changed in the future
     /// </summary>
+    /// <param name="cachedKeysProvider">Provider to perform saving of cached keys.</param>
     /// <param name="result">Data to track id's from.</param>
     /// <param name="resultType">Type of data to track id's from.</param>
     /// <param name="key">Key for saving data.</param>
     /// <param name="expires">Expiration time.</param>
     /// <remarks>DO NOT USE THIS METHOD OUTSIDE OF CALL IN TrackIds()</remarks>
-    private static async Task TrackIdsInternal(object result, Type resultType, string key, DateTimeOffset expires)
+    private static async Task TrackIdsInternal(
+        ICachedKeysProvider cachedKeysProvider,
+        object result,
+        Type resultType,
+        string key,
+        DateTimeOffset expires)
     {
         if (resultType.IsCollection())
         {
@@ -117,14 +134,14 @@ public static class CachingExtension
             Type collectionElementType = resultType.GetGenericArguments().Single();
             foreach (var collectionElement in resultCollection)
             {
-                await TrackIdsInternal(collectionElement, collectionElementType, key, expires);
+                await TrackIdsInternal(cachedKeysProvider, collectionElement, collectionElementType, key, expires);
             }
         }
         else if (typeof(BaseEntity).IsAssignableFrom(resultType))
         {
             var idProperty = resultType.GetProperty(nameof(BaseEntity.Id));
             int idValue = (int)idProperty.GetValue(result);
-            if (CachedKeys2.TryAddKeyToIdIfNotPresent(key, expires, resultType, idValue))
+            if (await cachedKeysProvider.TryAddKeyToIdIfNotPresentAsync(key, expires, resultType, idValue))
             {
                 foreach (var property in resultType.GetProperties())
                 {
@@ -132,7 +149,7 @@ public static class CachingExtension
                     {
                         var value = property.GetValue(result);
                         if (value != null)
-                            await TrackIdsInternal(value, property.PropertyType, key, expires);
+                            await TrackIdsInternal(cachedKeysProvider, value, property.PropertyType, key, expires);
                     }
                 }
             }

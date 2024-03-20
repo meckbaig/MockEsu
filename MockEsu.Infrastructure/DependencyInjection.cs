@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Domain.Entities.Authentification;
 using MockEsu.Infrastructure.Authentification;
+using MockEsu.Infrastructure.Caching;
 using MockEsu.Infrastructure.Data;
 using MockEsu.Infrastructure.Interceptors;
 
@@ -32,6 +33,7 @@ public static class DependencyInjection
         services.AddSingleton<IJwtProvider, JwtProvider>();
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
+        services.AddSingleton<ICachedKeysProvider, InMemoryCachedKeysProvider>();
         services.AddTransient<IPasswordHasher<User>, PasswordHasher<User>>();
 
         //services.AddScoped<AppDbContextInitialiser>();
