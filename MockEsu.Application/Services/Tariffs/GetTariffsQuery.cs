@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using MockEsu.Application.Common.BaseRequests.ListQuery;
 using MockEsu.Application.Common.Extensions.Caching;
@@ -56,7 +57,7 @@ public class GetTariffsQueryHandler : IRequestHandler<GetTariffsQuery, GetTariff
 
         var list = await _cache.GetOrCreateAsync(
             request.GetKey(),
-            () => query.ToList(),
+            () => query.ToListAsync(),
             projection,
             cancellationToken);
 
