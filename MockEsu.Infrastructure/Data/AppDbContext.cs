@@ -17,13 +17,8 @@ namespace MockEsu.Infrastructure.Data;
 
 public class AppDbContext : DbContext, IAppDbContext
 {
-    private readonly ILogger<TransactionLoggingInterceptor> _logger;
-    private readonly IDistributedCache _cache;
-
-    public AppDbContext(DbContextOptions<AppDbContext> options, ILogger<TransactionLoggingInterceptor> logger, IDistributedCache cache) : base(options)
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
-        _logger = logger;
-        _cache = cache;
     }
 
     public DbSet<Address> Addresses
@@ -104,7 +99,6 @@ public class AppDbContext : DbContext, IAppDbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.AddInterceptors(new TransactionLoggingInterceptor(_logger, _cache));
         base.OnConfiguring(optionsBuilder);
     }
 }
