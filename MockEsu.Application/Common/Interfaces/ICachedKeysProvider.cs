@@ -10,6 +10,5 @@ public interface ICachedKeysProvider
 {
     Task<bool> TryAddKeyToIdIfNotPresentAsync(string key, DateTimeOffset expires, Type entityType, int id);
     Task<bool> TryCompleteFormationAsync(string key);
-    Task<string?> GetAndRemoveKeyByIdAsync(Type entityType, int id);
-    bool TryGetAndRemoveKeyById(Type entityType, int id, out string key);
+    Task<List<string>> GetAndRemoveKeysByIdAsync(Type entityType, int id);
 }
