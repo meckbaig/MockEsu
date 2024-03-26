@@ -5,12 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using MockEsu.Application.Common.BaseRequests.ListQuery;
+using MockEsu.Application.Common.Extensions.Caching;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Application.DTOs.Kontragents;
 using MockEsu.Application.Extensions.DataBaseProvider;
 using MockEsu.Application.Extensions.ListFilters;
 using MockEsu.Domain.Entities;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace MockEsu.Application.Services.Kontragents;
 
@@ -42,12 +44,14 @@ internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery,
     private readonly IAppDbContext _context;
     private readonly IMapper _mapper;
     private readonly IDistributedCache _cache;
-    
-    public GetKontragentsQueryHandler(IAppDbContext context, IMapper mapper, IDistributedCache cache)
+    private readonly ICachedKeysProvider _cachedKeysProvider;
+
+    public GetKontragentsQueryHandler(IAppDbContext context, IMapper mapper, IDistributedCache cache, ICachedKeysProvider cachedKeysProvider)
     {
         _context = context;
         _mapper = mapper;
         _cache = cache;
+        _cachedKeysProvider = cachedKeysProvider;
     }
 
     public async Task<GetKontragentsResponse> Handle(GetKontragentsQuery request, CancellationToken cancellationToken)
@@ -55,12 +59,17 @@ internal class GetKontragentsQueryHandler : IRequestHandler<GetKontragentsQuery,
         var query = _context.Kontragents.FullData()
             .AddFilters(request.GetFilterExpressions())
             .AddOrderBy(request.GetOrderExpressions())
-            .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue)
-            .ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider);
+            .Skip(request.skip).Take(request.take > 0 ? request.take : int.MaxValue);
+            //.ProjectTo<KonragentPreviewDto>(_mapper.ConfigurationProvider);
 
-        var result = await _cache.GetOrCreate(
+        var projection = (List<Kontragent> kontragents)
+                => kontragents.Select(x => _mapper.Map<KonragentPreviewDto>(x)).ToList();
+
+        var result = await _cache.GetOrCreateAsync(
+            _cachedKeysProvider,
             request.GetKey(), 
-            () => query.ToList(), 
+            () => query.ToListAsync(), 
+            projection,
             cancellationToken);
         
         return new GetKontragentsResponse
