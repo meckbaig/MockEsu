@@ -38,12 +38,12 @@ public static class DependencyInjection
 
         services.AddStackExchangeRedisCache(options =>
             options.Configuration = configuration.GetConnectionString("Redis"));
+        services.AddElasticSearch(configuration);
         services.AddSingleton<IJwtProvider, JwtProvider>();
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
         services.AddScoped<ICachedKeysProvider, SqlCachedKeysProvider>();
         services.AddTransient<IPasswordHasher<User>, PasswordHasher<User>>();
-
         using (var scope = services.BuildServiceProvider())
         {
             var context = scope.GetRequiredService(typeof(IAppDbContext)) as IAppDbContext;
