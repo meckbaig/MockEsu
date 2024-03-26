@@ -41,6 +41,13 @@ public class KontragentsController : ControllerBase
     {
         JsonPatchKontragentsCommand command = new() { Patch = items };
         var result = await _mediator.Send(command);
+    }
+    
+    [HttpGet]
+    [Route("ElasticSearch")]
+    public async Task<ActionResult<GetFromElasticResponse>> GetWithElasticSearch([FromQuery] GetFromElasticQuery query)
+    {
+        var result = await _mediator.Send(query);
         return result.ToJsonResponse();
     }
 }
