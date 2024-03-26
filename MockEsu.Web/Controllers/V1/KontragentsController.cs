@@ -1,4 +1,6 @@
-﻿using MockEsu.Application.Services.Kontragents;
+﻿using Microsoft.AspNetCore.JsonPatch;
+using MockEsu.Application.DTOs.Kontragents;
+using MockEsu.Application.Services.Kontragents;
 using MockEsu.Domain.Enums;
 using MockEsu.Infratructure.Authentification;
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -33,6 +35,14 @@ public class KontragentsController : ControllerBase
         return result.ToJsonResponse();
     }
 
+    [HttpPatch]
+    public async Task<ActionResult<JsonPatchKontragentsResponse>> UpdateList(
+        [FromBody] JsonPatchDocument<KontragentEditDto> items)
+    {
+        JsonPatchKontragentsCommand command = new() { Patch = items };
+        var result = await _mediator.Send(command);
+    }
+    
     [HttpGet]
     [Route("ElasticSearch")]
     public async Task<ActionResult<GetFromElasticResponse>> GetWithElasticSearch([FromQuery] GetFromElasticQuery query)

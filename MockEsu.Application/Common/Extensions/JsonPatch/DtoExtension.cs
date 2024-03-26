@@ -6,6 +6,7 @@ using MockEsu.Application.Common.Extensions.StringExtensions;
 using MockEsu.Domain.Common;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -323,6 +324,7 @@ internal static class DtoExtension
         Dictionary<string, object> sourceProperties = new();
         Dictionary<string, object> properties
             = JsonConvert.DeserializeObject<Dictionary<string, object>>(serialized, settings);
+        properties = properties.ToDictionary(pair => pair.Key.ToPascalCase(), pair => pair.Value);
         foreach (var property in properties)
         {
             Type propertyType = dtoType;

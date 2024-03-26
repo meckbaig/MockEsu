@@ -34,7 +34,7 @@ public class JsonPatchServiceMethodCommandHandler : IRequestHandler<JsonPatchSer
         _mapper = mapper;
     }
 
-    public async Task<JsonPatchEntityResponse> Handle(JsonPatchServiceMethodCommand request, CancellationToken cancellationToken)
+    public async Task<JsonPatchServiceMethodResponse> Handle(JsonPatchServiceMethodCommand request, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }

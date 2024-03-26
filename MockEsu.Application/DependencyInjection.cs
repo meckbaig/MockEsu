@@ -22,8 +22,6 @@ public static class DependencyInjection
         });
         services.AddAutoMapper(Assembly.GetExecutingAssembly());
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
-        services.AddStackExchangeRedisCache(options =>
-            options.Configuration = configuration.GetConnectionString("Redis"));
         services.AddTransient(typeof(IRequestExceptionHandler<,,>), typeof(GlobalRequestExceptionHandler<,,>));
 
         return services;

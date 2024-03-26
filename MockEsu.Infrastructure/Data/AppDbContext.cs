@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Domain.Common;
@@ -16,11 +17,8 @@ namespace MockEsu.Infrastructure.Data;
 
 public class AppDbContext : DbContext, IAppDbContext
 {
-    private readonly ILogger<TransactionLoggingInterceptor> _logger;
-
-    public AppDbContext(DbContextOptions<AppDbContext> options, ILogger<TransactionLoggingInterceptor> logger) : base(options)
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
-        _logger = logger;
     }
 
     public DbSet<Address> Addresses
@@ -101,7 +99,6 @@ public class AppDbContext : DbContext, IAppDbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.AddInterceptors(new TransactionLoggingInterceptor(_logger));
         base.OnConfiguring(optionsBuilder);
     }
 }
