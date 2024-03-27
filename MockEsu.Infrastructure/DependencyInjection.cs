@@ -41,7 +41,7 @@ public static class DependencyInjection
         services.AddSingleton<IJwtProvider, JwtProvider>();
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
-        services.AddScoped<ICachedKeysProvider, SqlCachedKeysProvider>();
+        services.AddScoped<ICachedKeysProvider, SqlCachedKeysProviderWithInMemoryCache>();
         services.AddTransient<IPasswordHasher<User>, PasswordHasher<User>>();
 
         using (var scope = services.BuildServiceProvider())

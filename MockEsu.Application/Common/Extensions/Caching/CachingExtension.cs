@@ -13,7 +13,7 @@ public static class CachingExtension
 {
     private static readonly DistributedCacheEntryOptions CacheEntryOptions = new()
     {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(3000)
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30)
     };
 
     /// <summary>
