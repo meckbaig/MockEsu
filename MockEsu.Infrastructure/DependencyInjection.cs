@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using MassTransit;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using MockEsu.Application.Common.Interfaces;
 using MockEsu.Domain.Entities.Authentification;
+using MockEsu.Infrastructure.AsyncMessaging;
 using MockEsu.Infrastructure.Authentification;
 using MockEsu.Infrastructure.Caching;
 using MockEsu.Infrastructure.Data;
@@ -41,8 +43,24 @@ public static class DependencyInjection
         services.AddSingleton<IJwtProvider, JwtProvider>();
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
-        services.AddScoped<ICachedKeysProvider, SqlCachedKeysProviderWithInMemoryCache>();
         services.AddTransient<IPasswordHasher<User>, PasswordHasher<User>>();
+        services.AddScoped<ICachedKeysProvider, AsyncSqlCachedKeysProvider>();
+        services.AddMassTransit(configurator =>
+        {
+            configurator.SetKebabCaseEndpointNameFormatter();
+
+            configurator.AddConsumer<SqlCachedKeysCachingHandler>();
+
+            configurator.UsingRabbitMq((context, config) =>
+            {
+                config.Host(new Uri(configuration.GetConnectionString("RabbitMQ")), h =>
+                {
+                    h.Username("guest");
+                    h.Password("guest");
+                });
+                config.ConfigureEndpoints(context);
+            });
+        });
 
         using (var scope = services.BuildServiceProvider())
         {
