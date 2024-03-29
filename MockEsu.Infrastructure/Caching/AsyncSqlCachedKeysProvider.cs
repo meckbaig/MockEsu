@@ -32,6 +32,10 @@ internal class AsyncSqlCachedKeysProvider : ICachedKeysProvider
         }
     }
 
+    /// <summary>
+    /// Sends cached key data to a message brocker, then saves asyncronically to a database.
+    /// </summary>
+    /// <param name="key">Cache key (unused).</param>
     public async Task<bool> TryCompleteFormationAsync(string key)
     {
         using (var scope = _serviceScopeFactory.CreateScope())
@@ -43,6 +47,12 @@ internal class AsyncSqlCachedKeysProvider : ICachedKeysProvider
         return true;
     }
 
+    /// <summary>
+    /// Saves cached data to a database.
+    /// </summary>
+    /// <param name="cachedKeyData">Data of cached key.</param>
+    /// <param name="context">Database context.</param>
+    /// <returns><see langword="true" /> if the completion was successful; otherwise, <see langword="false" />.</returns>
     internal static async Task<bool> TryCompleteFormationAsync(CachedKeyData cachedKeyData, ICachedKeysContext context)
     {
         var cachedKey = ConvertToCachedKeyListAndCompleteFormation(cachedKeyData);
@@ -65,11 +75,19 @@ internal class AsyncSqlCachedKeysProvider : ICachedKeysProvider
         return cachedKeys.Select(k => k.Key).ToList();
     }
 
+    /// <summary>
+    /// Removes all expired keys in a database.
+    /// </summary>
     private async Task ClearExpiredKeys()
     {
         await _context.CachedKeys.Where(k => k.Expires < DateTimeOffset.UtcNow).ExecuteDeleteAsync();
     }
 
+    /// <summary>
+    /// Convets cached key data to a database compatible format.
+    /// </summary>
+    /// <param name="cachedKeyData">Data of cached key.</param>
+    /// <returns>Cached key in a database compatible format.</returns>
     private static CachedKey ConvertToCachedKeyListAndCompleteFormation(CachedKeyData cachedKeyData)
     {
         var cachedKey = new CachedKey
