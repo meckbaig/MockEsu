@@ -42,6 +42,7 @@ internal class CachedKeysContext : DbContext, ICachedKeysContext
     }
 }
 
+[Domain.Common.NotCached]
 internal class CachedKey
 {
     public int Id { get; set; }
@@ -59,6 +60,7 @@ internal class CachedKey
     }
 }
 
+[Domain.Common.NotCached]
 internal class TypeIdPair
 {
     public int EntityId { get; set; }

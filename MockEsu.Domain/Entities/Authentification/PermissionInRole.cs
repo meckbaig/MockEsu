@@ -1,8 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using MockEsu.Domain.Common;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MockEsu.Domain.Entities.Authentification;
 
+[NotCached]
 public class PermissionInRole
 {
     [Required]
