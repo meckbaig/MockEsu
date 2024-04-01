@@ -11,6 +11,8 @@ internal class AsyncSqlCachedKeysProvider : ICachedKeysProvider
     private readonly ICachedKeysContext _context;
     private CachedKeyData _cachedKey;
     private readonly IServiceScopeFactory _serviceScopeFactory;
+    private DateTimeOffset _expiredKeysClearDateTime = default;
+    private readonly TimeSpan _expiredKeysClearingInterval = TimeSpan.FromSeconds(5);
 
     public AsyncSqlCachedKeysProvider(ICachedKeysContext context, IServiceScopeFactory serviceScopeFactory)
     {
@@ -68,6 +70,7 @@ internal class AsyncSqlCachedKeysProvider : ICachedKeysProvider
         string asd = entityType.Name;
         List<CachedKey> cachedKeys = await _context.CachedKeys
             .Where(k => k.TypeIdPairs.Any(pair => pair.Type == entityType.Name && pair.EntityId == id))
+            .AsNoTracking()
             .ToListAsync();
         _context.CachedKeys.RemoveRange(cachedKeys);
         await _context.SaveChangesAsync();
@@ -80,7 +83,10 @@ internal class AsyncSqlCachedKeysProvider : ICachedKeysProvider
     /// </summary>
     private async Task ClearExpiredKeys()
     {
+        if (_expiredKeysClearDateTime > DateTimeOffset.UtcNow.Subtract(_expiredKeysClearingInterval))
+            return;
         await _context.CachedKeys.Where(k => k.Expires < DateTimeOffset.UtcNow).ExecuteDeleteAsync();
+        _expiredKeysClearDateTime = DateTimeOffset.UtcNow;
     }
 
     /// <summary>
