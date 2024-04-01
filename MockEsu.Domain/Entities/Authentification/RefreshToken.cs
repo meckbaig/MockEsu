@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace MockEsu.Domain.Entities.Authentification;
 
+[NotCached]
 public class RefreshToken : BaseEntity
 {
     [Required]

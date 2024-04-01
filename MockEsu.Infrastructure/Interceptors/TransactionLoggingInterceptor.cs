@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using MockEsu.Domain.Common;
 using MockEsu.Application.Common.Extensions.Caching;
 using MockEsu.Application.Common.Interfaces;
+using System.Reflection;
+using MockEsu.Infrastructure.Caching;
 
 namespace MockEsu.Infrastructure.Interceptors;
 
@@ -77,6 +79,8 @@ public class TransactionLoggingInterceptor : DbTransactionInterceptor
     {
         foreach (var entry in tracker.Entries<BaseEntity>())
         {
+            if (entry.Entity.GetType().GetCustomAttribute<NotCachedAttribute>() != null)
+                continue;
             var keys = await _cachedKeysProvider.GetAndRemoveKeysByIdAsync(entry.Entity.GetType(), entry.Entity.Id);
             foreach(var key in keys)
             {
