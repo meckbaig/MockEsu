@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MockEsu.Application.Common.Exceptions;
 using MockEsu.Web.Structure.OptionsSetup;
 using MockEsu.Web.Structure.Swagger;
+using Serilog;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,6 +39,7 @@ builder.Services.AddApiVersioning(options =>
     options.GroupNameFormat = "'v'VVV";
     options.SubstituteApiVersionInUrl = true;
 });
+builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
@@ -94,6 +96,7 @@ app.Use(async (context, next) =>
         await exceptionMiddleware.TryHandleAsync(context, ex, new CancellationToken());
     }
 });
+//app.UseSerilogRequestLogging();
 
 app.MapControllers();
 app.UseCors(builder => builder
