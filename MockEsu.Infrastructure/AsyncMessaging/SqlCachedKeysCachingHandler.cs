@@ -1,6 +1,5 @@
 ﻿using MassTransit;
 using MockEsu.Infrastructure.Caching;
-using static MockEsu.Infrastructure.Caching.AsyncSqlCachedKeysProvider;
 
 namespace MockEsu.Infrastructure.AsyncMessaging;
 
